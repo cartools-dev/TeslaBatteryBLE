@@ -196,7 +196,9 @@ class CardSnapshots {
                         phase = ConnectionPhase.DISCONNECTED,
                         disconnectedAtMillis = NOW - STALE_MINUTES * MINUTE,
                     ),
-                advert = advert,
+                // A disconnected car has no live scan entry (each discovery
+                // wipes the list), so no RSSI — just the disconnect age.
+                advert = null,
                 vehicle = vehicle,
                 history = listOf(storedSample(STALE_MINUTES)),
                 statusHistory = emptyList(),

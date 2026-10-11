@@ -279,7 +279,7 @@ internal fun HeroCard(
                             )
                         }
                         Text(
-                            text = heroStatusText(connection, display, nowMillis),
+                            text = heroStatusText(display, connection?.disconnectedAtMillis, nowMillis),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
@@ -332,22 +332,17 @@ internal fun HeroCard(
     }
 }
 
-/**
- * The car-view status line: a disconnected car reads "Disconnected · 12m"
- * instead of a stale scan RSSI. READY links keep the shared status untouched.
- */
+/** The car-view status line: a disconnected car reads "Disconnected · 12m". */
 private fun heroStatusText(
-    connection: TeslaConnection?,
     display: ConnectionDisplay,
+    disconnectedAtMillis: Long?,
     nowMillis: Long,
 ): String {
-    if (connection?.phase == ConnectionPhase.READY) return display.status
-    val disconnectedFor =
-        connection
-            ?.disconnectedAtMillis
+    val offlineFor =
+        disconnectedAtMillis
             ?.takeIf { display.stateText == "Disconnected" }
             ?.let { compactDuration(nowMillis - it) }
-    return disconnectedFor?.let { "Disconnected · $it" } ?: display.stateText
+    return offlineFor?.let { "Disconnected · $it" } ?: display.status
 }
 
 /** Range · charge limit · charging state, as one quiet line under the hero. */
