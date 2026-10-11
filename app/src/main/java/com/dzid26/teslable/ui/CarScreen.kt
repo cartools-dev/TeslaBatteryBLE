@@ -76,6 +76,7 @@ import com.dzid26.teslable.core.history.HistoryRange
 import com.dzid26.teslable.core.history.StatusSample
 import com.dzid26.teslable.core.history.chargeProjection
 import com.dzid26.teslable.core.history.chargeStats
+import com.dzid26.teslable.core.history.compactDuration
 import com.dzid26.teslable.core.history.dischargeProjection
 import com.dzid26.teslable.core.history.statusDurations
 import com.dzid26.teslable.core.history.within
@@ -299,33 +300,29 @@ internal fun HeroCard(
                     )
                 }
                 Spacer(Modifier.height(12.dp))
+                connection?.status?.let { status ->
+                    Text(vehicleStatusText(status, durations), style = MaterialTheme.typography.bodySmall)
+                    Spacer(Modifier.height(8.dp))
+                }
                 SocBlock(
                     reading = reading,
                     live = charge?.battery_level != null,
                     lastKnown = lastKnown,
                     stateText = display.stateText,
+                    connection = connection,
+                    nowMillis = nowMillis,
                 )
                 Spacer(Modifier.height(8.dp))
-                connection?.status?.let { status ->
-                    Text(vehicleStatusText(status, durations), style = MaterialTheme.typography.bodySmall)
-                }
                 ChargeDetails(charge)
             }
             // The card's top-right corner, clear of the title and the pill: a spinner while a
-            // read is in flight, and how old a stale reading is.
+            // read is in flight.
             Row(
                 modifier = Modifier.align(Alignment.TopEnd).padding(top = 6.dp, end = 12.dp),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(6.dp),
             ) {
                 ReadingSpinner(connection, forceVisible = spinnerOverride)
-                reading?.ageLabel(nowMillis, connection)?.let { age ->
-                    Text(
-                        text = age,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                }
             }
         }
     }
@@ -337,7 +334,7 @@ private fun ChargeDetails(charge: ChargeState?) {
     if (charge == null) return
     val details =
         buildList {
-            charge.battery_range?.let { add("${formatRangeMiles(it)} mi") }
+            charge.battery_range?.let { add("Range ${formatRangeMiles(it)} mi") }
             charge.charge_limit_soc?.let { add("Charge limit $it%") }
             charge.chargingStateKind?.let { add(chargingStateText(it)) }
         }
@@ -353,7 +350,8 @@ private fun ChargeDetails(charge: ChargeState?) {
 /**
  * The big battery reading, colored like the cars list: primary while fresh,
  * outline once stale. With no reading at all, the connection state shows
- * instead. How old a stale reading is shows in the card's top-right corner.
+ * instead. How old a stale reading is sits right of the "%", and how long a
+ * disconnected car has been shows under the state line.
  */
 @Composable
 private fun SocBlock(
@@ -361,14 +359,17 @@ private fun SocBlock(
     live: Boolean,
     lastKnown: BatterySample?,
     stateText: String,
+    connection: TeslaConnection?,
+    nowMillis: Long,
 ) {
     if (reading == null) {
         Text(text = stateText, style = MaterialTheme.typography.headlineSmall)
+        DisconnectedFor(connection, stateText, nowMillis)
         return
     }
     val color = if (reading.stale) MaterialTheme.colorScheme.outline else MaterialTheme.colorScheme.primary
-    // The number and the "%" share one text baseline.
-    Row {
+    // The number, the "%", and the reading's age share one text baseline.
+    Row(verticalAlignment = Alignment.Bottom) {
         Text(
             text = "${reading.value}",
             style = MaterialTheme.typography.displayLarge,
@@ -382,6 +383,14 @@ private fun SocBlock(
             color = color,
             modifier = Modifier.alignByBaseline(),
         )
+        reading.ageLabel(nowMillis, connection)?.let { age ->
+            Text(
+                text = age,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.alignByBaseline().padding(start = 6.dp),
+            )
+        }
     }
     if (live) {
         Spacer(Modifier.height(8.dp))
@@ -398,12 +407,34 @@ private fun SocBlock(
         // The stored sample carries its own range; a live one shows it below.
         lastKnown?.ratedRangeMiles?.let { miles ->
             Text(
-                text = "${formatRangeMiles(miles)} mi",
+                text = "Range ${formatRangeMiles(miles)} mi",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
     }
+    DisconnectedFor(connection, stateText, nowMillis)
+}
+
+/**
+ * How long the car has been disconnected, under the state line: "for 12m".
+ * Only when the state reads "Disconnected" and the link's drop is timed;
+ * under a minute there is nothing to say yet.
+ */
+@Composable
+private fun DisconnectedFor(
+    connection: TeslaConnection?,
+    stateText: String,
+    nowMillis: Long,
+) {
+    val since = connection?.disconnectedAtMillis
+    if (stateText != "Disconnected" || since == null) return
+    val forText = compactDuration(nowMillis - since) ?: return
+    Text(
+        text = "for $forText",
+        style = MaterialTheme.typography.bodySmall,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+    )
 }
 
 /** True when the app key is enrolled (or just was): the car can authenticate. */

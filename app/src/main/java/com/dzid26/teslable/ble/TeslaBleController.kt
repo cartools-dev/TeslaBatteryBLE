@@ -899,7 +899,11 @@ class TeslaBleController(
             wakeAfterSession = false
             pendingPairCheck = false
             updateConnection(address) {
-                it.copy(phase = ConnectionPhase.IDLE, sessions = emptyList())
+                it.copy(
+                    phase = ConnectionPhase.IDLE,
+                    sessions = emptyList(),
+                    disconnectedAtMillis = System.currentTimeMillis(),
+                )
             }
         }
 
@@ -1642,12 +1646,21 @@ class TeslaBleController(
                             } == true
                         val display = if (hadData) ConnectionPhase.DISCONNECTED else ConnectionPhase.FAILED
                         this@VehicleLink.phase = display
-                        updateConnection(address) { it.copy(phase = display) }
+                        updateConnection(address) {
+                            it.copy(phase = display, disconnectedAtMillis = System.currentTimeMillis())
+                        }
                         scheduleReconnect()
                         return
                     }
                     this@VehicleLink.phase = phase
-                    updateConnection(address) { it.copy(phase = phase) }
+                    updateConnection(address) {
+                        it.copy(
+                            phase = phase,
+                            // A reconnect attempt keeps the original drop time; a fresh READY link clears it.
+                            disconnectedAtMillis =
+                                if (phase == ConnectionPhase.READY) null else it.disconnectedAtMillis,
+                        )
+                    }
                     if (phase == ConnectionPhase.READY) {
                         reconnectAttempts = 0
                         nextRetryAtMs = 0

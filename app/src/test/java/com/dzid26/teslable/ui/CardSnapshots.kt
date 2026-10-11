@@ -194,6 +194,7 @@ class CardSnapshots {
                         address = ADDRESS,
                         name = BLE_NAME,
                         phase = ConnectionPhase.DISCONNECTED,
+                        disconnectedAtMillis = NOW - STALE_MINUTES * MINUTE,
                     ),
                 advert = advert,
                 vehicle = vehicle,
