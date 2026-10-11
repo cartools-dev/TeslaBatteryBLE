@@ -29,6 +29,7 @@ Light and dark themes, side by side.
 
 - **Scan & connect** to nearby Teslas by advertised BLE name, with VIN-based hinting
 - **Pair a key** (CHARGING_MANAGER role by default) via Tesla's unsigned `addKey` flow: NFC card tap on the console + vehicle confirmation
+- **No extra BLE channel** — the car reserves one BLE channel per connected device, not per app. A dongle or keyfob always takes its own channel; the app shares your phone's link, so installed on the same phone as Tesla's phone-key app it adds no channel at all
 - **Read battery SOC** and charge state over an authenticated, encrypted session; a
   reading is blue only while it is current (under 5 minutes old, the link up and the car
   awake); after that, or as soon as the link drops or the car sleeps, it turns gray and

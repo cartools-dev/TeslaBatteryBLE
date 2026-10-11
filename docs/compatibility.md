@@ -44,7 +44,10 @@ user action.
   ([ADR-0004](adr/0004-per-vehicle-links.md)).
 - The car stops BLE advertising when its BLE connection slots are full, so a
   missing car in the scan list can mean full slots rather than out of range
-  (VCSEC allows roughly 3 simultaneous BLE links).
+  (VCSEC allows roughly 3 simultaneous BLE links). One channel is reserved per
+  client device, not per app: two apps on the same phone share the phone's
+  link, so TeslaBatteryBLE adds no channel when installed alongside Tesla's
+  phone-key app (verified in-car, 2026-10-11).
 - Polling is request/response only (no push): roughly 10 s VCSEC cadence
   while tracking, and roughly 10 s Infotainment polling while the car is
   awake (e.g. while charging). Faster polling can keep the car awake.

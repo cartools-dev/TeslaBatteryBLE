@@ -222,8 +222,9 @@ Verified by case-insensitive search of all pinned `*.proto` for each term
 - **Polling**: request/response only; practical cadence ~10 s VCSEC asleep /
   ~10 s infotainment while awake (matches ADR-0001). Each `GetState` is one
   category per round trip over 256-byte-MTU-chunked BLE (`protocol.md`;
-  ADR-0001 framing notes). VCSEC: max ~3 concurrent BLE links total, avoid
-  parallel VCSEC requests. Faster polling keeps the car awake and drains
+  ADR-0001 framing notes). VCSEC: max ~3 concurrent BLE links total — counted
+  per client device, so two apps on one phone share a channel (verified
+  in-car, 2026-10-11); avoid parallel VCSEC requests. Faster polling keeps the car awake and drains
   battery — back off when `vehicleSleepStatus` says asleep / charge complete.
 - **Sessions**: per-domain ECDH handshakes (VCSEC + Infotainment separately),
   AES-GCM over BLE (HMAC over Fleet API), counters per epoch, clock tracking

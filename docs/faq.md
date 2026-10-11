@@ -22,8 +22,10 @@ Common causes:
 - The car advertises a BLE name of the form `S<8 hex chars of sha1(vin)>C`,
   so look for an unfamiliar short name rather than a friendly model name.
 - Advertising stops when the car's BLE connection slots are full — "not
-  visible" can mean slots are full, not out of range. Move other BLE clients
-  (such as keyfobs or phones holding a connection) away or disconnect them.
+  visible" can mean slots are full, not out of range. The app works alongside
+  the official Tesla app on the same phone without taking an extra channel.
+  Move other devices (keyfobs, dongles, other phones holding a connection)
+  away or disconnect them.
 - The phone must have Bluetooth switched on, and on Android, location
   services must be on for BLE scanning to return results. The app never reads
   or stores device location.
