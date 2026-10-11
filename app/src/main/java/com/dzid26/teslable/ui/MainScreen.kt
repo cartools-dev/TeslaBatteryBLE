@@ -642,6 +642,7 @@ internal fun TrackingToggle(
 internal fun StatusPill(
     connection: TeslaConnection?,
     onAsleepClick: (() -> Unit)? = null,
+    modifier: Modifier = Modifier,
 ) {
     val (container, content, label) =
         when {
@@ -678,7 +679,7 @@ internal fun StatusPill(
         color = container,
         contentColor = content,
         shape = RoundedCornerShape(50),
-        modifier = if (asleep && onAsleepClick != null) Modifier.clickable { onAsleepClick() } else Modifier,
+        modifier = if (asleep && onAsleepClick != null) modifier.clickable { onAsleepClick() } else modifier,
     ) {
         Text(
             text = label,

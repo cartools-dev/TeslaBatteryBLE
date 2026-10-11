@@ -32,6 +32,8 @@ data class TeslaConnection(
     val charge: ChargeState? = null,
     /** When [charge] was last read; null until the first charge response. */
     val chargeAtMillis: Long? = null,
+    /** When the link last dropped; null while READY, so a disconnected car can show how long it has been. */
+    val disconnectedAtMillis: Long? = null,
     /** An Infotainment read (charge, drive, closures, climate) is in flight; the VCSEC status poll does not count. */
     val readInFlight: Boolean = false,
     /** Pairing flow state for this car; idle unless a Pair is in flight. */
