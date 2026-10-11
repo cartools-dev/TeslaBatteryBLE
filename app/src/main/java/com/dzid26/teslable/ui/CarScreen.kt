@@ -58,6 +58,7 @@ import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.unit.dp
 import com.dzid26.teslable.ble.BatteryPercent
 import com.dzid26.teslable.ble.BleUiState
+import com.dzid26.teslable.ble.ConnectionDisplay
 import com.dzid26.teslable.ble.ConnectionPhase
 import com.dzid26.teslable.ble.PairingPhase
 import com.dzid26.teslable.ble.TeslaAdvert
@@ -276,10 +277,15 @@ internal fun HeroCard(
                             )
                         }
                         Text(
-                            text = display.status,
+                            text = heroStatusText(connection, display, nowMillis),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
+                        // The vehicle statuses sit right under the connection state,
+                        // so the block reads as one unit above the percentage.
+                        connection?.status?.let { status ->
+                            Text(vehicleStatusText(status, durations), style = MaterialTheme.typography.bodySmall)
+                        }
                         if (pairing == PairingPhase.OK) {
                             // Only shown for the pairing that just succeeded; the
                             // Tesla screen calls the key Phone Key, so this hint does.
@@ -300,10 +306,6 @@ internal fun HeroCard(
                     )
                 }
                 Spacer(Modifier.height(12.dp))
-                connection?.status?.let { status ->
-                    Text(vehicleStatusText(status, durations), style = MaterialTheme.typography.bodySmall)
-                    Spacer(Modifier.height(8.dp))
-                }
                 SocBlock(
                     reading = reading,
                     live = charge?.battery_level != null,
@@ -328,6 +330,25 @@ internal fun HeroCard(
     }
 }
 
+/**
+ * The car-view status line. The live RSSI only means anything on a READY
+ * link; a disconnected car instead shows how long it has been, and the scan
+ * advert's signal (kept on the cars list, where it stands in for a live
+ * reading) would be noise here.
+ */
+private fun heroStatusText(
+    connection: TeslaConnection?,
+    display: ConnectionDisplay,
+    nowMillis: Long,
+): String {
+    if (connection?.phase == ConnectionPhase.READY) return display.status
+    val disconnectedFor =
+        connection?.disconnectedAtMillis
+            ?.takeIf { display.stateText == "Disconnected" }
+            ?.let { compactDuration(nowMillis - it) }
+    return disconnectedFor?.let { "Disconnected · $it" } ?: display.stateText
+}
+
 /** Range · charge limit · charging state, as one quiet line under the hero. */
 @Composable
 private fun ChargeDetails(charge: ChargeState?) {
@@ -350,8 +371,7 @@ private fun ChargeDetails(charge: ChargeState?) {
 /**
  * The big battery reading, colored like the cars list: primary while fresh,
  * outline once stale. With no reading at all, the connection state shows
- * instead. How old a stale reading is sits right of the "%", and how long a
- * disconnected car has been shows under the state line.
+ * instead. How old a stale reading is sits right of the "%".
  */
 @Composable
 private fun SocBlock(
@@ -364,7 +384,6 @@ private fun SocBlock(
 ) {
     if (reading == null) {
         Text(text = stateText, style = MaterialTheme.typography.headlineSmall)
-        DisconnectedFor(connection, stateText, nowMillis)
         return
     }
     val color = if (reading.stale) MaterialTheme.colorScheme.outline else MaterialTheme.colorScheme.primary
@@ -413,28 +432,6 @@ private fun SocBlock(
             )
         }
     }
-    DisconnectedFor(connection, stateText, nowMillis)
-}
-
-/**
- * How long the car has been disconnected, under the state line: "for 12m".
- * Only when the state reads "Disconnected" and the link's drop is timed;
- * under a minute there is nothing to say yet.
- */
-@Composable
-private fun DisconnectedFor(
-    connection: TeslaConnection?,
-    stateText: String,
-    nowMillis: Long,
-) {
-    val since = connection?.disconnectedAtMillis
-    if (stateText != "Disconnected" || since == null) return
-    val forText = compactDuration(nowMillis - since) ?: return
-    Text(
-        text = "for $forText",
-        style = MaterialTheme.typography.bodySmall,
-        color = MaterialTheme.colorScheme.onSurfaceVariant,
-    )
 }
 
 /** True when the app key is enrolled (or just was): the car can authenticate. */
