@@ -264,7 +264,9 @@ internal fun HeroCard(
     ) {
         Box {
             Column(Modifier.padding(16.dp)) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
+                // The pill sits on the title's line: its bottom meets the
+                // title's, so it reads as one header, clear of the spinner.
+                Row(verticalAlignment = Alignment.Top) {
                     Column(Modifier.weight(1f)) {
                         Text(display.title, style = MaterialTheme.typography.titleMedium)
                         // The app key state sits above the connection state: it is
@@ -331,10 +333,8 @@ internal fun HeroCard(
 }
 
 /**
- * The car-view status line. The live RSSI only means anything on a READY
- * link; a disconnected car instead shows how long it has been, and the scan
- * advert's signal (kept on the cars list, where it stands in for a live
- * reading) would be noise here.
+ * The car-view status line: a disconnected car reads "Disconnected · 12m"
+ * instead of a stale scan RSSI. READY links keep the shared status untouched.
  */
 private fun heroStatusText(
     connection: TeslaConnection?,
@@ -343,7 +343,8 @@ private fun heroStatusText(
 ): String {
     if (connection?.phase == ConnectionPhase.READY) return display.status
     val disconnectedFor =
-        connection?.disconnectedAtMillis
+        connection
+            ?.disconnectedAtMillis
             ?.takeIf { display.stateText == "Disconnected" }
             ?.let { compactDuration(nowMillis - it) }
     return disconnectedFor?.let { "Disconnected · $it" } ?: display.stateText
