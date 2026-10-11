@@ -11,7 +11,8 @@ name: PR paparazzi comment
 # input. The upload token comes from the `release` environment. The shots are
 # hosted as user attachments, so neither the PR nor the releases carry image
 # assets. The comment also links the debug APK that Android CI built for the
-# same commit, when there is one.
+# same commit, when there is one. Previous rounds' comments are minimized as
+# outdated, so only the newest diff stays expanded.
 on:
   workflow_run:
     workflows: ["PR paparazzi"]
@@ -256,3 +257,21 @@ jobs:
           comment-tag: pr-paparazzi-${{ steps.meta.outputs.short }}
           pr-number: ${{ steps.meta.outputs.pr }}
           github-token: ${{ github.token }}
+
+      # Collapse superseded rounds: minimize previous bot comments as outdated,
+      # so only the newest diff stays expanded. History is preserved, collapsed.
+      - name: Minimize superseded comments
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR: ${{ steps.meta.outputs.pr }}
+          SHORT_SHA: ${{ steps.meta.outputs.short }}
+        run: |
+          set -euo pipefail
+          nodes="$(gh api "repos/$GITHUB_REPOSITORY/issues/$PR/comments?per_page=100" \
+            --jq '[.[] | select((.body // "") | contains("<!-- pr-paparazzi -->")) | select(.body | contains("pr-paparazzi-'"$SHORT_SHA"'") | not) | .node_id] | .[]' || true)"
+          query="mutation Minimize(\$id: ID!) { minimizeComment(input: {subjectId: \$id, classifier: OUTDATED }) { minimizedComment { isMinimized } } }"
+          while IFS= read -r node; do
+            [ -n "$node" ] || continue
+            gh api graphql -f query="$query" -f id="$node" --jq '.data.minimizeComment.minimizedComment.isMinimized' > /dev/null ||
+              echo "::warning::could not minimize a superseded snapshots comment"
+          done <<< "$nodes"
