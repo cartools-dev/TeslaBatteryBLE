@@ -34,7 +34,7 @@
   <header>
     <div class="container">
       <h1>TeslaBatteryBLE</h1>
-      <p class="tagline">An Android app that talks to a Tesla over Bluetooth LE: battery state, charge state, and a local history. Pair it with your car — the keys stay safely on your phone. No dongle or extra hardware — just your smartphone.</p>
+      <p class="tagline">An Android app that talks to a Tesla over Bluetooth LE: battery state, charge state, and a local history. Pair it with your car — the keys stay safely on your phone. No dongle or extra hardware — just your smartphone. Works alongside the official Tesla app.</p>
       <div class="cta-group">
         <a class="button button-primary" href="https://github.com/dzid26/TeslaBatteryBLE/releases">Get APK prerelease</a>
         <a href="https://apps.obtainium.imranr.dev/redirect?r=obtainium://app/%7B%22id%22%3A%22com.dzid26.teslable%22%2C%22url%22%3A%22https%3A%2F%2Fgithub.com%2Fdzid26%2FTeslaBatteryBLE%22%2C%22author%22%3A%22dzid26%22%2C%22name%22%3A%22TeslaBatteryBLE%22%7D"><img class="store-badge" src="images/obtainium-badge.png" alt="Get it on Obtainium"></a>
@@ -105,9 +105,10 @@
             <li>Scan for cars and and look for your car name. You will be able to check basics status of the car (awake, locked, user present)</li>
             <li>To pair with the car, you will need your Tesla NFC key card on hand. Press pair button on your selected car in the app.
             <li>When the app says it is waiting, hold the NFC key card on the center console until the car prompts, then confirm on the car touchscreen.</li>
-            <li>Done: the card reads <strong>App key paired</strong>. You can rename the new Phone Key in <strong>Controls &gt; Locks</strong> on the car screen. The key can read battery data and control charging — it cannot unlock or drive the car.</li>
+            <li>Done: the card reads <strong>App key paired</strong>. You can rename the new Phone Key in <strong>Controls &gt; Locks</strong> on the car screen.</li>
           </ol>
-        </div>
+          <p class="note">The key has a permission to read car ble api and control charging, but it cannot unlock or drive the car.</p>
+         </div>
       </div>
     </section>
 

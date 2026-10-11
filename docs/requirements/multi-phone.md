@@ -20,7 +20,8 @@ complete on every phone. Key cloning would avoid pairing each phone separately.
   direct phone-to-phone (Nearby, Wi-Fi LAN, QR/export), a user-owned cloud, or
   manual CSV export/import. This decides the privacy story.
 - **Connection coordination.** The car allows about three concurrent BLE
-  connections and stops advertising when full. Three tracking phones could
+  connections and stops advertising when full. One channel is reserved per
+  client device (two apps on one phone share it), so three tracking phones
   occupy all slots; clones may need to coordinate who connects (for example one
   active poller at a time).
 - **Key model if cloning.** A shared key means no extra pairing but shared
