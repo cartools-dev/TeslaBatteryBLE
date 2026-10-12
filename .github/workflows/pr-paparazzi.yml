@@ -3,9 +3,10 @@ name: PR paparazzi
 
 # Fast JVM snapshots of the two battery cards (cars-list VehicleCard, car-view
 # HeroCard, 6 states each) and the three full screens (cars list, car view,
-# settings, one representative state each), light AND dark. This workflow builds pull
+# settings, one representative state each), light AND dark, plus each card
+# state once more at Jelly Star width in light only: 42 PNGs total. This workflow builds pull
 # request code, so it runs without secrets and with a read-only token: it
-# records the 30 snapshots for the AFTER commit and the BEFORE commit (the
+# records the 42 snapshots for the AFTER commit and the BEFORE commit (the
 # pushed commit's parent) through .github/scripts/paparazzi-diff.sh — the
 # same script reviewers run locally — byte-compares the PNGs, and uploads
 # only the differing ones (before/after pairs, or after-only when a snapshot
@@ -161,7 +162,7 @@ jobs:
           count=0
           for file in app/src/test/snapshots/images/*.png; do
             base="$(basename "$file")"
-            if [[ "$base" =~ ((vehicle-card|hero-card)_[a-z-]+|screen-[a-z-]+)_(light|dark)\.png$ ]]; then
+            if [[ "$base" =~ ((vehicle-card|hero-card)_[a-z-]+(_jelly)?|screen-[a-z-]+)_(light|dark)\.png$ ]]; then
               cp "$file" "main-snapshots/${BASH_REMATCH[0]}"
               count=$((count + 1))
             else

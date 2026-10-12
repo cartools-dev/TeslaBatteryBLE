@@ -16,6 +16,7 @@ import androidx.compose.ui.unit.dp
 import app.cash.paparazzi.DeviceConfig
 import app.cash.paparazzi.Paparazzi
 import com.android.ide.common.rendering.api.SessionParams
+import com.android.resources.Density
 import com.dzid26.teslable.ble.BleUiState
 import com.dzid26.teslable.ble.ConnectionPhase
 import com.dzid26.teslable.ble.LogEntry
@@ -302,10 +303,11 @@ class CardSnapshots {
     }
 
     /**
-     * One state, two images: the card in the fixed light scheme and in the
-     * fixed dark scheme, rendered SHRINK-wrapped so the bitmap hugs the
-     * card (full-width x content-height, no black void). The theme is
-     * always the last name segment, so the workflow can group by state.
+     * One state, three images: the card in the fixed light scheme and in the
+     * fixed dark scheme, plus a narrow Jelly Star render in light, all
+     * SHRINK-wrapped so each bitmap hugs the card (full-width x
+     * content-height, no black void). The theme is always the last name
+     * segment, so the workflow can group by state.
      */
     private fun snapCard(
         name: String,
@@ -321,6 +323,16 @@ class CardSnapshots {
         }
         paparazzi.snapshot(name + "_dark") {
             CardFrame(darkTheme = true, content = content)
+        }
+        // The Jelly Star (3-inch, 480x854 @320dpi → 240dp) is narrower than
+        // anything Paparazzi ships, so hand-built via copy(); light only,
+        // collapsed in the PR comment next to dark.
+        paparazzi.unsafeUpdateConfig(
+            deviceConfig = jellyStar,
+            renderingMode = SessionParams.RenderingMode.SHRINK,
+        )
+        paparazzi.snapshot(name + "_jelly_light") {
+            CardFrame(darkTheme = false, content = content)
         }
     }
 
@@ -449,6 +461,20 @@ class CardSnapshots {
                 displayName = "Model 3",
             )
         private val advert = TeslaAdvert(name = BLE_NAME, address = ADDRESS, rssi = -70)
+
+        /**
+         * The narrow-width render: Jelly Star dimensions (3-inch, 480x854
+         * @320dpi → 240dp), hand-built because no preset goes that narrow.
+         * Light only; the PR comment keeps it collapsed next to dark.
+         */
+        private val jellyStar =
+            DeviceConfig.NEXUS_5.copy(
+                screenWidth = 480,
+                screenHeight = 854,
+                xdpi = 327,
+                ydpi = 327,
+                density = Density.XHIGH,
+            )
         private val screenState =
             BleUiState(
                 trackingEnabled = true,
