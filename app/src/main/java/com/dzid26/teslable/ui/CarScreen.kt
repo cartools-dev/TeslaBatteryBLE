@@ -663,7 +663,7 @@ private fun BatteryHistoryCard(
                 Text(
                     text =
                         "Since last charge: ${formatDuration(now - it.sinceMillis)}\u00A0ago · " +
-                            "${formatPercent(it.currentPercent)}%\u00A0now · ${formatPercent(it.usedPercent)}%\u00A0used",
+                            "${formatPercent(it.usedPercent)}%\u00A0used",
                     style = MaterialTheme.typography.bodySmall,
                 )
                 Text(

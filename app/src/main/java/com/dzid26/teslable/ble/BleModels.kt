@@ -261,8 +261,8 @@ fun connectionDisplay(
 }
 
 /**
- * The connection states: disconnected, connected while asleep, connected, or
- * connected with a battery percentage.
+ * The connection states: disconnected, connected while asleep, or connected.
+ * The battery percentage lives in the readout, never in the status line.
  */
 private fun connectionStateText(
     connection: TeslaConnection?,
@@ -274,9 +274,6 @@ private fun connectionStateText(
         connection.phase == ConnectionPhase.READY && connection.status?.asleep == true ->
             "Connected \uD83D\uDCA4" +
                 asleepForMillis(connection.status, durations)?.let(::compactDuration)?.let { " ·\u00A0$it" }.orEmpty()
-
-        connection.phase == ConnectionPhase.READY && connection.charge?.battery_level != null ->
-            "Connected ·\u00A0${connection.charge.battery_level}%"
 
         connection.phase == ConnectionPhase.READY -> "Connected"
 
