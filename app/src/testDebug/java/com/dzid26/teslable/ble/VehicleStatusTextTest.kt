@@ -28,26 +28,36 @@ class VehicleStatusTextTest {
 
     @Test
     fun `without durations the line is the plain labels, asleep first`() {
-        assertEquals("Asleep · Locked · User away", vehicleStatusText(asleepLocked))
+        assertEquals("Asleep · Locked · User\u00A0away", vehicleStatusText(asleepLocked))
     }
 
     @Test
     fun `asleep and locked each show how long they have held`() {
         val d = durations(asleepFor = hour + 12 * minute, lockedFor = 3 * hour)
-        assertEquals("Asleep 1h 12m · Locked 3h · User away", vehicleStatusText(asleepLocked, d))
+        assertEquals("Asleep\u00A01h\u00A012m · Locked\u00A03h · User\u00A0away", vehicleStatusText(asleepLocked, d))
     }
 
     @Test
     fun `a duration that is unknown or under a minute is left out`() {
-        assertEquals("Asleep 5m · Locked · User away", vehicleStatusText(asleepLocked, durations(asleepFor = 5 * minute)))
-        assertEquals("Asleep · Locked 3h · User away", vehicleStatusText(asleepLocked, durations(asleepFor = 30_000, lockedFor = 3 * hour)))
-        assertEquals("Asleep · Locked · User away", vehicleStatusText(asleepLocked, durations()))
+        assertEquals("Asleep\u00A05m · Locked · User\u00A0away", vehicleStatusText(asleepLocked, durations(asleepFor = 5 * minute)))
+        assertEquals(
+            "Asleep · Locked\u00A03h · User\u00A0away",
+            vehicleStatusText(
+                asleepLocked,
+                durations(
+                    asleepFor = 30_000,
+                    lockedFor =
+                        3 * hour,
+                ),
+            ),
+        )
+        assertEquals("Asleep · Locked · User\u00A0away", vehicleStatusText(asleepLocked, durations()))
     }
 
     @Test
     fun `a duration for a different value than the live status is not shown`() {
         val d = StatusDurations(asleep = false, locked = false, asleepForMillis = hour, lockedForMillis = hour)
-        assertEquals("Asleep · Locked · User away", vehicleStatusText(asleepLocked, d))
+        assertEquals("Asleep · Locked · User\u00A0away", vehicleStatusText(asleepLocked, d))
         assertNull(asleepForMillis(asleepLocked, d))
     }
 }
