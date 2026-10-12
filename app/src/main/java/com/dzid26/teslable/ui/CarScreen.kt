@@ -337,7 +337,7 @@ internal fun HeroCard(
     }
 }
 
-/** The car-view status line: a disconnected car reads "Disconnected · 12m". */
+/** The car-view status line: a disconnected car reads "Disconnected 12m". */
 private fun heroStatusText(
     display: ConnectionDisplay,
     disconnectedAtMillis: Long?,
@@ -347,7 +347,7 @@ private fun heroStatusText(
         disconnectedAtMillis
             ?.takeIf { display.stateText == "Disconnected" }
             ?.let { compactDuration(nowMillis - it) }
-    return offlineFor?.let { "Disconnected ·\u00A0$it" } ?: display.status
+    return offlineFor?.let { "Disconnected\u00A0$it" } ?: display.status
 }
 
 /** Range · charge limit · charging state, as one quiet line under the hero. */
