@@ -13,7 +13,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import app.cash.paparazzi.DeviceConfig
 import app.cash.paparazzi.Paparazzi
+import com.android.ide.common.rendering.api.SessionParams
 import com.dzid26.teslable.ble.BleUiState
 import com.dzid26.teslable.ble.ConnectionPhase
 import com.dzid26.teslable.ble.LogEntry
@@ -53,6 +55,13 @@ import org.junit.Test
  * no store writes).
  */
 class CardSnapshots {
+    /**
+     * One rule for every snapshot; [snapCard] and [snapScreen] switch its
+     * device and rendering mode up front via `unsafeUpdateConfig` (two
+     * Paparazzi rules cannot live in one class — layoutlib holds a single
+     * scene per thread). Each helper sets both values every time, so the
+     * renders never depend on test order.
+     */
     @get:Rule
     val paparazzi = Paparazzi()
 
@@ -293,13 +302,19 @@ class CardSnapshots {
 
     /**
      * One state, two images: the card in the fixed light scheme and in the
-     * fixed dark scheme. The theme is always the last name segment, so the
-     * workflow can group by state.
+     * fixed dark scheme, rendered SHRINK-wrapped so the bitmap hugs the
+     * card (full-width x content-height, no black void). The theme is
+     * always the last name segment, so the workflow can group by state.
      */
     private fun snapCard(
         name: String,
         content: @Composable () -> Unit,
     ) {
+        paparazzi.unsafeUpdateConfig(
+            // Narrowest phone Paparazzi ships (360dp): the width under test.
+            deviceConfig = DeviceConfig.NEXUS_5,
+            renderingMode = SessionParams.RenderingMode.SHRINK,
+        )
         paparazzi.snapshot(name + "_light") {
             CardFrame(darkTheme = false, content = content)
         }
@@ -308,11 +323,19 @@ class CardSnapshots {
         }
     }
 
-    /** One screen, two images: the full screen, light and dark. */
+    /**
+     * One screen, two images: the full screen in NORMAL mode on a tall
+     * S24-Ultra-like phone (Pixel 7 Pro preset: 1440x3120, 19.5:9
+     * portrait), so scrolled content gets vertical room. Light and dark.
+     */
     private fun snapScreen(
         name: String,
         content: @Composable () -> Unit,
     ) {
+        paparazzi.unsafeUpdateConfig(
+            deviceConfig = DeviceConfig.PIXEL_7_PRO,
+            renderingMode = SessionParams.RenderingMode.NORMAL,
+        )
         paparazzi.snapshot(name + "_light") {
             ScreenFrame(darkTheme = false, content = content)
         }
