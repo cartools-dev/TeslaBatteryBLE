@@ -177,7 +177,7 @@ fun BatteryPercent.ageLabel(
 }
 
 private const val READING_NOW_TEXT = "now"
-private const val READING_UNDER_A_MINUTE_TEXT = "<1m ago"
+private const val READING_UNDER_A_MINUTE_TEXT = "<1m\u00A0ago"
 
 /**
  * The percentage to show for a car: the live charge when there is one,
@@ -219,9 +219,9 @@ fun readingAgeText(ageMillis: Long): String {
     val minutes = ageMillis / 60_000
     return when {
         minutes < 1 -> READING_NOW_TEXT
-        minutes < 60 -> "${minutes}m ago"
-        minutes < 24 * 60 -> "${minutes / 60}h ago"
-        else -> "${minutes / (24 * 60)}d ago"
+        minutes < 60 -> "${minutes}m\u00A0ago"
+        minutes < 24 * 60 -> "${minutes / 60}h\u00A0ago"
+        else -> "${minutes / (24 * 60)}d\u00A0ago"
     }
 }
 
@@ -231,7 +231,7 @@ data class ConnectionDisplay(
     val stateText: String,
     val rssi: Int?,
 ) {
-    val status: String get() = rssi?.let { "$stateText · RSSI $it dBm" } ?: stateText
+    val status: String get() = rssi?.let { "$stateText · RSSI\u00A0$it\u00A0dBm" } ?: stateText
 }
 
 /**
@@ -273,10 +273,10 @@ private fun connectionStateText(
 
         connection.phase == ConnectionPhase.READY && connection.status?.asleep == true ->
             "Connected \uD83D\uDCA4" +
-                asleepForMillis(connection.status, durations)?.let(::compactDuration)?.let { " · $it" }.orEmpty()
+                asleepForMillis(connection.status, durations)?.let(::compactDuration)?.let { " ·\u00A0$it" }.orEmpty()
 
         connection.phase == ConnectionPhase.READY && connection.charge?.battery_level != null ->
-            "Connected · ${connection.charge.battery_level}%"
+            "Connected ·\u00A0${connection.charge.battery_level}%"
 
         connection.phase == ConnectionPhase.READY -> "Connected"
 
@@ -303,7 +303,7 @@ fun vehicleStatusText(
     return listOf(
         withDuration(if (status.asleep) "Asleep" else "Awake", asleepFor),
         withDuration(if (status.locked) "Locked" else "Unlocked", lockedFor),
-        if (status.userPresent) "User present" else "User away",
+        if (status.userPresent) "User\u00A0present" else "User\u00A0away",
     ).joinToString(" · ")
 }
 
@@ -316,7 +316,7 @@ fun asleepForMillis(
 private fun withDuration(
     label: String,
     millis: Long?,
-): String = millis?.let(::compactDuration)?.let { "$label $it" } ?: label
+): String = millis?.let(::compactDuration)?.let { "$label\u00A0$it" } ?: label
 
 /** Friendly names for the per-domain secure sessions. */
 fun sessionNames(sessions: List<String>): String =

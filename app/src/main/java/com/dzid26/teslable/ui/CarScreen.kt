@@ -266,38 +266,15 @@ internal fun HeroCard(
             Column(Modifier.padding(16.dp)) {
                 // The pill sits on the title's line: its bottom meets the
                 // title's, so it reads as one header, clear of the spinner.
+                // Everything else spans the full width below, so a narrow
+                // screen wraps the status lines instead of squeezing them
+                // beside the pill.
                 Row(verticalAlignment = Alignment.Top) {
-                    Column(Modifier.weight(1f)) {
-                        Text(display.title, style = MaterialTheme.typography.titleMedium)
-                        // The app key state sits above the connection state: it is
-                        // what unlocks authenticated reads.
-                        if (keySlot != null || pairing == PairingPhase.OK) {
-                            Text(
-                                text = keySlot?.let { "App key paired · slot $it" } ?: "App key paired",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            )
-                        }
-                        Text(
-                            text = heroStatusText(display, connection?.disconnectedAtMillis, nowMillis),
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                        // The vehicle statuses sit right under the connection state,
-                        // so the block reads as one unit above the percentage.
-                        connection?.status?.let { status ->
-                            Text(vehicleStatusText(status, durations), style = MaterialTheme.typography.bodySmall)
-                        }
-                        if (pairing == PairingPhase.OK) {
-                            // Only shown for the pairing that just succeeded; the
-                            // Tesla screen calls the key Phone Key, so this hint does.
-                            Text(
-                                text = "Rename the Phone Key in Controls > Locks on the Tesla screen.",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.primary,
-                            )
-                        }
-                    }
+                    Text(
+                        text = display.title,
+                        style = MaterialTheme.typography.titleMedium,
+                        modifier = Modifier.weight(1f),
+                    )
                     StatusPill(
                         connection = connection,
                         onAsleepClick = {
@@ -305,6 +282,34 @@ internal fun HeroCard(
                                 .makeText(context, "Swipe down to wake the car", Toast.LENGTH_SHORT)
                                 .show()
                         },
+                    )
+                }
+                // The app key state sits above the connection state: it is
+                // what unlocks authenticated reads.
+                if (keySlot != null || pairing == PairingPhase.OK) {
+                    Text(
+                        text = keySlot?.let { "App key paired · slot\u00A0$it" } ?: "App key paired",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+                Text(
+                    text = heroStatusText(display, connection?.disconnectedAtMillis, nowMillis),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                // The vehicle statuses sit right under the connection state,
+                // so the block reads as one unit above the percentage.
+                connection?.status?.let { status ->
+                    Text(vehicleStatusText(status, durations), style = MaterialTheme.typography.bodySmall)
+                }
+                if (pairing == PairingPhase.OK) {
+                    // Only shown for the pairing that just succeeded; the
+                    // Tesla screen calls the key Phone Key, so this hint does.
+                    Text(
+                        text = "Rename the Phone Key in Controls > Locks on the Tesla screen.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.primary,
                     )
                 }
                 Spacer(Modifier.height(12.dp))
@@ -342,7 +347,7 @@ private fun heroStatusText(
         disconnectedAtMillis
             ?.takeIf { display.stateText == "Disconnected" }
             ?.let { compactDuration(nowMillis - it) }
-    return offlineFor?.let { "Disconnected · $it" } ?: display.status
+    return offlineFor?.let { "Disconnected ·\u00A0$it" } ?: display.status
 }
 
 /** Range · charge limit · charging state, as one quiet line under the hero. */
@@ -351,8 +356,8 @@ private fun ChargeDetails(charge: ChargeState?) {
     if (charge == null) return
     val details =
         buildList {
-            charge.battery_range?.let { add("Range ${formatRangeMiles(it)} mi") }
-            charge.charge_limit_soc?.let { add("Charge limit $it%") }
+            charge.battery_range?.let { add("Range\u00A0${formatRangeMiles(it)}\u00A0mi") }
+            charge.charge_limit_soc?.let { add("Charge limit\u00A0$it%") }
             charge.chargingStateKind?.let { add(chargingStateText(it)) }
         }
     if (details.isNotEmpty()) {
@@ -422,7 +427,7 @@ private fun SocBlock(
         // The stored sample carries its own range; a live one shows it below.
         lastKnown?.ratedRangeMiles?.let { miles ->
             Text(
-                text = "Range ${formatRangeMiles(miles)} mi",
+                text = "Range\u00A0${formatRangeMiles(miles)}\u00A0mi",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -462,7 +467,7 @@ private fun KeyCard(
                         text =
                             when {
                                 !paired -> "Not paired"
-                                keySlot != null -> "Paired · slot $keySlot"
+                                keySlot != null -> "Paired · slot\u00A0$keySlot"
                                 else -> "Paired"
                             },
                         style = MaterialTheme.typography.bodySmall,
@@ -657,12 +662,12 @@ private fun BatteryHistoryCard(
                 Spacer(Modifier.height(8.dp))
                 Text(
                     text =
-                        "Since last charge: ${formatDuration(now - it.sinceMillis)} ago · " +
-                            "${formatPercent(it.currentPercent)}% now · ${formatPercent(it.usedPercent)}% used",
+                        "Since last charge: ${formatDuration(now - it.sinceMillis)}\u00A0ago · " +
+                            "${formatPercent(it.currentPercent)}%\u00A0now · ${formatPercent(it.usedPercent)}%\u00A0used",
                     style = MaterialTheme.typography.bodySmall,
                 )
                 Text(
-                    text = "min ${formatPercent(it.minPercent)}% · max ${formatPercent(it.maxPercent)}%",
+                    text = "min\u00A0${formatPercent(it.minPercent)}% · max\u00A0${formatPercent(it.maxPercent)}%",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -840,8 +845,8 @@ private fun formatDuration(millis: Long): String {
     val days = minutes / (24 * 60)
     val hours = minutes % (24 * 60) / 60
     return when {
-        days > 0 -> "${days}d ${hours}h"
-        hours > 0 -> "${hours}h ${minutes % 60}m"
+        days > 0 -> "${days}d\u00A0${hours}h"
+        hours > 0 -> "${hours}h\u00A0${minutes % 60}m"
         else -> "${minutes}m"
     }
 }

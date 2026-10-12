@@ -138,10 +138,10 @@ class StatusDurationsTest {
         assertEquals("1m", compactDuration(minute))
         assertEquals("59m", compactDuration(hour - 1))
         assertEquals("1h", compactDuration(hour))
-        assertEquals("1h 12m", compactDuration(hour + 12 * minute))
+        assertEquals("1h\u00A012m", compactDuration(hour + 12 * minute))
         assertEquals("3h", compactDuration(3 * hour))
-        assertEquals("23h 59m", compactDuration(24 * hour - 1))
+        assertEquals("23h\u00A059m", compactDuration(24 * hour - 1))
         assertEquals("1d", compactDuration(24 * hour))
-        assertEquals("2d 4h", compactDuration(52 * hour + 30 * minute))
+        assertEquals("2d\u00A04h", compactDuration(52 * hour + 30 * minute))
     }
 }

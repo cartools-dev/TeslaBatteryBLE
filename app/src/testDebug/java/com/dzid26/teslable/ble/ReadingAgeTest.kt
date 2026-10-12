@@ -29,26 +29,26 @@ class ReadingAgeTest {
 
     @Test
     fun `minutes read whole from the first minute`() {
-        assertEquals("1m ago", readingAgeText(minute))
-        assertEquals("3m ago", readingAgeText(3 * minute))
-        assertEquals("5m ago", readingAgeText(6 * minute - 1))
-        assertEquals("12m ago", readingAgeText(12 * minute))
-        assertEquals("59m ago", readingAgeText(hour - 1))
+        assertEquals("1m\u00A0ago", readingAgeText(minute))
+        assertEquals("3m\u00A0ago", readingAgeText(3 * minute))
+        assertEquals("5m\u00A0ago", readingAgeText(6 * minute - 1))
+        assertEquals("12m\u00A0ago", readingAgeText(12 * minute))
+        assertEquals("59m\u00A0ago", readingAgeText(hour - 1))
     }
 
     @Test
     fun `hours round down`() {
-        assertEquals("1h ago", readingAgeText(hour))
-        assertEquals("1h ago", readingAgeText(2 * hour - 1))
-        assertEquals("23h ago", readingAgeText(day - 1))
+        assertEquals("1h\u00A0ago", readingAgeText(hour))
+        assertEquals("1h\u00A0ago", readingAgeText(2 * hour - 1))
+        assertEquals("23h\u00A0ago", readingAgeText(day - 1))
     }
 
     @Test
     fun `days round down`() {
-        assertEquals("1d ago", readingAgeText(day))
-        assertEquals("1d ago", readingAgeText(2 * day - 1))
-        assertEquals("3d ago", readingAgeText(3 * day))
-        assertEquals("40d ago", readingAgeText(40 * day))
+        assertEquals("1d\u00A0ago", readingAgeText(day))
+        assertEquals("1d\u00A0ago", readingAgeText(2 * day - 1))
+        assertEquals("3d\u00A0ago", readingAgeText(3 * day))
+        assertEquals("40d\u00A0ago", readingAgeText(40 * day))
     }
 
     private fun liveConnection(
@@ -90,7 +90,7 @@ class ReadingAgeTest {
         val connection = liveConnection(readAt, status = asleep)
         val reading = batteryPercent(connection, null, now)
         assertEquals(true, reading?.stale)
-        assertEquals("4m ago", reading?.ageLabel(now, connection))
+        assertEquals("4m\u00A0ago", reading?.ageLabel(now, connection))
     }
 
     @Test
@@ -98,7 +98,7 @@ class ReadingAgeTest {
         val readAt = 1_000_000L
         val now = readAt + 3 * minute
         val connection = liveConnection(readAt, status = asleep)
-        assertEquals("3m ago", batteryPercent(connection, null, now)?.ageLabel(now, connection))
+        assertEquals("3m\u00A0ago", batteryPercent(connection, null, now)?.ageLabel(now, connection))
     }
 
     @Test
@@ -114,12 +114,12 @@ class ReadingAgeTest {
         val readAt = 1_000_000L
         val now = readAt + 20_000
         val disconnected = liveConnection(readAt, phase = ConnectionPhase.DISCONNECTED)
-        assertEquals("<1m ago", batteryPercent(disconnected, null, now)?.ageLabel(now, disconnected))
+        assertEquals("<1m\u00A0ago", batteryPercent(disconnected, null, now)?.ageLabel(now, disconnected))
         // No connection at all (a stored fallback): the same.
         val stored = batteryPercent(null, storedSample(carTimestamp = now, readAt = readAt), now)
-        assertEquals("<1m ago", stored?.ageLabel(now, null))
+        assertEquals("<1m\u00A0ago", stored?.ageLabel(now, null))
         // Older ages are unaffected.
-        assertEquals("3m ago", stored?.ageLabel(readAt + 3 * minute, null))
+        assertEquals("3m\u00A0ago", stored?.ageLabel(readAt + 3 * minute, null))
     }
 
     @Test
@@ -168,7 +168,7 @@ class ReadingAgeTest {
         // The car stamped the reply "now" but the phone read it 12 minutes ago.
         val reading = batteryPercent(null, storedSample(carTimestamp = now, readAt = now - 12 * minute), now)
         assertEquals(true, reading?.stale)
-        assertEquals("12m ago", reading?.ageLabel(now, null))
+        assertEquals("12m\u00A0ago", reading?.ageLabel(now, null))
     }
 
     @Test
@@ -186,7 +186,7 @@ class ReadingAgeTest {
 
         fun label(age: Long) = batteryPercent(connection, null, readAt + age)?.ageLabel(readAt + age, connection)
         assertNull(label(4 * minute))
-        assertEquals("5m ago", label(FRESH_READING_MS))
-        assertEquals("2h ago", label(2 * hour))
+        assertEquals("5m\u00A0ago", label(FRESH_READING_MS))
+        assertEquals("2h\u00A0ago", label(2 * hour))
     }
 }

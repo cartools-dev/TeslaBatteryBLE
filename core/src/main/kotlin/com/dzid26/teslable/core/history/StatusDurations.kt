@@ -68,8 +68,8 @@ fun compactDuration(millis: Long): String? {
     return when {
         minutes < 1 -> null
         minutes < 60 -> "${minutes}m"
-        minutes < 24 * 60 -> "${minutes / 60}h" + (minutes % 60).takeIf { it > 0 }?.let { " ${it}m" }.orEmpty()
-        else -> "${minutes / (24 * 60)}d" + (minutes / 60 % 24).takeIf { it > 0 }?.let { " ${it}h" }.orEmpty()
+        minutes < 24 * 60 -> "${minutes / 60}h" + (minutes % 60).takeIf { it > 0 }?.let { "\u00A0${it}m" }.orEmpty()
+        else -> "${minutes / (24 * 60)}d" + (minutes / 60 % 24).takeIf { it > 0 }?.let { "\u00A0${it}h" }.orEmpty()
     }
 }
 
