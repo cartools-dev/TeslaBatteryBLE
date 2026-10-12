@@ -24,6 +24,7 @@ import com.dzid26.teslable.ble.TeslaAdvert
 import com.dzid26.teslable.ble.TeslaConnection
 import com.dzid26.teslable.ble.Vehicle
 import com.dzid26.teslable.core.history.BatterySample
+import com.dzid26.teslable.core.protocol.ChargingStateKind
 import com.tesla.generated.carserver.vehicle.ChargeState
 import com.tesla.generated.vcsec.UserPresence_E
 import com.tesla.generated.vcsec.VehicleLockState_E
@@ -410,6 +411,23 @@ class CardSnapshots {
             readAtMillis = NOW - hoursAgo * HOUR,
         )
 
+        private fun chargeSample(
+            minutesAgo: Long,
+            percent: Int,
+            energyAddedKwh: Float?,
+            milesAddedRated: Float?,
+            chargingState: ChargingStateKind?,
+        ) = BatterySample(
+            timestampMillis = NOW - minutesAgo * MINUTE,
+            batteryLevel = percent,
+            chargingState = chargingState,
+            chargeLimit = null,
+            vehicleId = BLE_NAME,
+            chargeEnergyAdded = energyAddedKwh,
+            chargeMilesAddedRated = milesAddedRated,
+            readAtMillis = NOW - minutesAgo * MINUTE,
+        )
+
         private val liveCharge =
             ChargeState(
                 battery_level = LIVE_PERCENT,
@@ -439,12 +457,23 @@ class CardSnapshots {
                 vehicles = listOf(vehicle),
                 log = listOf(LogEntry(vehicleId = BLE_NAME, message = "$BLE_NAME · Connected · 62%")),
             )
+
+        // Drained to 68%, then one backbone charge (68 → 78%, a 10% swing
+        // with energy and rated-miles growth) so the health card renders
+        // populated — usable capacity + full range from the session's rated
+        // constant — while honestly staying Learning at 1 of 3 sessions.
+        // No charge limit, so the chart shows the run with no projection;
+        // the Complete + parked tail ends the session for the stats line.
         private val screenSamples =
             listOf(
                 historySample(6L, 72),
                 historySample(4L, 70),
                 historySample(2L, 68),
-                historySample(0L, 66),
+                chargeSample(50L, 68, 1.0f, 4.0f, ChargingStateKind.Charging),
+                chargeSample(35L, 73, 3.2f, 13.0f, ChargingStateKind.Charging),
+                chargeSample(20L, 78, 5.5f, 22.0f, ChargingStateKind.Charging),
+                chargeSample(15L, 78, null, null, ChargingStateKind.Complete),
+                historySample(0L, 77),
             )
     }
 }
