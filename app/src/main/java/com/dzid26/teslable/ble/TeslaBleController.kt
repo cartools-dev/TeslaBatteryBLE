@@ -20,9 +20,9 @@ import com.dzid26.teslable.core.protocol.PairingHost
 import com.dzid26.teslable.core.protocol.PairingKeys
 import com.dzid26.teslable.core.protocol.PairingPhase
 import com.dzid26.teslable.core.protocol.PairingTimer
-import com.dzid26.teslable.core.protocol.TeslaKeyPair
 import com.dzid26.teslable.core.protocol.TeslaCommands
 import com.dzid26.teslable.core.protocol.TeslaCrypto
+import com.dzid26.teslable.core.protocol.TeslaKeyPair
 import com.dzid26.teslable.core.protocol.TeslaSession
 import com.dzid26.teslable.core.protocol.TeslaSessionRequests
 import com.dzid26.teslable.core.protocol.TeslaVcsec
