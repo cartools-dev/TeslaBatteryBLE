@@ -678,10 +678,18 @@ internal fun BatteryHistoryCard(
                     Spacer(Modifier.height(6.dp))
                     Text(
                         text =
-                            "Discharging · projected ${it.projectedPercent}% by " +
-                                formatTime(it.projectedAtMillis, showDate = true),
+                            "Parked · projected ${it.projectedPercent}% by " +
+                                formatTime(it.projectedAtMillis, showDate = true) +
+                                " · ${"%.2f".format(it.percentPerHour)}%/h",
                         style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        // The measured line's colour; muted while a charge is
+                        // the main story.
+                        color =
+                            if (charge != null) {
+                                MaterialTheme.colorScheme.onSurfaceVariant
+                            } else {
+                                MaterialTheme.colorScheme.primary
+                            },
                     )
                 }
             }
