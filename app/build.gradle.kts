@@ -130,7 +130,8 @@ android {
         // The smoke build carries the simulated car from the debug source set,
         // so the emulator can drive the shrunk protocol and UI code end to end.
         maybeCreate("smoke").apply {
-            java.srcDir("src/debug/java")
+            // Kotlin sources: AGP built-in Kotlin compiles kotlin dirs, not extra java dirs.
+            kotlin.srcDir("src/debug/java")
             manifest.srcFile("src/debug/AndroidManifest.xml")
         }
     }
