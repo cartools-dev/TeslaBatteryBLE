@@ -27,10 +27,9 @@ an identity that survives BLE address rotation.
   car; the key slot is recorded per vehicle.
 - **History per vehicle.** Rows carry the vehicle id (advertised name); graphs
   and charge stats filter by vehicle.
-- **No migration code.** The only install is the owner's, and its data was
-  converted to the new formats once (history CSV rewritten in place, vehicles
-  store created over the old one). New installs start clean; do not add
-  back-compat paths for formats no install uses.
+- **No migration code.** The app is pre-1.0 and has no users yet, so
+  formats change freely and a reset (re-pair / reinstall) is documented instead
+  of migrated. Revisit once real installs exist.
 
 ## Consequences
 

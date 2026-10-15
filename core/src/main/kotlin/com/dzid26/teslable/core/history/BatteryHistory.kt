@@ -19,8 +19,7 @@ data class BatterySample(
     val chargeLimit: Int?,
     /**
      * Which vehicle the reading came from: the advertised BLE name
-     * (`S<sha1(VIN)[:8]>C`), which is stable before a VIN is known. Empty on
-     * rows written before per-vehicle history existed.
+     * (`S<sha1(VIN)[:8]>C`), which is stable before a VIN is known.
      */
     val vehicleId: String = "",
     /** `battery_range`: rated range in miles at this SOC. */

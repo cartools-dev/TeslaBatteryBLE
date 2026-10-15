@@ -146,7 +146,7 @@ private fun qualityNote(
 private const val LEARNING_SESSIONS = 3
 private const val MEDIUM_SESSIONS = 10
 
-/** The benchmark product needs about twenty sessions for a verdict; high confidence waits for as many. */
+/** High confidence waits for this many sessions. */
 private const val HIGH_SESSIONS = 20
 
 /** A charge swing under this widens the energy-delta error. */
