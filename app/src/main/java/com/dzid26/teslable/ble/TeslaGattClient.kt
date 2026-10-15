@@ -97,6 +97,9 @@ class TeslaGattClient(
 
     @SuppressLint("MissingPermission")
     override fun readRssi() {
+        // One GATT operation in flight: an RSSI read during setup or a chunk write would collide with it. The next
+        // poll picks the value up.
+        if (setupStep != SetupStep.DONE || writeInProgress) return
         gatt?.readRemoteRssi()
     }
 
@@ -108,7 +111,8 @@ class TeslaGattClient(
         val chunk = writeQueue.removeFirstOrNull() ?: return
 
         writeInProgress = true
-        // The Go reference writes with response; write without response is validated on a real car.
+        // The Go reference writes with response. We write without response: chunks are paced on
+        // onCharacteristicWrite, which fires for this type too, and it saves a round trip per chunk.
         val started =
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
                 gatt.writeCharacteristic(
