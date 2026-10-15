@@ -795,8 +795,8 @@ private fun BatteryChart(
         }
 
         charge?.let { target ->
-            // The beam: where the limit lands if the charge power stayed at the
-            // best or worst the supply showed this run.
+            // The beam: where the limit lands if the supply voltage stayed at the
+            // best or worst it showed this run.
             chargeBeamPath(target, ::x, ::y)?.let { beam ->
                 drawPath(path = beam, color = chargingColor.copy(alpha = 0.25f))
             }

@@ -103,28 +103,25 @@ private fun baseChargeProjection(
 }
 
 /**
- * Adds the beam: the AC voltage (and so the power) moves around during a
- * session, so the remaining time at the run's mean power stretches to the
- * time at its highest and lowest power. Needs at least two charging readings
- * with voltage and current, and a spread between them.
+ * Adds the beam: the AC voltage moves around during a session, and at a
+ * fixed current the charge power follows it, so the remaining time at the
+ * run's mean voltage stretches to the time at its highest and lowest
+ * voltage. Needs at least two charging readings with a voltage, and a spread
+ * between them.
  */
 private fun withPowerBeam(
     projection: ChargeProjection,
     samples: List<BatterySample>,
 ): ChargeProjection {
     val runStart = samples.indexOfLast { !it.isCharging } + 1
-    val powers =
+    val volts =
         samples
             .subList(runStart, samples.size)
-            .mapNotNull { sample ->
-                val volts = sample.chargerVoltage?.takeIf { it > 0 } ?: return@mapNotNull null
-                val amps = sample.chargerActualCurrent?.takeIf { it > 0 } ?: return@mapNotNull null
-                volts.toDouble() * amps
-            }
-    if (powers.size < 2) return projection
-    val mean = powers.average()
-    val min = powers.min()
-    val max = powers.max()
+            .mapNotNull { it.chargerVoltage?.takeIf { volts -> volts > 0 }?.toDouble() }
+    if (volts.size < 2) return projection
+    val mean = volts.average()
+    val min = volts.min()
+    val max = volts.max()
     if (max <= min) return projection
     val remaining = (projection.completionMillis - projection.from.timestampMillis).toDouble()
     return projection.copy(
