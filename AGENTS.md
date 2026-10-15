@@ -21,7 +21,7 @@ Master plan: `docs/master-plan.md` — read it first and update its checkboxes w
 
 ## Conventions
 
-- Kotlin official style; match the surrounding code. Imperative commit subjects ("Add ...", "Fix ...").
+- Kotlin official style; match the surrounding code. Commits and PR titles use Conventional Commits prefixes (`feat`, `fix`, `refactor`, `docs`, `test`, `chore`, `ci`, ...) with an imperative subject (`fix: retry the handshake after a stale session`).
 - Protocol changes require test vectors derived from the Go implementation. Never hand-edit `expected.txt`.
 - Never log VINs, private keys, session keys, or decrypted payloads.
 - `core` stays multiplatform-ready: no Android, no new `java.*`/`javax.*` imports in portable logic — platform capabilities go through seams per ADR-0007.
