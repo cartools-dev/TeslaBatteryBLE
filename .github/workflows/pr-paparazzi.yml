@@ -76,7 +76,8 @@ jobs:
 
       # Snapshots recorded for a commit are cached by its SHA, so the next push
       # (whose parent is that commit) skips the BEFORE record, and a PR's first
-      # commit reuses the main baseline. A miss just records as before.
+      # commit reuses the main baseline. A miss (no cache for the parent) just
+      # records both sets, as it always did.
       - name: Restore the cached BEFORE snapshots
         id: before-cache
         if: github.event_name == 'pull_request'
