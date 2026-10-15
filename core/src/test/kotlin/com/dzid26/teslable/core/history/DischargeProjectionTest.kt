@@ -3,6 +3,7 @@
 package com.dzid26.teslable.core.history
 
 import com.dzid26.teslable.core.protocol.ChargingStateKind
+import com.dzid26.teslable.core.protocol.ShiftStateKind
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
@@ -23,10 +24,11 @@ class DischargeProjectionTest {
     private fun drive(
         minutes: Long,
         odometer: Int?,
+        shift: ShiftStateKind? = null,
     ) = DriveSample(
         timestampMillis = minutes * MINUTE,
         vehicleId = "",
-        shiftState = null,
+        shiftState = shift,
         speed = null,
         power = null,
         odometerInHundredthsOfAMile = odometer,
@@ -83,6 +85,22 @@ class DischargeProjectionTest {
         val drives = listOf(drive(0, ODOMETER), drive(60, ODOMETER), drive(300, ODOMETER + 500), drive(360, ODOMETER + 500))
         // Two parked hours lost 2 points: 1 %/h, 3 points over the horizon.
         assertEquals(66, assertNotNull(project(samples, drives)).projectedPercent)
+    }
+
+    @Test
+    fun `a pair read in gear does not count even with a steady odometer`() {
+        // Stopped at a light in D: 36 -> 35 -> 34 in 20 min is driving, not parked drain.
+        val samples = listOf(sample(0, 80), sample(60, 79), sample(70, 78), sample(80, 77), sample(140, 76))
+        val drives =
+            listOf(
+                drive(0, ODOMETER, ShiftStateKind.P),
+                drive(60, ODOMETER, ShiftStateKind.P),
+                drive(70, ODOMETER, ShiftStateKind.D),
+                drive(80, ODOMETER, ShiftStateKind.D),
+                drive(140, ODOMETER, ShiftStateKind.P),
+            )
+        // Only the 0-60 pair is parked: 1 point per hour, 3 over the horizon from 76.
+        assertEquals(73, assertNotNull(project(samples, drives, nowMillis = 141 * MINUTE)).projectedPercent)
     }
 
     @Test
