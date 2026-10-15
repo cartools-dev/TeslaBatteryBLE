@@ -149,8 +149,18 @@ class DischargeProjectionTest {
     }
 
     @Test
-    fun `null while charging`() {
-        assertNull(project(listOf(sample(0, 70, ChargingStateKind.Charging), sample(30, 80, ChargingStateKind.Charging))))
+    fun `still projects the parked drain while charging`() {
+        val samples =
+            listOf(
+                sample(0, 60),
+                sample(60, 59),
+                sample(90, 70, ChargingStateKind.Charging),
+                sample(120, 80, ChargingStateKind.Charging),
+            )
+        val projection = assertNotNull(project(samples))
+        // One parked hour lost 1 point: 1 %/h, 3 points down from the latest 80.
+        assertEquals(77, projection.projectedPercent)
+        assertEquals(1.0, projection.percentPerHour)
     }
 
     @Test

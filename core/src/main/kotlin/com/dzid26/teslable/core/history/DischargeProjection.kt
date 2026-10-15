@@ -16,6 +16,8 @@ data class DischargeProjection(
     val projectedAtMillis: Long,
     /** How far ahead the projection looks: half of the selected range. */
     val horizonMillis: Long,
+    /** The parked drain rate the line follows, in percentage points lost per hour. */
+    val percentPerHour: Double,
 )
 
 /**
@@ -38,7 +40,8 @@ data class DischargeProjection(
  * the parked pairs, so a rounding blip that drops and recovers while parked
  * cancels out instead of inflating the drop.
  *
- * Returns null while charging (the charge projection owns that), once the
+ * While charging it still projects: the line shows where the battery would
+ * head if unplugged now, next to the charge projection. Returns null once the
  * whole projection lies in the past (the last sample is older than the
  * horizon), when the range holds less than [MIN_RATE_SPAN_MILLIS] of parked
  * time, or when the summed drop is not positive: a rising or flat line would
@@ -55,7 +58,6 @@ fun dischargeProjection(
     nowMillis: Long,
 ): DischargeProjection? {
     val last = samples.lastOrNull() ?: return null
-    if (last.isCharging) return null
     val horizon = rangeMillis / 2
     if (nowMillis - last.timestampMillis > horizon) return null
 
@@ -72,6 +74,7 @@ fun dischargeProjection(
         projectedPercent = projected,
         projectedAtMillis = last.timestampMillis + horizon,
         horizonMillis = horizon,
+        percentPerHour = parked.drop.toDouble() * HOUR / parked.millis,
     )
 }
 
@@ -132,6 +135,8 @@ private fun driveReadingsAt(
 }
 
 private const val MINUTE = 60_000L
+
+private const val HOUR = 60 * MINUTE
 
 /** Less parked time than this makes the rate too noisy to extrapolate. */
 private const val MIN_RATE_SPAN_MILLIS = 10 * MINUTE

@@ -634,14 +634,10 @@ internal fun BatteryHistoryCard(
                         ?: (visible.last().timestampMillis - visible.first().timestampMillis)
                             .coerceAtLeast(1L)
                 val charge = chargeProjection(samples)
-                val discharge =
-                    if (charge == null) {
-                        // Parked drain only: the drive samples' odometer marks
-                        // the stretches the car moved.
-                        dischargeProjection(samples, drives, baseMillis, now)
-                    } else {
-                        null
-                    }
+                // Parked drain: the drive samples' odometer marks the
+                // stretches the car moved. Shown next to the charge
+                // projection too: where the battery heads if unplugged now.
+                val discharge = dischargeProjection(samples, drives, baseMillis, now)
                 // The projection gets room on the x-axis: half the range ahead.
                 val windowEnd =
                     if (charge != null || discharge != null) {
@@ -814,7 +810,7 @@ private fun BatteryChart(
                         moveTo(x(target.from.timestampMillis), y(target.from.percent))
                         lineTo(end.x, end.y)
                     },
-                color = lineColor.copy(alpha = 0.65f),
+                color = dischargeChartColor.copy(alpha = 0.65f),
                 style =
                     Stroke(
                         width = 2.dp.toPx(),
@@ -848,6 +844,9 @@ private const val REFRESH_FEEDBACK_MS = 2500L
 
 /** Green shared by charging segments, dots, and the projected line. */
 private val chargingChartColor = Color(0xFF43A047)
+
+/** Blue for the parked-drain projection, the way down next to the green way up. */
+private val dischargeChartColor = Color(0xFF1E88E5)
 
 private val timeFormatter = DateTimeFormatter.ofPattern("HH:mm")
 private val dateTimeFormatter = DateTimeFormatter.ofPattern("dd MMM HH:mm")
