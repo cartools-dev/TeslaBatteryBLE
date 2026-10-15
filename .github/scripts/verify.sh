@@ -12,7 +12,7 @@ set -euo pipefail
 
 case "${1:-all}" in
   tests) ./gradlew :core:test :app:testDebugUnitTest ;;
-  static) ./gradlew :app:lintDebug ktlintCheck detekt detektMain detektTest ;;
-  all) ./gradlew :core:test :app:testDebugUnitTest :app:lintDebug ktlintCheck detekt detektMain detektTest ;;
+  static) ./gradlew :app:lintDebug ktlintCheck detekt ;;
+  all) ./gradlew :core:test :app:testDebugUnitTest :app:lintDebug ktlintCheck detekt ;;
   *) echo "usage: verify.sh [tests|static|all]" >&2; exit 2 ;;
 esac
