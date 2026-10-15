@@ -40,6 +40,12 @@ on:
 permissions:
   contents: read
 
+env:
+  # Task outputs (compiled classes and the like) come from the Gradle build
+  # cache that setup-gradle restores, so the BEFORE record and later pushes
+  # recompile only what changed.
+  GRADLE_OPTS: -Dorg.gradle.caching=true
+
 concurrency:
   group: pr-paparazzi-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
@@ -66,6 +72,8 @@ jobs:
 
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@3f5f9adaf7d9fecd50b5935e54106014257a94e6 # v6
+        with:
+          cache-read-only: false # EXPERIMENT: measure a warm PR run
 
       - name: Make gradlew executable
         run: chmod +x gradlew
