@@ -10,8 +10,11 @@ name: PR paparazzi
 # same script reviewers run locally — byte-compares the PNGs, and uploads
 # only the differing ones (before/after pairs, or after-only when a snapshot
 # is new or the parent predates Paparazzi) plus the PR number and the short
-# SHAs as the `pr-paparazzi` artifact.
-# pr-paparazzi-comment.yml posts the diffs from the default branch. One
+# SHAs as the `pr-paparazzi` artifact. It runs on every pull request (a JVM
+# render is ~2 minutes and runs parallel to the other checks), so the merge
+# gate can uniformly require "artifact exists with zero after-images".
+# pr-paparazzi-comment.yml posts the diffs from the default branch, staying
+# silent when nothing changed (the green run itself is the signal). One
 # comment per ready revision (tagged by SHA), so flipping a PR back to ready
 # after rework posts the next round's diffs instead of overwriting the
 # reviewed one; draft pushes are skipped. Manual runs only record; their
@@ -23,13 +26,13 @@ name: PR paparazzi
 on:
   pull_request:
     types: [opened, synchronize, reopened, ready_for_review]
-    paths:
-      - 'app/**'
-      - '.github/workflows/pr-paparazzi.yml'
   push:
     branches: [main]
+    # The baseline only needs re-recording when rendering inputs change: the
+    # app, or the version catalog holding the Compose BOM.
     paths:
       - 'app/**'
+      - 'gradle/libs.versions.toml'
       - '.github/workflows/pr-paparazzi.yml'
   workflow_dispatch:
 
