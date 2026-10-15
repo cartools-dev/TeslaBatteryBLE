@@ -2,6 +2,7 @@
 
 package com.dzid26.teslable.core.history
 
+import com.dzid26.teslable.core.protocol.ShiftStateKind
 import kotlin.math.abs
 import kotlin.math.roundToInt
 
@@ -15,6 +16,8 @@ data class DischargeProjection(
     val projectedAtMillis: Long,
     /** How far ahead the projection looks: half of the selected range. */
     val horizonMillis: Long,
+    /** The parked drain rate the line follows, in percentage points lost per hour. */
+    val percentPerHour: Double,
 )
 
 /**
@@ -23,10 +26,11 @@ data class DischargeProjection(
  * expanded x-axis.
  *
  * Only parked pairs of consecutive battery samples feed the rate. A pair is
- * parked when neither sample is charging and the odometer did not move
- * between them. Each sample's odometer comes from the [DriveSample] nearest
- * to it in time, within [DRIVE_MATCH_MILLIS] (a drive read follows every
- * charge read). A sample with no such reading is not known to be parked, so
+ * parked when neither sample is charging, neither is in gear (R, N or D: a
+ * car stopped at a light keeps its odometer but is mid-drive), and the
+ * odometer did not move between them. Each sample's drive reading is the
+ * [DriveSample] nearest to it in time, within [DRIVE_MATCH_MILLIS] (a drive
+ * read follows every charge read). A sample with no such reading is not known to be parked, so
  * its pairs are left out. A long gap with no readings still counts when the
  * odometer is unchanged across it: the overnight drop up to the wake-up
  * reading is exactly the drain this projects, while a drive no phone saw
@@ -36,7 +40,8 @@ data class DischargeProjection(
  * the parked pairs, so a rounding blip that drops and recovers while parked
  * cancels out instead of inflating the drop.
  *
- * Returns null while charging (the charge projection owns that), once the
+ * While charging it still projects: the line shows where the battery would
+ * head if unplugged now, next to the charge projection. Returns null once the
  * whole projection lies in the past (the last sample is older than the
  * horizon), when the range holds less than [MIN_RATE_SPAN_MILLIS] of parked
  * time, or when the summed drop is not positive: a rising or flat line would
@@ -53,7 +58,6 @@ fun dischargeProjection(
     nowMillis: Long,
 ): DischargeProjection? {
     val last = samples.lastOrNull() ?: return null
-    if (last.isCharging) return null
     val horizon = rangeMillis / 2
     if (nowMillis - last.timestampMillis > horizon) return null
 
@@ -70,6 +74,7 @@ fun dischargeProjection(
         projectedPercent = projected,
         projectedAtMillis = last.timestampMillis + horizon,
         horizonMillis = horizon,
+        percentPerHour = parked.drop.toDouble() * HOUR / parked.millis,
     )
 }
 
@@ -86,12 +91,18 @@ private fun parkedDrain(
 ): ParkedDrain {
     var drop = 0
     var millis = 0L
-    val odometers = odometersAt(samples, drives)
+    val readings = driveReadingsAt(samples, drives)
     for (index in 1 until samples.size) {
         val a = samples[index - 1]
         val b = samples[index]
-        val odometerA = odometers[index - 1]
-        val stayed = odometerA != null && odometerA == odometers[index]
+        val readingA = readings[index - 1]
+        val readingB = readings[index]
+        val stayed =
+            readingA != null &&
+                readingB != null &&
+                readingA.odometerInHundredthsOfAMile == readingB.odometerInHundredthsOfAMile &&
+                !readingA.inGear &&
+                !readingB.inGear
         if (stayed && !a.isCharging && !b.isCharging) {
             drop += a.percent - b.percent
             millis += b.timestampMillis - a.timestampMillis
@@ -100,15 +111,18 @@ private fun parkedDrain(
     return ParkedDrain(drop, millis)
 }
 
+/** In R, N or D: the car is being driven even if the odometer has not ticked yet. */
+private val DriveSample.inGear: Boolean
+    get() = shiftState == ShiftStateKind.R || shiftState == ShiftStateKind.N || shiftState == ShiftStateKind.D
+
 /**
- * The odometer at each sample: the reading of the drive sample nearest to it,
- * or null when none lies within [DRIVE_MATCH_MILLIS]. One sweep, since both
- * lists are oldest first.
+ * The drive sample nearest to each battery sample, or null when none lies
+ * within [DRIVE_MATCH_MILLIS]. One sweep, since both lists are oldest first.
  */
-private fun odometersAt(
+private fun driveReadingsAt(
     samples: List<BatterySample>,
     drives: List<DriveSample>,
-): List<Int?> {
+): List<DriveSample?> {
     var next = 0
     return samples.map { sample ->
         // Advance to the first drive sample after this battery sample; the
@@ -117,11 +131,12 @@ private fun odometersAt(
         listOfNotNull(drives.getOrNull(next - 1), drives.getOrNull(next))
             .minByOrNull { abs(it.timestampMillis - sample.timestampMillis) }
             ?.takeIf { abs(it.timestampMillis - sample.timestampMillis) <= DRIVE_MATCH_MILLIS }
-            ?.odometerInHundredthsOfAMile
     }
 }
 
 private const val MINUTE = 60_000L
+
+private const val HOUR = 60 * MINUTE
 
 /** Less parked time than this makes the rate too noisy to extrapolate. */
 private const val MIN_RATE_SPAN_MILLIS = 10 * MINUTE

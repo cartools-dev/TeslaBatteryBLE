@@ -73,6 +73,7 @@ import com.dzid26.teslable.core.history.BatterySample
 import com.dzid26.teslable.core.history.ChargeProjection
 import com.dzid26.teslable.core.history.DischargeProjection
 import com.dzid26.teslable.core.history.DriveSample
+import com.dzid26.teslable.core.history.FullRangeScaleEstimator
 import com.dzid26.teslable.core.history.HistoryRange
 import com.dzid26.teslable.core.history.StatusSample
 import com.dzid26.teslable.core.history.chargeProjection
@@ -633,15 +634,15 @@ internal fun BatteryHistoryCard(
                     range.durationMillis
                         ?: (visible.last().timestampMillis - visible.first().timestampMillis)
                             .coerceAtLeast(1L)
-                val charge = chargeProjection(samples)
-                val discharge =
-                    if (charge == null) {
-                        // Parked drain only: the drive samples' odometer marks
-                        // the stretches the car moved.
-                        dischargeProjection(samples, drives, baseMillis, now)
-                    } else {
-                        null
-                    }
+                val charge =
+                    chargeProjection(
+                        samples,
+                        fullRangeMiles = FullRangeScaleEstimator.estimate(samples)?.fullRangeMiles,
+                    )
+                // Parked drain: the drive samples' odometer marks the
+                // stretches the car moved. Shown next to the charge
+                // projection too: where the battery heads if unplugged now.
+                val discharge = dischargeProjection(samples, drives, baseMillis, now)
                 // The projection gets room on the x-axis: half the range ahead.
                 val windowEnd =
                     if (charge != null || discharge != null) {
@@ -677,10 +678,18 @@ internal fun BatteryHistoryCard(
                     Spacer(Modifier.height(6.dp))
                     Text(
                         text =
-                            "Discharging · projected ${it.projectedPercent}% by " +
-                                formatTime(it.projectedAtMillis, showDate = true),
+                            "Parked · projected ${it.projectedPercent}% by " +
+                                formatTime(it.projectedAtMillis, showDate = true) +
+                                " · ${"%.1f".format(it.percentPerHour * 24)}%/day",
                         style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        // The measured line's colour; muted while a charge is
+                        // the main story.
+                        color =
+                            if (charge != null) {
+                                MaterialTheme.colorScheme.onSurfaceVariant
+                            } else {
+                                MaterialTheme.colorScheme.primary
+                            },
                     )
                 }
             }
@@ -814,7 +823,7 @@ private fun BatteryChart(
                         moveTo(x(target.from.timestampMillis), y(target.from.percent))
                         lineTo(end.x, end.y)
                     },
-                color = lineColor.copy(alpha = 0.65f),
+                color = lineColor.copy(alpha = if (charge != null) 0.35f else 0.65f),
                 style =
                     Stroke(
                         width = 2.dp.toPx(),
