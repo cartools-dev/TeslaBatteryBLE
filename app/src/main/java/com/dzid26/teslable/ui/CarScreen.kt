@@ -60,7 +60,6 @@ import com.dzid26.teslable.ble.BatteryPercent
 import com.dzid26.teslable.ble.BleUiState
 import com.dzid26.teslable.ble.ConnectionDisplay
 import com.dzid26.teslable.ble.ConnectionPhase
-import com.dzid26.teslable.ble.PairingPhase
 import com.dzid26.teslable.ble.TeslaAdvert
 import com.dzid26.teslable.ble.TeslaConnection
 import com.dzid26.teslable.ble.Vehicle
@@ -81,6 +80,7 @@ import com.dzid26.teslable.core.history.compactDuration
 import com.dzid26.teslable.core.history.dischargeProjection
 import com.dzid26.teslable.core.history.statusDurations
 import com.dzid26.teslable.core.history.within
+import com.dzid26.teslable.core.protocol.PairingPhase
 import com.dzid26.teslable.core.protocol.asleep
 import com.dzid26.teslable.core.protocol.chargingStateKind
 import com.dzid26.teslable.health.healthSummary
