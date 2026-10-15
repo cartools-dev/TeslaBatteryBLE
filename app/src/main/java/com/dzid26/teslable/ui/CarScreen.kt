@@ -55,6 +55,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.drawText
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.rememberTextMeasurer
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.dzid26.teslable.ble.BatteryPercent
 import com.dzid26.teslable.ble.BleUiState
@@ -80,6 +81,7 @@ import com.dzid26.teslable.core.history.compactDuration
 import com.dzid26.teslable.core.history.dischargeProjection
 import com.dzid26.teslable.core.history.statusDurations
 import com.dzid26.teslable.core.history.within
+import com.dzid26.teslable.core.protocol.ChargingStateKind
 import com.dzid26.teslable.core.protocol.PairingPhase
 import com.dzid26.teslable.core.protocol.asleep
 import com.dzid26.teslable.core.protocol.chargingStateKind
@@ -316,7 +318,7 @@ internal fun HeroCard(
                 SocBlock(
                     reading = reading,
                     live = charge?.battery_level != null,
-                    lastKnown = lastKnown,
+                    rangeMiles = charge?.battery_range ?: lastKnown?.ratedRangeMiles,
                     stateText = display.stateText,
                     connection = connection,
                     nowMillis = nowMillis,
@@ -350,14 +352,14 @@ private fun heroStatusText(
     return offlineFor?.let { "Disconnected\u00A0$it" } ?: display.status
 }
 
-/** Range · charge limit · charging state, as one quiet line under the hero. */
+/** Charge limit · AC voltage and current · charging state, as one quiet line under the hero. */
 @Composable
 private fun ChargeDetails(charge: ChargeState?) {
     if (charge == null) return
     val details =
         buildList {
-            charge.battery_range?.let { add("Range\u00A0${formatRangeMiles(it)}\u00A0mi") }
             charge.charge_limit_soc?.let { add("Charge limit\u00A0$it%") }
+            chargerElectricalText(charge)?.let { add(it) }
             charge.chargingStateKind?.let { add(chargingStateText(it)) }
         }
     if (details.isNotEmpty()) {
@@ -370,6 +372,26 @@ private fun ChargeDetails(charge: ChargeState?) {
 }
 
 /**
+ * "240 V · 16/32 A": the charger's voltage, then the actual current over the
+ * requested limit. Shown only while charging, and each piece is dropped when the car reports none.
+ */
+private fun chargerElectricalText(charge: ChargeState): String? {
+    // Plugged in but idle, the car can still report the pilot's numbers; only a live charge is worth showing.
+    if (charge.chargingStateKind != ChargingStateKind.Charging) return null
+    val volts = charge.charger_voltage?.takeIf { it > 0 }
+    val limit = (charge.charge_current_request ?: charge.charger_pilot_current)?.takeIf { it > 0 }
+    val actual = charge.charger_actual_current
+    val amps =
+        when {
+            actual != null && limit != null -> "$actual/$limit A"
+            actual != null && volts != null -> "$actual A"
+            limit != null -> "$limit A"
+            else -> null
+        }
+    return listOfNotNull(volts?.let { "$it V" }, amps).takeIf { it.isNotEmpty() }?.joinToString(" · ")
+}
+
+/**
  * The big battery reading, colored like the cars list: primary while fresh,
  * outline once stale. With no reading at all, the connection state shows
  * instead. How old a stale reading is sits right of the "%".
@@ -378,7 +400,7 @@ private fun ChargeDetails(charge: ChargeState?) {
 private fun SocBlock(
     reading: BatteryPercent?,
     live: Boolean,
-    lastKnown: BatterySample?,
+    rangeMiles: Float?,
     stateText: String,
     connection: TeslaConnection?,
     nowMillis: Long,
@@ -411,6 +433,17 @@ private fun SocBlock(
                 modifier = Modifier.alignByBaseline().padding(start = 6.dp),
             )
         }
+        // The range hugs the bottom-right, just above the progress bar, and wraps
+        // right-aligned instead of crowding the age on narrow screens.
+        rangeMiles?.let { miles ->
+            Text(
+                text = "Range ${formatRangeMiles(miles)} mi",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                textAlign = TextAlign.End,
+                modifier = Modifier.weight(1f).alignByBaseline().padding(start = 8.dp),
+            )
+        }
     }
     if (live) {
         Spacer(Modifier.height(8.dp))
@@ -423,15 +456,6 @@ private fun SocBlock(
                     .clip(RoundedCornerShape(4.dp)),
             color = color,
         )
-    } else {
-        // The stored sample carries its own range; a live one shows it below.
-        lastKnown?.ratedRangeMiles?.let { miles ->
-            Text(
-                text = "Range\u00A0${formatRangeMiles(miles)}\u00A0mi",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-        }
     }
 }
 
