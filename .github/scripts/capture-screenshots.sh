@@ -431,6 +431,16 @@ if tap_text "AA:BB:CC:DD:EE:01" 30; then
         sleep 1
       fi
       capture 03-car.png
+      # 06 - the tracking notification in the shade. Best effort: it is not in
+      # the required list, so a shade that will not open never fails the run.
+      adb shell cmd statusbar expand-notifications || true
+      if wait_for_contains "Demo Tesla" 10; then
+        sleep 1
+        capture 06-notification.png
+      else
+        echo "  ! notification shade did not show the car (not required)" >&2
+      fi
+      adb shell cmd statusbar collapse || true
     else
       echo "  ! no charge reading appeared" >&2
       debug_dump "charge-reading"
