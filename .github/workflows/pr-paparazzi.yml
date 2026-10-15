@@ -26,11 +26,13 @@ on:
     types: [opened, synchronize, reopened, ready_for_review]
     paths:
       - 'app/**'
+      - 'gradle/libs.versions.toml'
       - '.github/workflows/pr-paparazzi.yml'
   push:
     branches: [main]
     paths:
       - 'app/**'
+      - 'gradle/libs.versions.toml'
       - '.github/workflows/pr-paparazzi.yml'
   workflow_dispatch:
 
