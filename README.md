@@ -103,7 +103,7 @@ On Windows, use `.\gradlew` instead of `./gradlew`. The debug APK lands in
 `app/build/outputs/apk/debug/`.
 
 CI (`.github/workflows/android.yml`) runs the core tests, app unit tests, lint, a
-debug build, a Go-fixture diff against `teslamotors/vehicle-command`, and publishes
+debug and release build (R8), a Go-fixture diff against `teslamotors/vehicle-command`, and publishes
 a draft of the next release; tag releases add the APK and emulator screenshots.
 
 ## Architecture

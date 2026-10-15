@@ -181,6 +181,12 @@ jobs:
 
       # The APK name says which PR and commit it came from; the artifact name
       # stays fixed because the screenshot comment looks it up.
+      # The shipping variant is never installed from here, but R8, resource
+      # shrinking and the release manifest are exercised on every build. Without
+      # signing secrets it is unsigned.
+      - name: Build release APK
+        run: ./gradlew :app:assembleRelease
+
       - name: Name the debug APK
         env:
           PR_NUMBER: ${{ github.event.pull_request.number }}
@@ -300,14 +306,20 @@ jobs:
             echo "keyPassword=$SIGNING_KEY_PASSWORD"
           } > keystore.properties
 
-      - name: Build the signed debug APK
-        run: ./gradlew :app:assembleDebug
+      # The published APK is the minified, non-debuggable release variant,
+      # signed with the release key (no LeakCanary, no demo code).
+      - name: Build the signed release APK
+        run: ./gradlew :app:assembleRelease
 
-      # Tag releases capture their own screenshots from the simulated car.
       - name: Stage the release APK
         run: |
+          set -euo pipefail
+          apk=app/build/outputs/apk/release/app-release.apk
+          [ -f "$apk" ] || { echo "::error::$apk missing (unsigned build?)"; exit 1; }
           mkdir -p dist
-          cp app/build/outputs/apk/debug/app-debug.apk "dist/TeslaBatteryBLE-${RELEASE_TAG}.apk"
+          cp "$apk" "dist/TeslaBatteryBLE-${RELEASE_TAG}.apk"
+
+      # Screenshots come from the simulated car, which only the debug variant has.
 
       - name: Build the demo APK for screenshots
         run: ./gradlew :app:assembleDebug -PdemoCar=true

@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # SPDX-License-Identifier: AGPL-3.0-only
 # Publish a tagged release: the changes since the previous tag plus the
-# screenshots captured by CI. Run from a checkout with the debug APK
+# screenshots captured by CI. Run from a checkout with the release APK
 # built and the emulator screenshots captured into `screenshots/`.
 set -euo pipefail
 
