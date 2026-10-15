@@ -815,7 +815,7 @@ private fun BatteryChart(
                         moveTo(x(target.from.timestampMillis), y(target.from.percent))
                         lineTo(end.x, end.y)
                     },
-                color = dischargeChartColor.copy(alpha = 0.65f),
+                color = lineColor.copy(alpha = if (charge != null) 0.35f else 0.65f),
                 style =
                     Stroke(
                         width = 2.dp.toPx(),
@@ -849,9 +849,6 @@ private const val REFRESH_FEEDBACK_MS = 2500L
 
 /** Green shared by charging segments, dots, and the projected line. */
 private val chargingChartColor = Color(0xFF43A047)
-
-/** Blue for the parked-drain projection, the way down next to the green way up. */
-private val dischargeChartColor = Color(0xFF1E88E5)
 
 private val timeFormatter = DateTimeFormatter.ofPattern("HH:mm")
 private val dateTimeFormatter = DateTimeFormatter.ofPattern("dd MMM HH:mm")
