@@ -70,16 +70,52 @@ jobs:
       - name: Make gradlew executable
         run: chmod +x gradlew
 
+      - name: Find the parent commit
+        id: parent
+        run: echo "sha=$(git rev-parse HEAD~1)" >> "$GITHUB_OUTPUT"
+
+      # Snapshots recorded for a commit are cached by its SHA, so the next push
+      # (whose parent is that commit) skips the BEFORE record, and a PR's first
+      # commit reuses the main baseline. A miss just records as before.
+      - name: Restore the cached BEFORE snapshots
+        id: before-cache
+        if: github.event_name == 'pull_request'
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ${{ runner.temp }}/paparazzi-cache
+          key: paparazzi-${{ steps.parent.outputs.sha }}
+
       # The shared diff script: records AFTER (the PR head) and BEFORE (its
       # parent commit, not the merge base) and prints which snapshots differ.
       # The script restores this checkout itself, even on failure.
       - name: Record and diff the snapshots
         id: diff
+        env:
+          PAPARAZZI_BEFORE_CACHED: ${{ steps.before-cache.outputs.cache-hit == 'true' && '1' || '' }}
         run: |
           set -euo pipefail
           after_sha="${{ github.event.pull_request.head.sha || github.sha }}"
+          if [ "$PAPARAZZI_BEFORE_CACHED" = 1 ]; then
+            mkdir -p "$RUNNER_TEMP/before"
+            cp "$RUNNER_TEMP"/paparazzi-cache/*.png "$RUNNER_TEMP/before/"
+          fi
           bash .github/scripts/paparazzi-diff.sh "$after_sha~1" "$after_sha" \
             "$RUNNER_TEMP/before" "$RUNNER_TEMP/after" | tee "$RUNNER_TEMP/diff-report.txt"
+
+      - name: Cache the AFTER snapshots for the next push
+        if: github.event_name == 'pull_request'
+        run: |
+          set -euo pipefail
+          rm -rf "$RUNNER_TEMP/paparazzi-cache"
+          mkdir -p "$RUNNER_TEMP/paparazzi-cache"
+          cp "$RUNNER_TEMP"/after/*.png "$RUNNER_TEMP/paparazzi-cache/"
+
+      - name: Save the AFTER snapshots
+        if: github.event_name == 'pull_request'
+        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ${{ runner.temp }}/paparazzi-cache
+          key: paparazzi-${{ github.event.pull_request.head.sha }}
 
       # Hand-off to pr-paparazzi-comment.yml: the differing PNGs as
       # after/<name>.png plus before/<name>.png when the snapshot existed
@@ -189,8 +225,17 @@ jobs:
           done
           [ "$count" -gt 0 ] || { echo "::error::no card snapshots were recorded"; exit 1; }
           echo "Recorded $count main snapshots."
+          mkdir -p "$RUNNER_TEMP/paparazzi-cache"
+          cp main-snapshots/*.png "$RUNNER_TEMP/paparazzi-cache/"
           git rev-parse --short HEAD > main-snapshots/short-sha
           rm -rf app/src/test/snapshots
+
+      # A PR whose first commit sits on this commit reuses these as its BEFORE.
+      - name: Cache the baseline for PR diffs
+        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ${{ runner.temp }}/paparazzi-cache
+          key: paparazzi-${{ github.sha }}
 
       - name: Upload the baseline
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7

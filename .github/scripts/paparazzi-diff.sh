@@ -16,6 +16,10 @@
 #   changed <name> (one line per differing or new snapshot)
 #   unchanged (when nothing differs)
 #
+# With PAPARAZZI_BEFORE_CACHED=1 and PNGs already in before-dir, the before
+# record is skipped and those PNGs are compared as is (CI restores them from
+# a cache keyed by the commit they were recorded for).
+#
 # Exit 0 whether or not anything differs: this is a local review tool, not a
 # gate. Non-zero only when the after record itself fails. The before record
 # is best-effort (the parent may predate Paparazzi): when it fails every
@@ -101,9 +105,24 @@ fi
 echo "Recorded $AFTER_COUNT after snapshots." >&2
 AFTER_SHA="$(git rev-parse --short HEAD)"
 
-echo "Recording the before snapshots ($BEFORE_REF)..." >&2
 BEFORE_SHA="none"
-if BEFORE_COUNT="$(render "$BEFORE_REF" "$BEFORE_DIR")"; then
+BEFORE_CACHED=false
+if [ "${PAPARAZZI_BEFORE_CACHED:-}" = 1 ]; then
+    # CI restored the before PNGs from the snapshots it recorded for that
+    # commit earlier, so the second (slowest) record is skipped.
+    shopt -s nullglob
+    cached=("$BEFORE_DIR"/*.png)
+    shopt -u nullglob
+    if [ "${#cached[@]}" -gt 0 ]; then
+        BEFORE_CACHED=true
+        BEFORE_SHA="$(git rev-parse --short "$BEFORE_REF")"
+        echo "Using ${#cached[@]} cached before snapshots ($BEFORE_REF)." >&2
+    fi
+fi
+if [ "$BEFORE_CACHED" = true ]; then
+    :
+elif echo "Recording the before snapshots ($BEFORE_REF)..." >&2 &&
+    BEFORE_COUNT="$(render "$BEFORE_REF" "$BEFORE_DIR")"; then
     if [ "$BEFORE_COUNT" -gt 0 ]; then
         echo "Recorded $BEFORE_COUNT before snapshots." >&2
         BEFORE_SHA="$(git rev-parse --short HEAD)"
