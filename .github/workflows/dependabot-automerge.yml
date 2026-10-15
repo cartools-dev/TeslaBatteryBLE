@@ -1,0 +1,47 @@
+# SPDX-License-Identifier: AGPL-3.0-only
+name: Dependabot automerge
+
+# Merge Dependabot patch updates once CI is green and the snapshots show zero
+# visual drift, so dependency churn does not pile up for review. Only exact
+# semver-patch merges: minor/major stays manual, since AGP/Kotlin/Compose
+# bumps can redraw the Paparazzi snapshots or need code changes. There is
+# deliberately no branch protection, so the script waits for the checks
+# itself; auto-merge would merge immediately.
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: dependabot-automerge-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  automerge:
+    name: Merge patch updates on green CI
+    if: github.actor == 'dependabot[bot]'
+    runs-on: ubuntu-latest
+    permissions:
+      actions: read         # find the PR-paparazzi run and its artifact
+      checks: read          # poll the PR's check runs
+      contents: write       # merge the PR
+      pull-requests: read   # read the PR state for the merge
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          # The default branch's copy of the script: PR code is never trusted.
+          ref: ${{ github.event.repository.default_branch }}
+          persist-credentials: false
+
+      - uses: dependabot/fetch-metadata@21025c705c08248db411dc16f3619e6b5f9ea21a # v2.5.0
+        id: meta
+        with:
+          github-token: ${{ github.token }}
+
+      - name: Merge on green CI without visual drift
+        if: steps.meta.outputs.update-type == 'version-update:semver-patch'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: bash .github/scripts/dependabot-automerge.sh "${{ github.event.pull_request.number }}" "${{ github.event.pull_request.head.sha }}"
