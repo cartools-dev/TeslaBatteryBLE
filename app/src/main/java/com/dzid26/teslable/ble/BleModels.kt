@@ -5,6 +5,7 @@ import com.dzid26.teslable.core.history.BatterySample
 import com.dzid26.teslable.core.history.StatusDurations
 import com.dzid26.teslable.core.history.compactDuration
 import com.dzid26.teslable.core.protocol.ChargingStateKind
+import com.dzid26.teslable.core.protocol.PairingPhase
 import com.dzid26.teslable.core.protocol.asleep
 import com.dzid26.teslable.core.protocol.locked
 import com.dzid26.teslable.core.protocol.userPresent
@@ -54,15 +55,6 @@ enum class ConnectionPhase {
     READY,
     FAILED,
     DISCONNECTED,
-}
-
-enum class PairingPhase {
-    IDLE,
-    CHECKING,
-    SENDING,
-    WAITING_FOR_CARD,
-    OK,
-    ERROR,
 }
 
 data class BleUiState(

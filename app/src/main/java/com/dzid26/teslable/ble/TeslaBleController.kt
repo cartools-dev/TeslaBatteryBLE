@@ -15,10 +15,14 @@ import com.dzid26.teslable.core.protocol.AntiReplayWindow
 import com.dzid26.teslable.core.protocol.CommandRecords
 import com.dzid26.teslable.core.protocol.InfotainmentPollPolicy
 import com.dzid26.teslable.core.protocol.InfotainmentSessionGate
+import com.dzid26.teslable.core.protocol.PairingFlow
+import com.dzid26.teslable.core.protocol.PairingHost
+import com.dzid26.teslable.core.protocol.PairingKeys
+import com.dzid26.teslable.core.protocol.PairingPhase
+import com.dzid26.teslable.core.protocol.PairingTimer
 import com.dzid26.teslable.core.protocol.TeslaCommands
 import com.dzid26.teslable.core.protocol.TeslaCrypto
 import com.dzid26.teslable.core.protocol.TeslaKeyPair
-import com.dzid26.teslable.core.protocol.TeslaPairing
 import com.dzid26.teslable.core.protocol.TeslaSession
 import com.dzid26.teslable.core.protocol.TeslaSessionRequests
 import com.dzid26.teslable.core.protocol.TeslaVcsec
@@ -31,8 +35,6 @@ import com.dzid26.teslable.core.protocol.userPresent
 import com.dzid26.teslable.history.HistoryStore
 import com.tesla.generated.universalmessage.Domain
 import com.tesla.generated.universalmessage.RoutableMessage
-import com.tesla.generated.vcsec.WhitelistEntryInfo
-import com.tesla.generated.vcsec.WhitelistInfo
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -246,7 +248,7 @@ class TeslaBleController(
         when (link?.phase) {
             ConnectionPhase.READY -> {
                 link.requestStatus()
-                link.requestKeySlot()
+                link.pairing.requestKeySlot()
                 link.startSession()
                 stopScan()
                 link.startRssiPoll()
@@ -298,7 +300,7 @@ class TeslaBleController(
                 return
             }
         selectVehicle(link.bleName)
-        link.pairKey()
+        link.pairing.pairKey()
     }
 
     /** True when an enrolled car is connected, so the tracking service should run. */
@@ -720,11 +722,6 @@ class TeslaBleController(
         private var wakeRefreshAttempts = 0
         private var decryptFailures = 0
         private var lastRehandshakeMs = 0L
-        private var keySlotQueue: List<Int> = emptyList()
-        private var whitelistPollAttempts = 0
-        private var pairingPhase = PairingPhase.IDLE
-        private var pairingKeyId: String? = null
-        private var pendingPairCheck = false
 
         /** The next VCSEC status is the first since the link became ready; the status log always keeps it. */
         private var firstStatusAfterConnect = true
@@ -820,40 +817,78 @@ class TeslaBleController(
                 }
             }
 
-        val pairingTimeout =
-            Runnable {
-                when (pairingPhase) {
-                    PairingPhase.SENDING -> {
-                        pairingPhase = PairingPhase.WAITING_FOR_CARD
-                        updateConnection(address) {
-                            it.copy(pairing = PairingPhase.WAITING_FOR_CARD, pairingKeyId = pairingKeyId)
-                        }
-                        log("${name()}: no pairing response yet; waiting for the card")
-                    }
+        private val pairingTimers: Map<PairingTimer, Runnable> =
+            PairingTimer.entries.associateWith { timer -> Runnable { pairing.onTimer(timer) } }
 
-                    PairingPhase.CHECKING -> {
-                        pendingPairCheck = false
-                        setPairing(PairingPhase.ERROR)
-                        log("${name()}: no response while checking the key list")
-                    }
+        private val pairingHost: PairingHost =
+            object : PairingHost {
+                override val isReady: Boolean get() = phase == ConnectionPhase.READY
 
-                    else -> Unit
+                override fun log(message: String): Unit = this@VehicleLink.log("${name()}: $message")
+
+                override fun transmitVcsec(
+                    request: ByteArray,
+                    reason: Command.Reason,
+                ) {
+                    this@VehicleLink.transmitVcsec(request, reason)
+                }
+
+                override fun transmitAddKey(request: ByteArray): Boolean =
+                    transmit(request, CommandRecords.addKey(Command.Reason.PAIRING, request))
+
+                override fun publishPairing(
+                    phase: PairingPhase,
+                    keyId: String?,
+                ) {
+                    updateConnection(address) { it.copy(pairing = phase, pairingKeyId = keyId) }
+                }
+
+                override fun publishKeySlot(slot: Int?) {
+                    updateConnection(address) { it.copy(keySlot = slot) }
+                    updateVehicle(bleName) { it.copy(keySlot = slot) }
+                }
+
+                override fun hasConnectionKeySlot(): Boolean = _state.value.connections[address]?.keySlot != null
+
+                override fun hasShownKeySlot(): Boolean = hasConnectionKeySlot() || vehicles[bleName]?.keySlot != null
+
+                override fun onKeyConfirmed() {
+                    rememberVehicle(address)
+                    startSession()
+                }
+
+                override fun onFreshlyEnrolled() {
+                    infotainmentPolicy.onFreshStart(System.currentTimeMillis())
+                }
+
+                override fun schedule(
+                    timer: PairingTimer,
+                    delayMs: Long,
+                ) {
+                    handler.removeCallbacks(pairingTimers.getValue(timer))
+                    handler.postDelayed(pairingTimers.getValue(timer), delayMs)
+                }
+
+                override fun cancel(timer: PairingTimer) {
+                    handler.removeCallbacks(pairingTimers.getValue(timer))
                 }
             }
 
-        val whitelistPoll =
-            object : Runnable {
-                override fun run() {
-                    if (pairingPhase == PairingPhase.OK || pairingPhase == PairingPhase.ERROR) return
-                    if (whitelistPollAttempts++ >= WHITELIST_MAX_ATTEMPTS) {
-                        setPairing(PairingPhase.ERROR)
-                        log("${name()}: the car did not confirm the key; pair again when ready")
-                        return
-                    }
-                    transmitVcsec(TeslaVcsec.buildWhitelistInfoRequest(), Command.Reason.PAIRING)
-                    handler.postDelayed(this, WHITELIST_POLL_MS)
-                }
-            }
+        /** Enrolls this phone's key and finds its slot; the state machine lives in core. */
+        val pairing: PairingFlow =
+            PairingFlow(
+                keys =
+                    object : PairingKeys {
+                        override fun hasKey(): Boolean = keyStore.hasKey(bleName)
+
+                        override fun publicKeyRaw(): ByteArray? = keyStore.publicKeyRaw(bleName)
+
+                        override fun keyId(): ByteArray? = keyStore.keyId(bleName)
+
+                        override fun generate(): TeslaKeyPair? = keyStore.generate(bleName)
+                    },
+                host = pairingHost,
+            )
 
         fun name(): String {
             val connection = _state.value.connections[address]
@@ -906,11 +941,10 @@ class TeslaBleController(
             sessions.clear()
             pendingSessions.clear()
             pendingCommands.clear()
-            keySlotQueue = emptyList()
+            pairing.onLinkClosed()
             infotainmentGate.onLinkDropped()
             readInFlight.onLinkDropped()
             wakeAfterSession = false
-            pendingPairCheck = false
             updateConnection(address) {
                 it.copy(
                     phase = ConnectionPhase.IDLE,
@@ -926,11 +960,8 @@ class TeslaBleController(
             pendingSessions.clear()
             pendingCommands.clear()
             readInFlight.onLinkDropped()
-            keySlotQueue = emptyList()
-            pendingPairCheck = false
+            pairing.onCacheCleared()
             wakeAfterSession = false
-            pairingPhase = PairingPhase.IDLE
-            pairingKeyId = null
             updateConnection(address) {
                 it.copy(
                     keySlot = null,
@@ -961,8 +992,7 @@ class TeslaBleController(
             handler.removeCallbacks(reconnect)
             handler.removeCallbacks(wakeRefresh)
             handler.removeCallbacks(sessionRetry)
-            handler.removeCallbacks(whitelistPoll)
-            handler.removeCallbacks(pairingTimeout)
+            pairing.cancelTimers()
         }
 
         private fun scheduleReconnect() {
@@ -1120,7 +1150,7 @@ class TeslaBleController(
                 if (keyPair == null && !keyStore.hasKey(bleName)) {
                     // The store dropped a key this phone can never decrypt (for
                     // example a device-only key restored from another phone).
-                    forgetEnrollment("the stored key can't be used on this phone")
+                    pairing.forgetEnrollment("the stored key can't be used on this phone")
                 }
                 log("${name()}: session verification failed (${pending.domain.name})")
                 return true
@@ -1349,246 +1379,6 @@ class TeslaBleController(
             requestFollowUp(TeslaCommands.buildDriveStateRequest(), CommandKind.DRIVE)
         }
 
-        fun pairKey() {
-            if (phase != ConnectionPhase.READY) {
-                log("No selected car ready for pairing")
-                return
-            }
-            val storedKeyId = keyStore.keyId(bleName)
-            if (storedKeyId == null) {
-                // First pairing for this car: generate its key now.
-                pairWithFreshKey()
-                return
-            }
-            // The car may already have this key. Adding it again would ask for
-            // the card and can fail, so check the whitelist first.
-            pendingPairCheck = true
-            pairingKeyId = storedKeyId.toHex()
-            setPairing(PairingPhase.CHECKING)
-            log("${name()}: checking whether the key is already enrolled")
-            transmitVcsec(TeslaVcsec.buildWhitelistInfoRequest(), Command.Reason.PAIRING)
-            handler.removeCallbacks(pairingTimeout)
-            handler.postDelayed(pairingTimeout, PAIRING_TIMEOUT_MS)
-        }
-
-        /**
-         * Starts the add-key flow with a freshly generated key for this car.
-         * A key the car no longer recognizes is never re-enrolled: it may have
-         * been removed after a phone theft, and re-enrolling it would re-arm
-         * the stolen copy.
-         */
-        private fun pairWithFreshKey() {
-            val keyPair = keyStore.generate(bleName)
-            if (keyPair == null) {
-                // Enrolling a key the app may not have kept would orphan the
-                // car's key slot, so pairing stops here.
-                setPairing(PairingPhase.ERROR)
-                log("${name()}: could not save a new key; pairing not started")
-                return
-            }
-            // The previous key is gone; its cached slot is stale.
-            updateVehicle(bleName) { it.copy(keySlot = null) }
-            updateConnection(address) { it.copy(keySlot = null) }
-            sendAddKey(keyPair)
-        }
-
-        private fun sendAddKey(keyPair: TeslaKeyPair) {
-            val keyId = keyPair.keyId.toHex()
-            setPairing(PairingPhase.SENDING, keyId)
-            log("${name()}: pairing key $keyId")
-            val request = TeslaPairing.buildAddKeyRequest(keyPair.publicKeyRaw)
-            if (!transmit(request, CommandRecords.addKey(Command.Reason.PAIRING, request))) {
-                setPairing(PairingPhase.ERROR)
-                log("${name()}: failed to send pairing request")
-            } else {
-                handler.removeCallbacks(pairingTimeout)
-                handler.postDelayed(pairingTimeout, PAIRING_TIMEOUT_MS)
-                whitelistPollAttempts = 0
-                handler.removeCallbacks(whitelistPoll)
-                handler.postDelayed(whitelistPoll, WHITELIST_POLL_MS)
-            }
-        }
-
-        private fun setPairing(
-            phase: PairingPhase,
-            keyId: String? = pairingKeyId,
-        ) {
-            pairingPhase = phase
-            pairingKeyId = keyId
-            updateConnection(address) { it.copy(pairing = phase, pairingKeyId = keyId) }
-        }
-
-        /**
-         * Once this car's key is known to be unusable, drops what still shows
-         * the car as paired (cached slot, a stale OK) so it offers pairing again.
-         */
-        private fun forgetEnrollment(reason: String) {
-            val shownPaired =
-                vehicles[bleName]?.keySlot != null ||
-                    _state.value.connections[address]?.keySlot != null ||
-                    pairingPhase == PairingPhase.OK
-            if (!shownPaired) return
-            updateVehicle(bleName) { it.copy(keySlot = null) }
-            updateConnection(address) { it.copy(keySlot = null) }
-            if (pairingPhase == PairingPhase.OK) setPairing(PairingPhase.IDLE, null)
-            log("${name()}: $reason; pair again")
-        }
-
-        fun requestKeySlot() {
-            if (_state.value.connections[address]?.keySlot != null) return
-            if (!keyStore.hasKey(bleName)) return
-            transmitVcsec(TeslaVcsec.buildWhitelistInfoRequest(), Command.Reason.KEY_LOOKUP)
-        }
-
-        private fun requestNextKeySlot() {
-            val slot = keySlotQueue.firstOrNull()
-            if (slot == null) {
-                log("${name()}: could not locate our key slot")
-                return
-            }
-            keySlotQueue = keySlotQueue.drop(1)
-            transmitVcsec(TeslaVcsec.buildWhitelistEntryRequest(slot), Command.Reason.KEY_LOOKUP)
-        }
-
-        private fun handlePairingResponse(message: ByteArray): Boolean {
-            val pairing =
-                runCatching { TeslaPairing.parseAddKeyResponse(message) }.getOrNull()
-                    ?: return false
-            handler.removeCallbacks(pairingTimeout)
-            val phase =
-                when (pairing) {
-                    TeslaPairing.Result.OK -> PairingPhase.OK
-                    TeslaPairing.Result.WAITING_FOR_CARD -> PairingPhase.WAITING_FOR_CARD
-                    TeslaPairing.Result.ERROR -> PairingPhase.ERROR
-                }
-            pairingPhase = phase
-            updateConnection(address) { it.copy(pairing = phase, pairingKeyId = pairingKeyId) }
-            when (phase) {
-                PairingPhase.OK -> {
-                    // The car confirmed the key: save the vehicle, open a
-                    // session, and pull the whitelist so the slot resolves.
-                    rememberVehicle(address)
-                    startSession()
-                    requestKeySlot()
-                }
-
-                PairingPhase.ERROR -> {
-                    // The car may already have the key; a whitelist check
-                    // clears the failure if it is enrolled.
-                    requestKeySlot()
-                }
-
-                else -> Unit
-            }
-            log("${name()}: pairing ${pairing.name.lowercase()}")
-            return true
-        }
-
-        private fun handleWhitelistInfo(whitelist: WhitelistInfo) {
-            val storedKeyId = keyStore.keyId(bleName)
-            val keyId = storedKeyId?.toHex()
-            val enrolled =
-                storedKeyId != null &&
-                    whitelist.whitelistEntries.any {
-                        it.publicKeySHA1
-                            .toByteArray()
-                            .copyOf(storedKeyId.size)
-                            .contentEquals(storedKeyId)
-                    }
-            if (storedKeyId != null && enrolled && keyId != null) {
-                handler.removeCallbacks(whitelistPoll)
-                pendingPairCheck = false
-                when (pairingPhase) {
-                    PairingPhase.SENDING, PairingPhase.WAITING_FOR_CARD, PairingPhase.CHECKING -> {
-                        setPairing(PairingPhase.OK, keyId)
-                        infotainmentPolicy.onFreshStart(System.currentTimeMillis())
-                        log("${name()}: key enrolled (${whitelist.numberOfEntries} keys)")
-                    }
-
-                    PairingPhase.ERROR -> {
-                        // The car has the key after all; drop the stale failure.
-                        setPairing(PairingPhase.IDLE, null)
-                        log("${name()}: key is enrolled; pairing state recovered")
-                    }
-
-                    else -> Unit
-                }
-                rememberVehicle(address)
-                // A freshly enrolled key can open sessions now.
-                startSession()
-                resolveKeySlots(whitelist, storedKeyId)
-                return
-            }
-            if (pendingPairCheck) {
-                // Never re-enroll a key the car no longer has: it may have been
-                // removed after a theft, so pairing enrolls a fresh key.
-                pendingPairCheck = false
-                log("${name()}: key not enrolled; generating a new key for pairing")
-                pairWithFreshKey()
-                return
-            }
-            if (storedKeyId != null && !enrolled && whitelist.isComplete(storedKeyId.size)) {
-                // Only a whole listing proves the car no longer has the key
-                // (removed in the car, or restored here from another phone).
-                forgetEnrollment("the car no longer lists this phone's key")
-            }
-            if (whitelistPollAttempts == 1) {
-                log("${name()}: whitelist has ${whitelist.numberOfEntries} keys")
-            }
-        }
-
-        private fun resolveKeySlots(
-            whitelist: WhitelistInfo,
-            storedKeyId: ByteArray,
-        ) {
-            val index =
-                whitelist.whitelistEntries.indexOfFirst {
-                    it.publicKeySHA1
-                        .toByteArray()
-                        .copyOf(storedKeyId.size)
-                        .contentEquals(storedKeyId)
-                }
-            val slots = occupiedSlots(whitelist.slotMask)
-            keySlotQueue =
-                if (index in slots.indices) {
-                    listOf(slots[index]) + slots.filterIndexed { i, _ -> i != index }
-                } else {
-                    slots
-                }
-            requestNextKeySlot()
-        }
-
-        private fun handleWhitelistEntry(entry: WhitelistEntryInfo) {
-            val storedPublicKey = keyStore.publicKeyRaw(bleName)
-            val storedKeyId = keyStore.keyId(bleName)
-            val matches =
-                storedPublicKey != null &&
-                    storedKeyId != null &&
-                    (
-                        entry.publicKey
-                            ?.PublicKeyRaw
-                            ?.toByteArray()
-                            ?.contentEquals(storedPublicKey) == true ||
-                            entry.keyId
-                                ?.publicKeySHA1
-                                ?.toByteArray()
-                                ?.copyOf(storedKeyId.size)
-                                ?.contentEquals(storedKeyId) == true
-                    )
-            if (matches) {
-                keySlotQueue = emptyList()
-                updateConnection(address) { it.copy(keySlot = entry.slot) }
-                updateVehicle(bleName) { it.copy(keySlot = entry.slot) }
-                if (pairingPhase == PairingPhase.ERROR) {
-                    // The slot proves enrollment; clear the stale failure.
-                    setPairing(PairingPhase.IDLE, null)
-                }
-                log("${name()}: key slot ${entry.slot}")
-            } else {
-                requestNextKeySlot()
-            }
-        }
-
         fun onMessage(message: ByteArray) {
             // The phone's clock when this reply arrived, read once: both BLE
             // logs keep it beside the car's reply (ADR-0008). Whole milliseconds,
@@ -1596,19 +1386,7 @@ class TeslaBleController(
             val deviceTimestamp = Instant.ofEpochMilli(System.currentTimeMillis())
             if (handleSessionInfo(message)) return
             if (handleEncryptedResponse(message, deviceTimestamp)) return
-            if (handlePairingResponse(message)) return
-
-            val whitelist = runCatching { TeslaVcsec.parseWhitelistInfoResponse(message) }.getOrNull()
-            if (whitelist != null) {
-                handleWhitelistInfo(whitelist)
-                return
-            }
-
-            val entry = runCatching { TeslaVcsec.parseWhitelistEntryResponse(message) }.getOrNull()
-            if (entry != null) {
-                handleWhitelistEntry(entry)
-                return
-            }
+            if (pairing.onMessage(message)) return
 
             val status = runCatching { TeslaVcsec.parseStatusResponse(message) }.getOrNull()
             if (status != null) {
@@ -1690,7 +1468,7 @@ class TeslaBleController(
                         if (_state.value.explicitScan && selectedBleName == bleName) stopScan()
                         if (selectedBleName == bleName) startRssiPoll()
                         requestStatus()
-                        requestKeySlot()
+                        pairing.requestKeySlot()
                         startSession()
                         postPoll()
                         maybeStopDiscovery()
@@ -1723,25 +1501,10 @@ class TeslaBleController(
             }
     }
 
-    private fun occupiedSlots(slotMask: Int): List<Int> = (0 until Int.SIZE_BITS).filter { (slotMask ushr it) and 1 == 1 }
-
-    /**
-     * True when the listing is whole: the car reported keys, listed an ID for
-     * each occupied slot, and every ID is long enough to compare with ours.
-     */
-    private fun WhitelistInfo.isComplete(keyIdSize: Int): Boolean =
-        numberOfEntries > 0 &&
-            whitelistEntries.size == numberOfEntries &&
-            slotMask.countOneBits() == numberOfEntries &&
-            whitelistEntries.all { it.publicKeySHA1.size >= keyIdSize }
-
     private fun ByteArray.toHex(): String = joinToString("") { (it.toInt() and 0xFF).toString(16).padStart(2, '0') }
 
     private companion object {
         const val LOG_MAX_LINES = 200
-        const val PAIRING_TIMEOUT_MS = 5000L
-        const val WHITELIST_POLL_MS = 2000L
-        const val WHITELIST_MAX_ATTEMPTS = 30
         const val COMMAND_EXPIRES_SECONDS = 5
         const val SESSION_RETRY_MS = 3000L
         const val SESSION_MAX_ATTEMPTS = 20
