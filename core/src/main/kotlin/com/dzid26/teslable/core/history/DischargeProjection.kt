@@ -95,9 +95,11 @@ private fun parkedDrain(
         val readingA = readings[index - 1]
         val readingB = readings[index]
         val stayed =
-            readingA != null && readingB != null &&
+            readingA != null &&
+                readingB != null &&
                 readingA.odometerInHundredthsOfAMile == readingB.odometerInHundredthsOfAMile &&
-                !readingA.inGear && !readingB.inGear
+                !readingA.inGear &&
+                !readingB.inGear
         if (stayed && !a.isCharging && !b.isCharging) {
             drop += a.percent - b.percent
             millis += b.timestampMillis - a.timestampMillis
