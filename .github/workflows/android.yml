@@ -291,6 +291,22 @@ jobs:
           done
           [ -z "$missing" ]
 
+      # Put the cause in the job log: the focused window, the visible texts
+      # and any crash from the shrunk app (R8 strips what it cannot see used).
+      - name: Show why the app stopped
+        if: failure()
+        run: |
+          shopt -s nullglob
+          for f in smoke-screenshots/debug/*-focus.txt; do echo "== $f"; cat "$f"; done
+          for f in smoke-screenshots/debug/*-window.xml; do
+            echo "== $f"
+            grep -oE '(text|content-desc)="[^"]+"' "$f" | head -n 30 || true
+          done
+          for f in smoke-screenshots/debug/*-logcat.txt; do
+            echo "== $f"
+            grep -E -A 40 'FATAL EXCEPTION|AndroidRuntime|ClassNotFound|NoSuchMethod|NoSuchField|teslable' "$f" | head -n 150 || true
+          done
+
       - name: Upload screenshots and logs
         if: always()
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
