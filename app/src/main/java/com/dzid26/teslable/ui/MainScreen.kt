@@ -673,8 +673,13 @@ internal fun StatusPill(
                 Triple(
                     MaterialTheme.colorScheme.surfaceVariant,
                     MaterialTheme.colorScheme.onSurfaceVariant,
-                    // GATT setup (connected, discovering services) still reads as connecting, as in the status line.
-                    if (connection?.phase in SETTING_UP_PHASES) "Connecting" else "Disconnected",
+                    // Match the status line: GATT setup still reads as connecting, and a ready link whose first
+                    // VCSEC status has not arrived yet is connected, not disconnected.
+                    when (connection?.phase) {
+                        in SETTING_UP_PHASES -> "Connecting"
+                        ConnectionPhase.READY -> "Connected"
+                        else -> "Disconnected"
+                    },
                 )
         }
     val asleep = connection?.phase == ConnectionPhase.READY && connection.status?.asleep == true
