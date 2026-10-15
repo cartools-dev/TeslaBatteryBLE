@@ -43,7 +43,7 @@ permissions:
 env:
   # Task outputs (compiled classes and the like) come from the Gradle build
   # cache that setup-gradle restores, so the BEFORE record and later pushes
-  # recompile only what changed.
+  # recompile only what changed (a cache miss builds everything, as before).
   GRADLE_OPTS: -Dorg.gradle.caching=true
 
 concurrency:
