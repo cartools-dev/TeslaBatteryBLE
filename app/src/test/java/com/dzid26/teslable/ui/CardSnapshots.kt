@@ -443,7 +443,7 @@ class CardSnapshots {
         // range, capacity and the rated constant.
         snapScreen("screen-car-detail-learnt") {
             CarScreen(
-                state = screenState,
+                state = learntState,
                 vehicle = vehicle,
                 advert = advert,
                 address = ADDRESS,
@@ -660,6 +660,25 @@ class CardSnapshots {
                 connections = mapOf(ADDRESS to liveConnection(readAt = NOW - FRESH_MINUTES * MINUTE)),
                 vehicles = listOf(vehicle),
                 log = listOf(LogEntry(vehicleId = BLE_NAME, message = "$BLE_NAME · Connected · 62%")),
+            )
+
+        // The live reading agrees with the learnt 270-mile scale: 62.4% is
+        // 168.5 rated miles, which the fit shows as 62.4% against the int 62.
+        private val learntState =
+            screenState.copy(
+                connections =
+                    mapOf(
+                        ADDRESS to
+                            liveConnection(
+                                readAt = NOW - FRESH_MINUTES * MINUTE,
+                                charge =
+                                    ChargeState(
+                                        battery_level = LIVE_PERCENT,
+                                        battery_range = 168.5f,
+                                        charge_limit_soc = CHARGE_LIMIT,
+                                    ),
+                            ),
+                    ),
             )
 
         // Drained to 68%, then one backbone charge (68 → 78%, a 10% swing

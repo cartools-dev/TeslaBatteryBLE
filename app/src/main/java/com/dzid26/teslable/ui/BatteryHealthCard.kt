@@ -67,7 +67,7 @@ internal fun BatteryHealthCard(summary: HealthSummary) {
                 EstimateRow(
                     label = "Full range",
                     value = "~${miles.roundToInt()} mi",
-                    detail = "fitted from ${summary.fullRangeSteps} level steps",
+                    detail = "fitted from ${summary.fullRangeSteps} steps of 1% level",
                 )
             }
             if (summary.capacityKwh == null && summary.fullRangeMiles == null && summary.sohPercent == null) {
