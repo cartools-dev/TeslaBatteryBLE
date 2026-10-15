@@ -637,6 +637,8 @@ internal fun TrackingToggle(
     }
 }
 
+private val SETTING_UP_PHASES = setOf(ConnectionPhase.CONNECTING, ConnectionPhase.CONNECTED, ConnectionPhase.DISCOVERING)
+
 /** Shared by the cars list and the car view. */
 @Composable
 internal fun StatusPill(
@@ -671,7 +673,8 @@ internal fun StatusPill(
                 Triple(
                     MaterialTheme.colorScheme.surfaceVariant,
                     MaterialTheme.colorScheme.onSurfaceVariant,
-                    if (connection?.phase == ConnectionPhase.CONNECTING) "Connecting" else "Disconnected",
+                    // GATT setup (connected, discovering services) still reads as connecting, as in the status line.
+                    if (connection?.phase in SETTING_UP_PHASES) "Connecting" else "Disconnected",
                 )
         }
     val asleep = connection?.phase == ConnectionPhase.READY && connection.status?.asleep == true
