@@ -81,7 +81,7 @@ render() {
     shopt -s nullglob
     for file in app/src/test/snapshots/images/*.png; do
         base="$(basename "$file")"
-        if [[ "$base" =~ ((vehicle-card|hero-card|history-card)_[a-z-]+(_jelly)?|screen-[a-z-]+)_(light|dark)\.png$ ]]; then
+        if [[ "$base" =~ ((vehicle-card|hero-card|history-card|drive-card)_[a-z-]+(_jelly)?|screen-[a-z-]+)_(light|dark)\.png$ ]]; then
             cp "$file" "$dir/${BASH_REMATCH[0]}"
             count=$((count + 1))
         else

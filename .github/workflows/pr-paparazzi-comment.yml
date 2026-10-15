@@ -95,7 +95,7 @@ jobs:
           for side in after before diff; do
             for file in "$ARTIFACT"/"$side"/*.png; do
               name="$(basename "$file")"
-              [[ "$name" =~ ^((vehicle-card|hero-card|history-card)_[a-z-]+(_jelly)?|screen-[a-z-]+)_(light|dark)\.png$ ]] \
+              [[ "$name" =~ ^((vehicle-card|hero-card|history-card|drive-card)_[a-z-]+(_jelly)?|screen-[a-z-]+)_(light|dark)\.png$ ]] \
                 || fail "unexpected snapshot name: $name"
               regular "$file" || fail "the artifact has no $side/$name"
               if [ "$(head -c 8 "$file" | od -An -tx1 | tr -d ' \n')" != 89504e470d0a1a0a ]; then
@@ -139,6 +139,7 @@ jobs:
               vehicle-card_*) printf 'Cars-list card' ;;
               hero-card_*) printf 'Car-view card' ;;
               history-card_*) printf 'History card' ;;
+              drive-card_*) printf 'Drive card' ;;
             esac
           }
           # Cards group by state ("Cars-list card · fresh"); screens render
