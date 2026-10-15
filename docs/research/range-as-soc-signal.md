@@ -170,3 +170,22 @@ Owner direction 2026-10-05: make rated miles the primary unit everywhere — sto
 - `tools/signal-matrix/upstream/tesla-docs/available-data.tsv` L2, L10, L12, L25, L41, L89–L90, L117, L170, L210.
 - `docs/reference/fleet-telemetry-vs-ble.md` L89 and `tools/signal-matrix/mapping.json` L43 (our rated-range wording, not Tesla).
 - `docs/research/battery-health-methods.md` L20–L31, L43 (method taxonomy, third-party citations).
+
+## 8. Scale fit: slope of the level steps (2026-10-15)
+
+Dividing rated miles by the integer level (section 2.3) bakes the car's rounding
+into the scale, with an error of up to 0.5 / level. TeslaMate history (3.8k
+samples, Oct 3-7, one car) cannot name the rounding mode either: ceil, nearest
+and floor fit equally well, each with a different scale (268.5 / 266.8 /
+265.3 mi, a 1.2% spread).
+
+The spacing between level steps is rounding-independent. `FullRangeScaleEstimator`
+now fits `miles = offset + slope x level` to the rated miles at which the level
+changes by one (boundary at `level + 0.5`), weighting each boundary by how
+tightly consecutive reads bracket it, over the newest 80 boundaries with
+outlier rejection. `fullRangeMiles` is `100 x slope` (about 269 mi for the
+TeslaMate data, 2.69 mi per 1%); the offset absorbs the rounding mode and any
+buffer, and fine SOC is `(miles - offset) / slope`. This is the single
+definition of full range: the session-swing and single-reading variants
+(issue #122) are removed, and the health card's full range, capacity and rated
+SoH use the fit.

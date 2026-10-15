@@ -5,9 +5,9 @@ import com.dzid26.teslable.core.health.ChargeSession
 import com.dzid26.teslable.core.health.EnergyDeltaEstimator
 import com.dzid26.teslable.core.health.HealthFusion
 import com.dzid26.teslable.core.health.MIN_SWING_PERCENT
-import com.dzid26.teslable.core.health.RatedRangeEstimator
 import com.dzid26.teslable.core.health.chargeSessions
 import com.dzid26.teslable.core.history.BatterySample
+import com.dzid26.teslable.core.history.FullRangeScaleEstimator
 import kotlin.math.roundToInt
 
 // Battery-health glue: turns the recorded raw samples into the numbers the car
@@ -34,9 +34,8 @@ data class HealthSummary(
     val ratedKwhPerMile: Float?,
     val capacitySwingPercent: Float?,
     val fullRangeMiles: Float?,
-    /** True when the full range came from the session's scale, not a reading. */
-    val fullRangeFromSession: Boolean,
-    val rangeSocPercent: Float?,
+    /** Level steps the full-range fit used. */
+    val fullRangeSteps: Int,
     val confidence: HealthConfidence,
     /** A plain-language caveat when the inputs are thin, else null. */
     val qualityNote: String?,
@@ -54,20 +53,19 @@ fun healthSummary(
 ): HealthSummary {
     val sessions = chargeSessions(samples)
     val lastSession = sessions.lastOrNull()
-    // Rated miles are the backbone (research: range-as-soc-signal section 6):
-    // a session that measured both energy added and rated miles added gives
-    // the rated constant (kWh/mi) and the full-range scale directly. A single
-    // rated-range reading is the fallback until such a session exists.
-    val backboneSession = sessions.lastOrNull { it.kwhPerMile != null && it.fullRangeMiles != null }
+    // Rated miles are the backbone (research: range-as-soc-signal section 6).
+    // The one full-range definition is the fitted scale of the level steps
+    // (`FullRangeScaleEstimator`); a charge session contributes the rated
+    // constant (kWh per rated mile) from the energy and miles it added.
+    val scale = FullRangeScaleEstimator.estimate(samples)
+    val backboneSession = sessions.lastOrNull { it.kwhPerMile != null }
     val energySession =
         sessions.lastOrNull { it.energyAddedKwh != null && it.swingPercent >= MIN_SWING_PERCENT }
-    val rangeSample = samples.lastOrNull { it.ratedRangeMiles != null && it.batteryLevel > 0 }
-    val fullRangeMiles =
-        backboneSession?.fullRangeMiles
-            ?: rangeSample?.let { sample -> sample.ratedRangeMiles!! / (sample.batteryLevel / 100f) }
+    // The range at 100%: the fitted line's value at displayed SOC 100.
+    val fullRangeMiles = scale?.let { it.offsetMiles + it.fullRangeMiles }
     val ratedKwhPerMile = backboneSession?.kwhPerMile
     val capacityKwh =
-        backboneSession?.let { session -> session.kwhPerMile!! * session.fullRangeMiles!! }
+        ratedKwhPerMile?.let { constant -> fullRangeMiles?.let { constant * it } }
             ?: energySession?.let { session ->
                 EnergyDeltaEstimator
                     .estimate(
@@ -89,16 +87,7 @@ fun healthSummary(
             }
         }
     val ratedSoh =
-        rangeSample?.let { sample ->
-            epaRatedRangeMiles?.let { epa ->
-                RatedRangeEstimator
-                    .estimate(
-                        displayedRangeMiles = sample.ratedRangeMiles!!,
-                        socPercent = sample.batteryLevel.toFloat(),
-                        epaRatedRangeMiles = epa,
-                    )?.sohPercent
-            }
-        }
+        fullRangeMiles?.let { full -> epaRatedRangeMiles?.takeIf { it > 0f }?.let { full / it * 100f } }
     val fused = HealthFusion.fuse(ratedSoh, deltaSoh)
     return HealthSummary(
         sessions = sessions.size,
@@ -110,10 +99,9 @@ fun healthSummary(
         ratedKwhPerMile = ratedKwhPerMile,
         capacitySwingPercent = (backboneSession ?: energySession)?.swingPercent,
         fullRangeMiles = fullRangeMiles,
-        fullRangeFromSession = backboneSession?.fullRangeMiles != null,
-        rangeSocPercent = rangeSample?.batteryLevel?.toFloat(),
+        fullRangeSteps = scale?.samples ?: 0,
         confidence = confidenceFor(sessions.size),
-        qualityNote = qualityNote(backboneSession ?: energySession ?: lastSession, rangeSample),
+        qualityNote = qualityNote(backboneSession ?: energySession ?: lastSession),
     )
 }
 
@@ -125,18 +113,11 @@ private fun confidenceFor(sessions: Int): HealthConfidence =
         else -> HealthConfidence.HIGH
     }
 
-private fun qualityNote(
-    lastSession: ChargeSession?,
-    rangeSample: BatterySample?,
-): String? {
+private fun qualityNote(lastSession: ChargeSession?): String? {
     val swing = lastSession?.swingPercent
-    val rangeLevel = rangeSample?.batteryLevel
     return when {
         swing != null && swing < QUALITY_SWING_PERCENT ->
             "the last charge only swung ${swing.roundToInt()}% SOC"
-
-        rangeLevel != null && rangeLevel < QUALITY_RANGE_SOC ->
-            "the range reading was taken at $rangeLevel% SOC"
 
         else -> null
     }
@@ -151,6 +132,3 @@ private const val HIGH_SESSIONS = 20
 
 /** A charge swing under this widens the energy-delta error. */
 private const val QUALITY_SWING_PERCENT = 20f
-
-/** Rated-range extrapolation gets noisy below this SOC. */
-private const val QUALITY_RANGE_SOC = 30

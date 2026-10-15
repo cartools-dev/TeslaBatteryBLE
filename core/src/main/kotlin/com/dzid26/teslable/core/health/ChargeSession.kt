@@ -27,14 +27,6 @@ data class ChargeSession(
             val miles = milesAddedRated?.takeIf { it > 0f } ?: return null
             return energy / miles
         }
-
-    /** The full-range scale the session implies: miles added over its swing. */
-    val fullRangeMiles: Float?
-        get() {
-            val miles = milesAddedRated?.takeIf { it > 0f } ?: return null
-            if (swingPercent < MIN_SWING_PERCENT) return null
-            return miles / (swingPercent / 100f)
-        }
 }
 
 /**
