@@ -63,33 +63,36 @@ fun List<BatterySample>.within(
     return filter { it.timestampMillis >= cutoff }
 }
 
-/** Summary since the end of the last completed charging session. */
+/** Summary since the last charge: the level it reached, and the drain since. */
 data class ChargeStats(
     val sinceMillis: Long,
-    val startPercent: Float,
+    /** The level the charge ended at (the newest charging sample). */
+    val chargePercent: Float,
     val currentPercent: Float,
     val minPercent: Float,
     val maxPercent: Float,
 ) {
-    val usedPercent: Float get() = (startPercent - currentPercent).coerceAtLeast(0f)
+    val usedPercent: Float get() = (chargePercent - currentPercent).coerceAtLeast(0f)
 }
 
 /**
- * Stats since the last completed charge: the first sample after the last
- * charging sample. Returns null when nothing was charged yet or the car is
- * still charging.
+ * Stats since the last charge ended, referenced to the charge itself: its
+ * newest charging sample supplies both the time and the level, and the
+ * samples after it supply the drain. The first sample recorded after the
+ * charge is *not* the reference: the app can see nothing for a while (the car
+ * asleep, the phone away), so that sample may be days after the charge and at
+ * a level the car already fell to. Returns null when nothing was charged yet
+ * or while the car is still charging. The samples need not be in time order.
  */
 fun chargeStats(samples: List<BatterySample>): ChargeStats? {
-    val lastCharging = samples.indexOfLast { it.isCharging }
-    if (lastCharging < 0) return null
-    val startIndex = lastCharging + 1
-    if (startIndex >= samples.size) return null
-    val start = samples[startIndex]
-    val tail = samples.subList(startIndex, samples.size)
+    val charged = samples.filter { it.isCharging }.maxByOrNull { it.timestampMillis } ?: return null
+    val newest = samples.maxByOrNull { it.timestampMillis } ?: return null
+    if (newest.timestampMillis <= charged.timestampMillis) return null
+    val tail = samples.filter { it.timestampMillis > charged.timestampMillis }
     return ChargeStats(
-        sinceMillis = start.timestampMillis,
-        startPercent = start.percent.toFloat(),
-        currentPercent = tail.last().percent.toFloat(),
+        sinceMillis = charged.timestampMillis,
+        chargePercent = charged.percent.toFloat(),
+        currentPercent = newest.percent.toFloat(),
         minPercent = tail.minOf { it.percent.toFloat() },
         maxPercent = tail.maxOf { it.percent.toFloat() },
     )
