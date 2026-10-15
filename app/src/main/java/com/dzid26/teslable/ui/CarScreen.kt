@@ -567,14 +567,16 @@ private fun pairingDetailText(pairing: PairingPhase): String? =
 // ---------------------------------------------------------------- battery card
 
 @Composable
-private fun BatteryHistoryCard(
+internal fun BatteryHistoryCard(
     samples: List<BatterySample>,
     drives: List<DriveSample>,
     // Injectable for the Paparazzi snapshots; production call sites use the
     // default, which is the same wall-clock read as before.
     nowMillis: Long = System.currentTimeMillis(),
+    // Injectable for the Paparazzi snapshots; production opens on the day range.
+    initialRange: HistoryRange = HistoryRange.DAY,
 ) {
-    var range by rememberSaveable { mutableStateOf(HistoryRange.DAY) }
+    var range by rememberSaveable { mutableStateOf(initialRange) }
     val now = nowMillis
     val visible = samples.within(range, now)
     val stats = chargeStats(samples)

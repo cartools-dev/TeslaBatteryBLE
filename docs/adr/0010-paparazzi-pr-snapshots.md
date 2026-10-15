@@ -21,13 +21,15 @@ Date: 2026-10-10
 - Pull requests render the battery cards AND the full screens as Paparazzi JVM
   snapshots (`app.cash.paparazzi` 2.0.0-alpha05): the two cards in 6 states
   each (fresh, stale with age, asleep, disconnected, reading spinner, no
-  reading) plus the cars list, the car view and Settings in one representative
-  state each (a connected car with a fresh reading and seeded history) —
-  light AND dark, plus each card state once more at Jelly Star width
-  (3-inch, 480x854 @320dpi → 240dp, hand-built via `DeviceConfig.copy()`
-  since no preset goes that narrow) in light only: 42 PNGs total. Full
-  screens render one representative state; state coverage still comes from
-  the card matrix, width coverage from the narrow render.
+  reading), the history card in 2 (a charge, and a charge followed by a
+  five-day gap — the case where the stats must still name the charge), plus
+  the cars list, the car view and Settings in one representative state each (a
+  connected car with a fresh reading and seeded history) — light AND dark,
+  plus each card state once more at Jelly Star width (3-inch, 480x854 @320dpi
+  → 240dp, hand-built via `DeviceConfig.copy()` since no preset goes that
+  narrow) in light only: 48 PNGs total. Full screens render one representative
+  state; state coverage still comes from the card matrix, width coverage from
+  the narrow render.
 - `pr-paparazzi.yml` records the snapshots for the AFTER commit (HEAD) and
   the BEFORE commit (HEAD~1, the pushed commit's parent — not the merge
   base), byte-compares them, and uploads only the differing PNGs (plus the PR

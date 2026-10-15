@@ -25,6 +25,7 @@ import com.dzid26.teslable.ble.TeslaAdvert
 import com.dzid26.teslable.ble.TeslaConnection
 import com.dzid26.teslable.ble.Vehicle
 import com.dzid26.teslable.core.history.BatterySample
+import com.dzid26.teslable.core.history.HistoryRange
 import com.dzid26.teslable.core.protocol.ChargingStateKind
 import com.tesla.generated.carserver.vehicle.ChargeState
 import com.tesla.generated.vcsec.UserPresence_E
@@ -243,6 +244,29 @@ class CardSnapshots {
                 history = emptyList(),
                 statusHistory = emptyList(),
                 nowMillis = NOW,
+            )
+        }
+    }
+
+    @Test
+    fun historyCardCharged() {
+        snapCard("history-card_charged") {
+            BatteryHistoryCard(
+                samples = screenSamples,
+                drives = emptyList(),
+                nowMillis = NOW,
+            )
+        }
+    }
+
+    @Test
+    fun historyCardGap() {
+        snapCard("history-card_gap") {
+            BatteryHistoryCard(
+                samples = gapSamples,
+                drives = emptyList(),
+                nowMillis = NOW,
+                initialRange = HistoryRange.ALL,
             )
         }
     }
@@ -500,6 +524,18 @@ class CardSnapshots {
                 chargeSample(20L, 78, 5.5f, 22.0f, ChargingStateKind.Charging),
                 chargeSample(15L, 78, null, null, ChargingStateKind.Complete),
                 historySample(0L, 77),
+            )
+
+        // A charge five days before the newest reading, with nothing recorded
+        // in between: the stats must name the charge (47%, five days ago) and
+        // the drain since (19%), not the first reading after it. This is the
+        // gap case the charge-stats anchor fix covers.
+        private val gapSamples =
+            listOf(
+                historySample(6L * 24, 44),
+                chargeSample(5L * 24 * 60 + 2, 46, 30f, 120f, ChargingStateKind.Charging),
+                chargeSample(5L * 24 * 60, 47, 32f, 128f, ChargingStateKind.Charging),
+                historySample(0L, 28),
             )
     }
 }

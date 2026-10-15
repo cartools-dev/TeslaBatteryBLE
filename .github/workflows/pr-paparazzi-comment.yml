@@ -95,7 +95,7 @@ jobs:
           for side in after before diff; do
             for file in "$ARTIFACT"/"$side"/*.png; do
               name="$(basename "$file")"
-              [[ "$name" =~ ^((vehicle-card|hero-card)_[a-z-]+(_jelly)?|screen-[a-z-]+)_(light|dark)\.png$ ]] \
+              [[ "$name" =~ ^((vehicle-card|hero-card|history-card)_[a-z-]+(_jelly)?|screen-[a-z-]+)_(light|dark)\.png$ ]] \
                 || fail "unexpected snapshot name: $name"
               regular "$file" || fail "the artifact has no $side/$name"
               if [ "$(head -c 8 "$file" | od -An -tx1 | tr -d ' \n')" != 89504e470d0a1a0a ]; then
@@ -138,6 +138,7 @@ jobs:
             case "$1" in
               vehicle-card_*) printf 'Cars-list card' ;;
               hero-card_*) printf 'Car-view card' ;;
+              history-card_*) printf 'History card' ;;
             esac
           }
           # Cards group by state ("Cars-list card · fresh"); screens render
@@ -215,7 +216,7 @@ jobs:
                   post_theme "$stem" dark
                 fi
               done <<< "$stems"
-              printf 'Snapshots are light- and dark-theme JVM renders of the battery cards and screens, plus a narrow Jelly Star render of each card state.\n'
+              printf 'Snapshots are light- and dark-theme JVM renders of the battery cards, the history card and the screens, plus a narrow Jelly Star render of each card state.\n'
             fi
             printf "\nFull-screen emulator shots: Actions → \`PR screenshots\` → Run workflow, choosing the head branch of this PR.\n"
           } > "$MSG"
