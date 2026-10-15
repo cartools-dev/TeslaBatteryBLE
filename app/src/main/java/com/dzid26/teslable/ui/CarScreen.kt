@@ -430,7 +430,7 @@ private fun SocBlock(
                 modifier = Modifier.alignByBaseline().padding(start = 6.dp),
             )
         }
-        // The range hugs the top-right, above the progress bar, and wraps
+        // The range hugs the bottom-right, just above the progress bar, and wraps
         // right-aligned instead of crowding the age on narrow screens.
         rangeMiles?.let { miles ->
             Text(
@@ -438,7 +438,7 @@ private fun SocBlock(
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 textAlign = TextAlign.End,
-                modifier = Modifier.weight(1f).align(Alignment.Top).padding(start = 8.dp),
+                modifier = Modifier.weight(1f).align(Alignment.Bottom).padding(start = 8.dp),
             )
         }
     }
