@@ -56,12 +56,45 @@ fun chargeProjection(
     }
 
     val gained = last.percent - first.percent
-    if (gained <= 0) return null
+    if (gained <= 0) {
+        // The level has not ticked yet: the run's own rated-range slope keeps
+        // moving on a slow charger.
+        val milesRate = ratedMilesPerHour(first, last, elapsed)
+        val fullRange = fullRangeMiles?.takeIf { it.isFinite() && it > 0f } ?: impliedFullRangeMiles(last)
+        if (milesRate != null && fullRange != null) {
+            val remainingMiles = fullRange * remaining / 100f
+            return ChargeProjection(
+                from = last,
+                targetPercent = target,
+                completionMillis = last.timestampMillis + (remainingMiles / milesRate * 3_600_000f).toLong(),
+            )
+        }
+        return null
+    }
     return ChargeProjection(
         from = last,
         targetPercent = target,
         completionMillis = last.timestampMillis + remaining * elapsed / gained,
     )
+}
+
+/** Rated miles gained per hour over the run; null without both readings or a positive gain. */
+private fun ratedMilesPerHour(
+    first: BatterySample,
+    last: BatterySample,
+    elapsedMillis: Long,
+): Float? {
+    val firstMiles = first.ratedRangeMiles ?: return null
+    val lastMiles = last.ratedRangeMiles ?: return null
+    val gainedMiles = lastMiles - firstMiles
+    if (!gainedMiles.isFinite() || gainedMiles <= 0f) return null
+    return gainedMiles / (elapsedMillis / 3_600_000f)
+}
+
+/** The full rated range implied by one sample's range and level; null without both. */
+private fun impliedFullRangeMiles(sample: BatterySample): Float? {
+    val miles = sample.ratedRangeMiles?.takeIf { it.isFinite() && it > 0f } ?: return null
+    return if (sample.percent > 0) miles / (sample.percent / 100f) else null
 }
 
 /** Miles per displayed percent: the learned scale, else the run's rated-range gain. */

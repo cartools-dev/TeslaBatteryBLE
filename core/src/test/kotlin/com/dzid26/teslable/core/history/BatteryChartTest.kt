@@ -153,4 +153,19 @@ class BatteryChartTest {
         val projection = chargeProjection(samples, fullRangeMiles = 240f)!!
         assertEquals(10 * 60_000L + 20 * 60_000L, projection.completionMillis)
     }
+
+    @Test
+    fun projectionFollowsTheRatedRangeWhileTheLevelSitsStill() {
+        // 31% for 30 min, rated range +3 mi: 6 mi/h. 84 mi at 31% implies ~271 mi
+        // full range, so the 54 points left are ~146 mi, about 24 h away.
+        val samples =
+            listOf(
+                sample(0, 31, ChargingStateKind.Charging, limit = 85).copy(ratedRangeMiles = 81f),
+                sample(30, 31, ChargingStateKind.Charging, limit = 85).copy(ratedRangeMiles = 84f),
+            )
+
+        val projection = chargeProjection(samples)!!
+        assertEquals(85, projection.targetPercent)
+        assertEquals((30 * 60_000L + 24 * 3_600_000L).toDouble(), projection.completionMillis.toDouble(), 30 * 60_000.0)
+    }
 }

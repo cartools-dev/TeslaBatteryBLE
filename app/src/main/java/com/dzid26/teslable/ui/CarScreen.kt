@@ -73,6 +73,7 @@ import com.dzid26.teslable.core.history.BatterySample
 import com.dzid26.teslable.core.history.ChargeProjection
 import com.dzid26.teslable.core.history.DischargeProjection
 import com.dzid26.teslable.core.history.DriveSample
+import com.dzid26.teslable.core.history.FullRangeScaleEstimator
 import com.dzid26.teslable.core.history.HistoryRange
 import com.dzid26.teslable.core.history.StatusSample
 import com.dzid26.teslable.core.history.chargeProjection
@@ -633,7 +634,11 @@ internal fun BatteryHistoryCard(
                     range.durationMillis
                         ?: (visible.last().timestampMillis - visible.first().timestampMillis)
                             .coerceAtLeast(1L)
-                val charge = chargeProjection(samples)
+                val charge =
+                    chargeProjection(
+                        samples,
+                        fullRangeMiles = FullRangeScaleEstimator.estimate(samples)?.fullRangeMiles,
+                    )
                 // Parked drain: the drive samples' odometer marks the
                 // stretches the car moved. Shown next to the charge
                 // projection too: where the battery heads if unplugged now.
