@@ -264,10 +264,14 @@ class TeslaBleController(
      * on, service start). Direct connects first; discovery takes over when a
      * car stopped advertising or moved to a new address. The scan button stays
      * a manual "find new cars" action.
+     *
+     * [bluetoothJustOn]: a retry that fired while Bluetooth was off never completed, and the backoff may be a minute
+     * long by now, so every car that is not connected tries again at once.
      */
-    fun ensureConnected() {
+    fun ensureConnected(bluetoothJustOn: Boolean = false) {
         if (!_state.value.trackingEnabled) return
         if (!hasBlePermissions(appContext)) return
+        if (bluetoothJustOn) links.values.filter { it.phase != ConnectionPhase.READY }.forEach { it.retryNow() }
         if (_state.value.scanning) return
         val ordered = orderedVehicles()
         var active = links.values.count { it.phase in ACTIVE_PHASES }
@@ -285,16 +289,6 @@ class TeslaBleController(
                 it.copy(devices = ordered.map { vehicle -> TeslaAdvert(vehicle.bleName, vehicle.address) })
             }
         }
-    }
-
-    /**
-     * Bluetooth came back on. A retry that fired while it was off never completed, and the backoff may be a minute
-     * long by now; every car that is not connected tries again at once.
-     */
-    fun onBluetoothOn() {
-        if (!_state.value.trackingEnabled) return
-        links.values.filter { it.phase != ConnectionPhase.READY }.forEach { it.retryNow() }
-        ensureConnected()
     }
 
     fun pairKey(address: String) {

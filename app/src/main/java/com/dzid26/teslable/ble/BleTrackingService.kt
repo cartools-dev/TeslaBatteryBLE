@@ -87,7 +87,7 @@ class BleTrackingService : Service() {
                 intent: Intent,
             ) {
                 if (intent.getIntExtra(BluetoothAdapter.EXTRA_STATE, BluetoothAdapter.ERROR) != BluetoothAdapter.STATE_ON) return
-                BleControllerHolder.get(context).onBluetoothOn()
+                BleControllerHolder.get(context).ensureConnected(bluetoothJustOn = true)
             }
         }
 
