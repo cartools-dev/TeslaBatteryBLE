@@ -321,6 +321,20 @@ class CardSnapshots {
     }
 
     @Test
+    fun historyCardChargingSixHours() {
+        // The short range puts the chart's right edge only 3 h ahead, so the beam is
+        // cut near the line's start: it must stay a visible sliver, not round away.
+        snapCard("history-card_charging-6h") {
+            BatteryHistoryCard(
+                samples = chargingSamples,
+                drives = parkedSamples.map { parkedDrive(it) },
+                nowMillis = NOW,
+                initialRange = HistoryRange.SIX_HOURS,
+            )
+        }
+    }
+
+    @Test
     fun historyCardChargingStalledLevel() {
         // The whole-number level has not ticked for a while but the rated range
         // climbs: the charge line still draws, from the miles.

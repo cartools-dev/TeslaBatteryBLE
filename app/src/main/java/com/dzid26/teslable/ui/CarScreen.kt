@@ -750,7 +750,9 @@ private fun BatteryChart(
 
         fun x(timestampMillis: Long): Float = left + ((timestampMillis - windowStart).toFloat() / span).coerceIn(0f, 1f) * width
 
-        fun y(percent: Int): Float = top + height - ((percent - yMin).toFloat() / (yMax - yMin)) * height
+        fun y(percent: Float): Float = top + height - ((percent - yMin) / (yMax - yMin)) * height
+
+        fun y(percent: Int): Float = y(percent.toFloat())
 
         listOf(yMin, (yMin + yMax) / 2, yMax).forEach { value ->
             val gridY = y(value)
@@ -797,7 +799,7 @@ private fun BatteryChart(
         charge?.let { target ->
             // The beam: where the limit lands if the supply voltage stayed at the
             // best or worst it showed this run.
-            val (line, beam) = chargeProjectionPaths(target, windowEnd, ::x, ::y)
+            val (line, beam) = chargeProjectionPaths(target, windowEnd, ::x) { percent -> y(percent) }
             beam?.let { drawPath(path = it, color = chargingColor.copy(alpha = 0.25f)) }
             drawPath(
                 path = line,
@@ -854,7 +856,7 @@ private fun chargeProjectionPaths(
     projection: ChargeProjection,
     windowEnd: Long,
     x: (Long) -> Float,
-    y: (Int) -> Float,
+    y: (Float) -> Float,
 ): Pair<Path, Path?> {
     val fromMillis = projection.from.timestampMillis
     val fromPercent = projection.from.percent
@@ -862,15 +864,16 @@ private fun chargeProjectionPaths(
     // A completion past the chart's right edge would flatten the wedge onto the
     // edge, so cut each side where it crosses the edge instead.
     fun end(completionMillis: Long): Pair<Float, Float> {
-        if (completionMillis <= windowEnd) return x(completionMillis) to y(projection.targetPercent)
+        if (completionMillis <= windowEnd) return x(completionMillis) to y(projection.targetPercent.toFloat())
         val share = (windowEnd - fromMillis).toFloat() / (completionMillis - fromMillis)
+        // Not rounded: far from the limit the two sides differ by well under a point.
         val percentAtEdge = fromPercent + (projection.targetPercent - fromPercent) * share
-        return x(windowEnd) to y(percentAtEdge.roundToInt())
+        return x(windowEnd) to y(percentAtEdge)
     }
     val (lineX, lineY) = end(projection.completionMillis)
     val line =
         Path().apply {
-            moveTo(x(fromMillis), y(fromPercent))
+            moveTo(x(fromMillis), y(fromPercent.toFloat()))
             lineTo(lineX, lineY)
         }
     val (earliest, latest) = projection.beam ?: return line to null
@@ -878,7 +881,7 @@ private fun chargeProjectionPaths(
     val (lateX, lateY) = end(latest)
     val beam =
         Path().apply {
-            moveTo(x(fromMillis), y(fromPercent))
+            moveTo(x(fromMillis), y(fromPercent.toFloat()))
             lineTo(earlyX, earlyY)
             lineTo(lateX, lateY)
             close()
