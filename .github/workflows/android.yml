@@ -66,6 +66,64 @@ concurrency:
 # (v* tags) takes the signing key and ATTACHMENTS_TOKEN from the `release`
 # environment and builds the signed APK itself. `draft` (main) needs no secrets.
 jobs:
+  tests:
+    name: Unit tests
+    # Release runs verify in the release job instead.
+    if: |
+      !(startsWith(github.ref, 'refs/tags/') ||
+        (github.event_name == 'workflow_dispatch' && (inputs.release || inputs.tag != '')))
+    permissions:
+      contents: read
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          fetch-depth: 0 # full history and tags: versionName is derived from git describe
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6 # v6
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@3f5f9adaf7d9fecd50b5935e54106014257a94e6 # v6
+
+      - name: Make gradlew executable
+        run: chmod +x gradlew
+
+      - name: Verify (unit tests)
+        run: bash .github/scripts/verify.sh tests
+
+  static:
+    name: Lint and static analysis
+    # Release runs verify in the release job instead.
+    if: |
+      !(startsWith(github.ref, 'refs/tags/') ||
+        (github.event_name == 'workflow_dispatch' && (inputs.release || inputs.tag != '')))
+    permissions:
+      contents: read
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          fetch-depth: 0 # full history and tags: versionName is derived from git describe
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6 # v6
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@3f5f9adaf7d9fecd50b5935e54106014257a94e6 # v6
+
+      - name: Make gradlew executable
+        run: chmod +x gradlew
+
+      - name: Verify (lint and static analysis)
+        run: bash .github/scripts/verify.sh static
+
   build:
     # Release runs skip this job: the release job verifies, builds and signs
     # the app itself, so the app is not built twice.
@@ -109,9 +167,8 @@ jobs:
           # Values pasted on Windows end in CRLF, and some encoders wrap lines.
           printf '%s' "$CI_DEBUG_KEYSTORE_BASE64" | tr -d '[:space:]' | base64 -d > "$dir/debug.keystore"
 
-      - name: Verify (tests, lint, static analysis)
-        run: bash .github/scripts/verify.sh
-
+      # Tests and static analysis run as the parallel `tests` and `static`
+      # jobs; this job only builds the APK, so a PR gets its install sooner.
       # The artifact gets its own application ID (.pr), launcher label and a
       # versionName like 0.4.1-beta.1+pr85@a47c909 (PR number and head sha from the
       # env below), so it installs next to the release app and says which commit it
@@ -335,7 +392,8 @@ jobs:
 
   draft:
     name: Draft next release
-    needs: build
+    # The draft only advances when the build and both verify jobs pass.
+    needs: [build, tests, static]
     permissions:
       contents: write
     if: |
