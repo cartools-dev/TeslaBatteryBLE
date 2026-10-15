@@ -797,20 +797,10 @@ private fun BatteryChart(
         charge?.let { target ->
             // The beam: where the limit lands if the supply voltage stayed at the
             // best or worst it showed this run.
-            chargeBeamPath(target, windowEnd, ::x, ::y)?.let { beam ->
-                drawPath(path = beam, color = chargingColor.copy(alpha = 0.25f))
-            }
-            val end =
-                Offset(
-                    x(target.completionMillis),
-                    y(target.targetPercent),
-                )
+            val (line, beam) = chargeProjectionPaths(target, windowEnd, ::x, ::y)
+            beam?.let { drawPath(path = it, color = chargingColor.copy(alpha = 0.25f)) }
             drawPath(
-                path =
-                    Path().apply {
-                        moveTo(x(target.from.timestampMillis), y(target.from.percent))
-                        lineTo(end.x, end.y)
-                    },
+                path = line,
                 color = chargingColor.copy(alpha = 0.65f),
                 style =
                     Stroke(
@@ -854,14 +844,18 @@ private fun BatteryChart(
     }
 }
 
-/** The wedge from the latest sample to the earliest and latest completion; null without a beam. */
-private fun chargeBeamPath(
+/**
+ * The projected line from the latest sample to the limit, and the beam's wedge
+ * to the earliest and latest completion (null without a beam). A completion
+ * past the chart's right edge is cut where its line crosses the edge, so the
+ * line and the wedge keep their slope instead of flattening onto the edge.
+ */
+private fun chargeProjectionPaths(
     projection: ChargeProjection,
     windowEnd: Long,
     x: (Long) -> Float,
     y: (Int) -> Float,
-): Path? {
-    val (earliest, latest) = projection.beam ?: return null
+): Pair<Path, Path?> {
     val fromMillis = projection.from.timestampMillis
     val fromPercent = projection.from.percent
 
@@ -871,16 +865,25 @@ private fun chargeBeamPath(
         if (completionMillis <= windowEnd) return x(completionMillis) to y(projection.targetPercent)
         val share = (windowEnd - fromMillis).toFloat() / (completionMillis - fromMillis)
         val percentAtEdge = fromPercent + (projection.targetPercent - fromPercent) * share
-        return x(windowEnd) to y(percentAtEdge.toInt())
+        return x(windowEnd) to y(percentAtEdge.roundToInt())
     }
+    val (lineX, lineY) = end(projection.completionMillis)
+    val line =
+        Path().apply {
+            moveTo(x(fromMillis), y(fromPercent))
+            lineTo(lineX, lineY)
+        }
+    val (earliest, latest) = projection.beam ?: return line to null
     val (earlyX, earlyY) = end(earliest)
     val (lateX, lateY) = end(latest)
-    return Path().apply {
-        moveTo(x(fromMillis), y(fromPercent))
-        lineTo(earlyX, earlyY)
-        lineTo(lateX, lateY)
-        close()
-    }
+    val beam =
+        Path().apply {
+            moveTo(x(fromMillis), y(fromPercent))
+            lineTo(earlyX, earlyY)
+            lineTo(lateX, lateY)
+            close()
+        }
+    return line to beam
 }
 
 private fun HistoryRange.label(): String =

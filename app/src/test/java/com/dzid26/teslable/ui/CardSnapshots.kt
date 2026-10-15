@@ -550,17 +550,17 @@ class CardSnapshots {
         private val chargingSamples =
             parkedSamples.dropLast(1) +
                 listOf(
-                    projectionSample(60L, 55, charging = true, ratedMiles = 165f).copy(chargerVoltage = 244),
-                    projectionSample(30L, 58, charging = true, ratedMiles = 174f).copy(chargerVoltage = 224),
-                    projectionSample(0L, 61, charging = true, ratedMiles = 183f).copy(chargerVoltage = 236),
+                    projectionSample(60L, 55, charging = true, ratedMiles = 165f).copy(chargerVoltage = 245),
+                    projectionSample(30L, 58, charging = true, ratedMiles = 174f).copy(chargerVoltage = 215),
+                    projectionSample(0L, 61, charging = true, ratedMiles = 183f).copy(chargerVoltage = 232),
                 )
 
         private val stalledSamples =
             parkedSamples.dropLast(1) +
                 listOf(
-                    projectionSample(30L, 55, charging = true, ratedMiles = 165f).copy(chargerVoltage = 224),
+                    projectionSample(30L, 55, charging = true, ratedMiles = 165f).copy(chargerVoltage = 215),
                     projectionSample(15L, 55, charging = true, ratedMiles = 166.5f).copy(chargerVoltage = 245),
-                    projectionSample(0L, 55, charging = true, ratedMiles = 168f).copy(chargerVoltage = 236),
+                    projectionSample(0L, 55, charging = true, ratedMiles = 168f).copy(chargerVoltage = 232),
                 )
 
         private fun chargeSample(
