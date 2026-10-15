@@ -65,6 +65,12 @@ object FullRangeScaleEstimator {
 
     private const val MIN_BOUNDARIES = 4
 
+    /** sqrt(12): a uniform position inside a gap has standard deviation gap / sqrt(12). */
+    private const val UNIFORM_SPREAD_DIVISOR = 3.4641016f
+
+    /** A level step happens half a level above the lower level. */
+    private const val STEP_MIDPOINT = 0.5f
+
     /** Distinct level steps needed so the slope is not read off one spot. */
     private const val MIN_LEVEL_SPAN = 3f
 
@@ -120,8 +126,8 @@ object FullRangeScaleEstimator {
             val b = after.ratedRangeMiles!!
             val gap = abs(b - a)
             // A uniform position inside the gap has standard deviation gap / sqrt(12).
-            val sigma = maxOf(gap / sqrt(12f), MIN_SIGMA_MILES)
-            val level = minOf(before.batteryLevel, after.batteryLevel) + 0.5f
+            val sigma = maxOf(gap / UNIFORM_SPREAD_DIVISOR, MIN_SIGMA_MILES)
+            val level = minOf(before.batteryLevel, after.batteryLevel) + STEP_MIDPOINT
             result += Boundary(level, (a + b) / 2f, sigma)
         }
         return result
