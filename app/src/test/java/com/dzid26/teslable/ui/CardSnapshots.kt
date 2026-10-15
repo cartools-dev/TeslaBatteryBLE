@@ -27,6 +27,7 @@ import com.dzid26.teslable.ble.Vehicle
 import com.dzid26.teslable.core.history.BatterySample
 import com.dzid26.teslable.core.history.HistoryRange
 import com.dzid26.teslable.core.protocol.ChargingStateKind
+import com.tesla.generated.carserver.common.Void
 import com.tesla.generated.carserver.vehicle.ChargeState
 import com.tesla.generated.vcsec.UserPresence_E
 import com.tesla.generated.vcsec.VehicleLockState_E
@@ -160,6 +161,21 @@ class CardSnapshots {
         snapCard("hero-card_fresh") {
             HeroCard(
                 connection = liveConnection(readAt = NOW - FRESH_MINUTES * MINUTE),
+                advert = advert,
+                vehicle = vehicle,
+                history = emptyList(),
+                statusHistory = emptyList(),
+                nowMillis = NOW,
+            )
+        }
+    }
+
+    @Test
+    fun heroCardCharging() {
+        val charging = liveCharge.copy(charging_state = ChargeState.ChargingState(Charging = Void()))
+        snapCard("hero-card_charging") {
+            HeroCard(
+                connection = liveConnection(readAt = NOW - FRESH_MINUTES * MINUTE, charge = charging),
                 advert = advert,
                 vehicle = vehicle,
                 history = emptyList(),
