@@ -25,8 +25,10 @@ import com.dzid26.teslable.ble.TeslaAdvert
 import com.dzid26.teslable.ble.TeslaConnection
 import com.dzid26.teslable.ble.Vehicle
 import com.dzid26.teslable.core.history.BatterySample
+import com.dzid26.teslable.core.history.DriveSample
 import com.dzid26.teslable.core.history.HistoryRange
 import com.dzid26.teslable.core.protocol.ChargingStateKind
+import com.dzid26.teslable.core.protocol.ShiftStateKind
 import com.tesla.generated.carserver.common.Void
 import com.tesla.generated.carserver.vehicle.ChargeState
 import com.tesla.generated.vcsec.UserPresence_E
@@ -294,6 +296,44 @@ class CardSnapshots {
     }
 
     @Test
+    fun historyCardParkedDrain() {
+        // A parked car losing a point every few hours: the "Parked" projection
+        // line and its rate, no charge in sight.
+        snapCard("history-card_parked-drain") {
+            BatteryHistoryCard(
+                samples = parkedSamples,
+                drives = parkedSamples.map { parkedDrive(it) },
+                nowMillis = NOW,
+            )
+        }
+    }
+
+    @Test
+    fun historyCardChargingProjection() {
+        // Charging toward the limit: the green line up, the parked drain muted.
+        snapCard("history-card_charging-projection") {
+            BatteryHistoryCard(
+                samples = chargingSamples,
+                drives = parkedSamples.map { parkedDrive(it) },
+                nowMillis = NOW,
+            )
+        }
+    }
+
+    @Test
+    fun historyCardChargingStalledLevel() {
+        // The whole-number level has not ticked for a while but the rated range
+        // climbs: the charge line still draws, from the miles.
+        snapCard("history-card_charging-stalled-level") {
+            BatteryHistoryCard(
+                samples = stalledSamples,
+                drives = parkedSamples.map { parkedDrive(it) },
+                nowMillis = NOW,
+            )
+        }
+    }
+
+    @Test
     fun screenCarsList() {
         snapScreen("screen-cars-list") {
             ConnectionsScreen(
@@ -468,6 +508,59 @@ class CardSnapshots {
             vehicleId = BLE_NAME,
             readAtMillis = NOW - hoursAgo * HOUR,
         )
+
+        private fun parkedDrive(sample: BatterySample) =
+            DriveSample(
+                timestampMillis = sample.timestampMillis + MINUTE,
+                vehicleId = BLE_NAME,
+                shiftState = ShiftStateKind.P,
+                speed = 0,
+                power = 0,
+                odometerInHundredthsOfAMile = ODOMETER,
+            )
+
+        private fun projectionSample(
+            minutesAgo: Long,
+            percent: Int,
+            charging: Boolean,
+            ratedMiles: Float,
+        ) = BatterySample(
+            timestampMillis = NOW - minutesAgo * MINUTE,
+            batteryLevel = percent,
+            chargingState = if (charging) ChargingStateKind.Charging else null,
+            chargeLimit = if (charging) CHARGE_LIMIT else null,
+            vehicleId = BLE_NAME,
+            ratedRangeMiles = ratedMiles,
+            readAtMillis = NOW - minutesAgo * MINUTE,
+        )
+
+        private const val ODOMETER = 1_234_500
+
+        private val parkedSamples =
+            listOf(
+                projectionSample(20 * 60L, 60, charging = false, ratedMiles = 180f),
+                projectionSample(16 * 60L, 59, charging = false, ratedMiles = 177f),
+                projectionSample(12 * 60L, 58, charging = false, ratedMiles = 174f),
+                projectionSample(8 * 60L, 57, charging = false, ratedMiles = 171f),
+                projectionSample(4 * 60L, 56, charging = false, ratedMiles = 168f),
+                projectionSample(0L, 55, charging = false, ratedMiles = 165f),
+            )
+
+        private val chargingSamples =
+            parkedSamples.dropLast(1) +
+                listOf(
+                    projectionSample(60L, 55, charging = true, ratedMiles = 165f),
+                    projectionSample(30L, 58, charging = true, ratedMiles = 174f),
+                    projectionSample(0L, 61, charging = true, ratedMiles = 183f),
+                )
+
+        private val stalledSamples =
+            parkedSamples.dropLast(1) +
+                listOf(
+                    projectionSample(30L, 55, charging = true, ratedMiles = 165f),
+                    projectionSample(15L, 55, charging = true, ratedMiles = 166.5f),
+                    projectionSample(0L, 55, charging = true, ratedMiles = 168f),
+                )
 
         private fun chargeSample(
             minutesAgo: Long,
