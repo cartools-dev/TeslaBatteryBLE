@@ -20,6 +20,7 @@ import com.dzid26.teslable.core.protocol.PairingHost
 import com.dzid26.teslable.core.protocol.PairingKeys
 import com.dzid26.teslable.core.protocol.PairingPhase
 import com.dzid26.teslable.core.protocol.PairingTimer
+import com.dzid26.teslable.core.protocol.TeslaKeyPair
 import com.dzid26.teslable.core.protocol.TeslaCommands
 import com.dzid26.teslable.core.protocol.TeslaCrypto
 import com.dzid26.teslable.core.protocol.TeslaSession
@@ -816,14 +817,14 @@ class TeslaBleController(
                 }
             }
 
-        private val pairingTimers =
+        private val pairingTimers: Map<PairingTimer, Runnable> =
             PairingTimer.entries.associateWith { timer -> Runnable { pairing.onTimer(timer) } }
 
-        private val pairingHost =
+        private val pairingHost: PairingHost =
             object : PairingHost {
-                override val isReady get() = phase == ConnectionPhase.READY
+                override val isReady: Boolean get() = phase == ConnectionPhase.READY
 
-                override fun log(message: String) = this@VehicleLink.log("${name()}: $message")
+                override fun log(message: String): Unit = this@VehicleLink.log("${name()}: $message")
 
                 override fun transmitVcsec(
                     request: ByteArray,
@@ -838,7 +839,9 @@ class TeslaBleController(
                 override fun publishPairing(
                     phase: PairingPhase,
                     keyId: String?,
-                ) = updateConnection(address) { it.copy(pairing = phase, pairingKeyId = keyId) }
+                ) {
+                    updateConnection(address) { it.copy(pairing = phase, pairingKeyId = keyId) }
+                }
 
                 override fun publishKeySlot(slot: Int?) {
                     updateConnection(address) { it.copy(keySlot = slot) }
@@ -854,7 +857,9 @@ class TeslaBleController(
                     startSession()
                 }
 
-                override fun onFreshlyEnrolled() = infotainmentPolicy.onFreshStart(System.currentTimeMillis())
+                override fun onFreshlyEnrolled() {
+                    infotainmentPolicy.onFreshStart(System.currentTimeMillis())
+                }
 
                 override fun schedule(
                     timer: PairingTimer,
@@ -864,21 +869,23 @@ class TeslaBleController(
                     handler.postDelayed(pairingTimers.getValue(timer), delayMs)
                 }
 
-                override fun cancel(timer: PairingTimer) = handler.removeCallbacks(pairingTimers.getValue(timer))
+                override fun cancel(timer: PairingTimer) {
+                    handler.removeCallbacks(pairingTimers.getValue(timer))
+                }
             }
 
         /** Enrolls this phone's key and finds its slot; the state machine lives in core. */
-        val pairing =
+        val pairing: PairingFlow =
             PairingFlow(
                 keys =
                     object : PairingKeys {
-                        override fun hasKey() = keyStore.hasKey(bleName)
+                        override fun hasKey(): Boolean = keyStore.hasKey(bleName)
 
-                        override fun publicKeyRaw() = keyStore.publicKeyRaw(bleName)
+                        override fun publicKeyRaw(): ByteArray? = keyStore.publicKeyRaw(bleName)
 
-                        override fun keyId() = keyStore.keyId(bleName)
+                        override fun keyId(): ByteArray? = keyStore.keyId(bleName)
 
-                        override fun generate() = keyStore.generate(bleName)
+                        override fun generate(): TeslaKeyPair? = keyStore.generate(bleName)
                     },
                 host = pairingHost,
             )
