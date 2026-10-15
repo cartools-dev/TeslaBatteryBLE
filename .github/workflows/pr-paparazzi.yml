@@ -110,6 +110,21 @@ jobs:
             fi
             changed=$((changed + 1))
           done < <(sed -n 's/^changed //p' "$report")
+          # A highlighted diff image for every changed snapshot that also
+          # existed before (best effort: the comment works without it).
+          if [ "$changed" -gt 0 ]; then
+            mapfile -t names < <(sed -n 's/^changed //p' "$report")
+            mkdir -p "$RUNNER_TEMP/pngdiff"
+            if npm install --no-save --no-audit --no-fund --prefix "$RUNNER_TEMP/pngdiff" \
+                pixelmatch@5.3.0 pngjs@7.0.0 > /dev/null &&
+              NODE_PATH="$RUNNER_TEMP/pngdiff/node_modules" node .github/scripts/png-diff.js \
+                "$RUNNER_TEMP/before" "$RUNNER_TEMP/after" pr-paparazzi/diff "${names[@]}"; then
+              :
+            else
+              echo "::warning::could not render the diff images"
+              rm -rf pr-paparazzi/diff
+            fi
+          fi
           printf '%s\n' "$PR_NUMBER" > pr-paparazzi/pr-number
           printf '%s\n' "$after_sha" > pr-paparazzi/short-sha
           printf '%s\n' "$before_sha" > pr-paparazzi/before-sha

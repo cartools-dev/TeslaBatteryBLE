@@ -90,9 +90,9 @@ jobs:
           if [ -z "$HEAD_REPO" ] || [ "$pr_head" != "$HEAD_REPO:$HEAD_BRANCH" ]; then
             fail "PR #$pr is not the pull request the run was for"
           fi
-          mkdir -p "$SHOTS/after" "$SHOTS/before"
+          mkdir -p "$SHOTS/after" "$SHOTS/before" "$SHOTS/diff"
           count=0
-          for side in after before; do
+          for side in after before diff; do
             for file in "$ARTIFACT"/"$side"/*.png; do
               name="$(basename "$file")"
               [[ "$name" =~ ^((vehicle-card|hero-card)_[a-z-]+(_jelly)?|screen-[a-z-]+)_(light|dark)\.png$ ]] \
@@ -105,7 +105,7 @@ jobs:
               count=$((count + 1))
             done
           done
-          [ "$count" -le 60 ] || fail "too many snapshots in the artifact"
+          [ "$count" -le 90 ] || fail "too many snapshots in the artifact"
           if [ ! -f "$ARTIFACT/unchanged" ] && [ "$(find "$SHOTS/after" -name '*.png' | wc -l)" -eq 0 ]; then
             fail "the artifact has no changed snapshots and no unchanged marker"
           fi
@@ -155,13 +155,18 @@ jobs:
           post_theme() {
             local stem="$1" theme="$2"
             local name="${stem}_${theme}.png"
-            local url before_url
+            local url before_url diff_url diff_img
             url="$(bash .github/scripts/upload-screenshot.sh "$SHOTS_DIR/after/$name" "$name-$SHORT_SHA.png")"
             if [ -f "$SHOTS_DIR/before/$name" ]; then
               before_url="$(bash .github/scripts/upload-screenshot.sh "$SHOTS_DIR/before/$name" "before-$name-$BEFORE_SHA.png")"
-              printf '<p><img src="%s" alt="%s %s before" width="32%%"> <img src="%s" alt="%s %s after" width="32%%"></p>\n\n' \
-                "$before_url" "$stem" "$theme" "$url" "$stem" "$theme"
-              printf 'Before %s · after %s.\n\n' "$BEFORE_SHA" "$SHORT_SHA"
+              diff_img=""
+              if [ -f "$SHOTS_DIR/diff/$name" ]; then
+                diff_url="$(bash .github/scripts/upload-screenshot.sh "$SHOTS_DIR/diff/$name" "diff-$name-$SHORT_SHA.png")"
+                diff_img="$(printf ' <img src="%s" alt="%s %s diff" width="32%%">' "$diff_url" "$stem" "$theme")"
+              fi
+              printf '<p><img src="%s" alt="%s %s before" width="32%%"> <img src="%s" alt="%s %s after" width="32%%">%s</p>\n\n' \
+                "$before_url" "$stem" "$theme" "$url" "$stem" "$theme" "$diff_img"
+              printf 'Before %s · after %s · changed pixels in red.\n\n' "$BEFORE_SHA" "$SHORT_SHA"
             else
               printf '<p><img src="%s" alt="%s %s after" width="32%%"></p>\n\n' "$url" "$stem" "$theme"
             fi
