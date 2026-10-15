@@ -6,6 +6,7 @@ import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.PendingIntent
 import android.app.Service
+import android.bluetooth.BluetoothAdapter
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
@@ -78,6 +79,18 @@ class BleTrackingService : Service() {
             }
         }
 
+    /** Reconnects as soon as Bluetooth is back on instead of waiting out the reconnect backoff. */
+    private val bluetoothReceiver =
+        object : BroadcastReceiver() {
+            override fun onReceive(
+                context: Context,
+                intent: Intent,
+            ) {
+                if (intent.getIntExtra(BluetoothAdapter.EXTRA_STATE, BluetoothAdapter.ERROR) != BluetoothAdapter.STATE_ON) return
+                BleControllerHolder.get(context).onBluetoothOn()
+            }
+        }
+
     override fun onCreate() {
         super.onCreate()
         isRunning = true
@@ -89,6 +102,12 @@ class BleTrackingService : Service() {
                 addAction(Intent.ACTION_SCREEN_ON)
                 addAction(Intent.ACTION_SCREEN_OFF)
             },
+            ContextCompat.RECEIVER_NOT_EXPORTED,
+        )
+        ContextCompat.registerReceiver(
+            this,
+            bluetoothReceiver,
+            IntentFilter(BluetoothAdapter.ACTION_STATE_CHANGED),
             ContextCompat.RECEIVER_NOT_EXPORTED,
         )
         val controller = BleControllerHolder.get(this)
@@ -147,6 +166,7 @@ class BleTrackingService : Service() {
     override fun onDestroy() {
         isRunning = false
         runCatching { unregisterReceiver(screenReceiver) }
+        runCatching { unregisterReceiver(bluetoothReceiver) }
         BleControllerHolder.get(this).recordAppState(AppState.Event.TRACKING_STOPPED)
         scope.cancel()
         super.onDestroy()

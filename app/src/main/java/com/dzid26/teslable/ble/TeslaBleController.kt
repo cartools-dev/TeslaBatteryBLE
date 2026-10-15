@@ -287,6 +287,16 @@ class TeslaBleController(
         }
     }
 
+    /**
+     * Bluetooth came back on. A retry that fired while it was off never completed, and the backoff may be a minute
+     * long by now; every car that is not connected tries again at once.
+     */
+    fun onBluetoothOn() {
+        if (!_state.value.trackingEnabled) return
+        links.values.filter { it.phase != ConnectionPhase.READY }.forEach { it.retryNow() }
+        ensureConnected()
+    }
+
     fun pairKey(address: String) {
         val link =
             linkForAddress(address) ?: run {
@@ -883,6 +893,14 @@ class TeslaBleController(
             val client = createTransport(address, listener())
             transport = client
             client.connect(address)
+        }
+
+        /** Connects now with a fresh backoff, dropping a connect attempt that can no longer complete. */
+        fun retryNow() {
+            reconnectAttempts = 0
+            if (phase == ConnectionPhase.CONNECTING) phase = ConnectionPhase.DISCONNECTED
+            log("${name()}: Bluetooth is back on, reconnecting")
+            connect()
         }
 
         fun close() {
