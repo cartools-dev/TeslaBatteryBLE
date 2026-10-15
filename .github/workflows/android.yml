@@ -179,14 +179,14 @@ jobs:
           HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
         run: ./gradlew :app:assembleDebug -PciDebugBuild=true
 
-      # The APK name says which PR and commit it came from; the artifact name
-      # stays fixed because the screenshot comment looks it up.
       # The shipping variant is never installed from here, but R8, resource
       # shrinking and the release manifest are exercised on every build. Without
       # signing secrets it is unsigned.
       - name: Build release APK
         run: ./gradlew :app:assembleRelease
 
+      # The APK name says which PR and commit it came from; the artifact name
+      # stays fixed because the screenshot comment looks it up.
       - name: Name the debug APK
         env:
           PR_NUMBER: ${{ github.event.pull_request.number }}
