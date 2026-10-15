@@ -669,7 +669,11 @@ internal fun BatteryHistoryCard(
                     Text(
                         text =
                             "Charging · projected ${it.targetPercent}% around " +
-                                formatTime(it.completionMillis, showDate = true),
+                                formatTime(it.completionMillis, showDate = true) +
+                                it.beam
+                                    ?.let { (earliest, latest) ->
+                                        " (${formatTime(earliest, showDate = false)}–${formatTime(latest, showDate = false)})"
+                                    }.orEmpty(),
                         style = MaterialTheme.typography.bodySmall,
                         color = chargingChartColor,
                     )
@@ -746,7 +750,9 @@ private fun BatteryChart(
 
         fun x(timestampMillis: Long): Float = left + ((timestampMillis - windowStart).toFloat() / span).coerceIn(0f, 1f) * width
 
-        fun y(percent: Int): Float = top + height - ((percent - yMin).toFloat() / (yMax - yMin)) * height
+        fun y(percent: Float): Float = top + height - ((percent - yMin) / (yMax - yMin)) * height
+
+        fun y(percent: Int): Float = y(percent.toFloat())
 
         listOf(yMin, (yMin + yMax) / 2, yMax).forEach { value ->
             val gridY = y(value)
@@ -791,17 +797,12 @@ private fun BatteryChart(
         }
 
         charge?.let { target ->
-            val end =
-                Offset(
-                    x(target.completionMillis),
-                    y(target.targetPercent),
-                )
+            // The beam: where the limit lands if the supply voltage stayed at the
+            // best or worst it showed this run.
+            val (line, beam) = chargeProjectionPaths(target, windowEnd, ::x) { percent -> y(percent) }
+            beam?.let { drawPath(path = it, color = chargingColor.copy(alpha = 0.25f)) }
             drawPath(
-                path =
-                    Path().apply {
-                        moveTo(x(target.from.timestampMillis), y(target.from.percent))
-                        lineTo(end.x, end.y)
-                    },
+                path = line,
                 color = chargingColor.copy(alpha = 0.65f),
                 style =
                     Stroke(
@@ -843,6 +844,49 @@ private fun BatteryChart(
             topLeft = Offset(left + width - endLabel.size.width, size.height - endLabel.size.height),
         )
     }
+}
+
+/**
+ * The projected line from the latest sample to the limit, and the beam's wedge
+ * to the earliest and latest completion (null without a beam). A completion
+ * past the chart's right edge is cut where its line crosses the edge, so the
+ * line and the wedge keep their slope instead of flattening onto the edge.
+ */
+private fun chargeProjectionPaths(
+    projection: ChargeProjection,
+    windowEnd: Long,
+    x: (Long) -> Float,
+    y: (Float) -> Float,
+): Pair<Path, Path?> {
+    val fromMillis = projection.from.timestampMillis
+    val fromPercent = projection.from.percent
+
+    // A completion past the chart's right edge would flatten the wedge onto the
+    // edge, so cut each side where it crosses the edge instead.
+    fun end(completionMillis: Long): Pair<Float, Float> {
+        if (completionMillis <= windowEnd) return x(completionMillis) to y(projection.targetPercent.toFloat())
+        val share = (windowEnd - fromMillis).toFloat() / (completionMillis - fromMillis)
+        // Not rounded: far from the limit the two sides differ by well under a point.
+        val percentAtEdge = fromPercent + (projection.targetPercent - fromPercent) * share
+        return x(windowEnd) to y(percentAtEdge)
+    }
+    val (lineX, lineY) = end(projection.completionMillis)
+    val line =
+        Path().apply {
+            moveTo(x(fromMillis), y(fromPercent.toFloat()))
+            lineTo(lineX, lineY)
+        }
+    val (earliest, latest) = projection.beam ?: return line to null
+    val (earlyX, earlyY) = end(earliest)
+    val (lateX, lateY) = end(latest)
+    val beam =
+        Path().apply {
+            moveTo(x(fromMillis), y(fromPercent.toFloat()))
+            lineTo(earlyX, earlyY)
+            lineTo(lateX, lateY)
+            close()
+        }
+    return line to beam
 }
 
 private fun HistoryRange.label(): String =

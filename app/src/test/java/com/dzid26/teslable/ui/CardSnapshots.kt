@@ -321,6 +321,20 @@ class CardSnapshots {
     }
 
     @Test
+    fun historyCardChargingSixHours() {
+        // The short range puts the chart's right edge only 3 h ahead, so the beam is
+        // cut near the line's start: it must stay a visible sliver, not round away.
+        snapCard("history-card_charging-6h") {
+            BatteryHistoryCard(
+                samples = chargingSamples,
+                drives = parkedSamples.map { parkedDrive(it) },
+                nowMillis = NOW,
+                initialRange = HistoryRange.SIX_HOURS,
+            )
+        }
+    }
+
+    @Test
     fun historyCardChargingStalledLevel() {
         // The whole-number level has not ticked for a while but the rated range
         // climbs: the charge line still draws, from the miles.
@@ -546,20 +560,21 @@ class CardSnapshots {
                 projectionSample(0L, 55, charging = false, ratedMiles = 165f),
             )
 
+        // The AC supply sagging and recovering around 240 V: the beam around the green line.
         private val chargingSamples =
             parkedSamples.dropLast(1) +
                 listOf(
-                    projectionSample(60L, 55, charging = true, ratedMiles = 165f),
-                    projectionSample(30L, 58, charging = true, ratedMiles = 174f),
-                    projectionSample(0L, 61, charging = true, ratedMiles = 183f),
+                    projectionSample(60L, 55, charging = true, ratedMiles = 165f).copy(chargerVoltage = 245),
+                    projectionSample(30L, 58, charging = true, ratedMiles = 174f).copy(chargerVoltage = 215),
+                    projectionSample(0L, 61, charging = true, ratedMiles = 183f).copy(chargerVoltage = 232),
                 )
 
         private val stalledSamples =
             parkedSamples.dropLast(1) +
                 listOf(
-                    projectionSample(30L, 55, charging = true, ratedMiles = 165f),
-                    projectionSample(15L, 55, charging = true, ratedMiles = 166.5f),
-                    projectionSample(0L, 55, charging = true, ratedMiles = 168f),
+                    projectionSample(30L, 55, charging = true, ratedMiles = 165f).copy(chargerVoltage = 215),
+                    projectionSample(15L, 55, charging = true, ratedMiles = 166.5f).copy(chargerVoltage = 245),
+                    projectionSample(0L, 55, charging = true, ratedMiles = 168f).copy(chargerVoltage = 232),
                 )
 
         private fun chargeSample(
