@@ -19,6 +19,8 @@ kotlin {
 
 dependencies {
     implementation(libs.wire.runtime)
+    implementation(libs.cryptography.core)
+    implementation(libs.cryptography.provider.jdk)
     testImplementation(libs.junit)
     // New tests use kotlin.test so they can move to commonTest (ADR-0007).
     testImplementation(kotlin("test"))

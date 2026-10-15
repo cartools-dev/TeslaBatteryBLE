@@ -55,8 +55,9 @@ Date: 2026-10-07
 
 ## Consequences
 
-- The crypto swap lands in a follow-up PR under the pre-1.0 policy: no data
-  migration, no in-app migration code. Existing PKCS8 keys must import
+- The crypto swap landed in #236 (cryptography-kotlin 0.6.0, JDK provider)
+  under the pre-1.0 policy: no data migration, no in-app migration code.
+  Existing PKCS8 keys must import
   through the new library; if they do not, the owner re-pairs (acceptable at
   this stage).
 - Contributors get a failing-lint-free rule set today: keep `java.*` out of

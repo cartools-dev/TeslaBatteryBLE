@@ -14,6 +14,11 @@ only (AGPL-3.0-only). See [LICENSE](LICENSE).
   ([misakatao/TeslaBLEKeyKit](https://github.com/misakatao/TeslaBLEKeyKit),
   [shoujiaxin/swift-tesla-ble](https://github.com/shoujiaxin/swift-tesla-ble)).
 
+## Runtime dependencies
+
+- [cryptography-kotlin](https://github.com/whyoleg/cryptography-kotlin)
+  (`dev.whyoleg.cryptography`, Apache-2.0): `core` crypto primitives.
+
 ## Behavioral references only — no code copied
 
 - The AGPL-licensed C++ implementations (pmdroid, yoziru/PedroKTFC lineage)

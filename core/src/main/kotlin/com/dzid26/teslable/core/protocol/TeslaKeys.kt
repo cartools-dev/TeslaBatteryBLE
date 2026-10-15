@@ -1,46 +1,35 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 package com.dzid26.teslable.core.protocol
 
-import java.math.BigInteger
-import java.security.KeyPair
-import java.security.KeyPairGenerator
-import java.security.MessageDigest
-import java.security.interfaces.ECPublicKey
-import java.security.spec.ECGenParameterSpec
+import dev.whyoleg.cryptography.CryptographyProvider
+import dev.whyoleg.cryptography.DelicateCryptographyApi
+import dev.whyoleg.cryptography.algorithms.EC
+import dev.whyoleg.cryptography.algorithms.ECDH
+import dev.whyoleg.cryptography.algorithms.SHA1
 
 data class TeslaKeyPair(
     val privateKeyPkcs8: ByteArray,
     val publicKeyRaw: ByteArray,
 ) {
+    @OptIn(DelicateCryptographyApi::class)
     val keyId: ByteArray
-        get() = MessageDigest.getInstance("SHA-1").digest(publicKeyRaw).copyOf(4)
+        // Truncated SHA-1 is mandated by the Tesla protocol, not our choice.
+        get() = sha1.hasher().hashBlocking(publicKeyRaw).copyOf(4)
 }
 
+@OptIn(DelicateCryptographyApi::class)
 object TeslaKeys {
-    fun generate(): TeslaKeyPair {
-        val generator = KeyPairGenerator.getInstance("EC")
-        generator.initialize(ECGenParameterSpec("secp256r1"))
-        return fromKeyPair(generator.generateKeyPair())
-    }
+    private val ecdh = CryptographyProvider.Default.get(ECDH)
 
-    // Internal so tests can encode a fixed key pair; generate() is random.
-    internal fun fromKeyPair(keyPair: KeyPair): TeslaKeyPair {
-        val publicKey = keyPair.public as ECPublicKey
-        val raw =
-            byteArrayOf(0x04) +
-                publicKey.w.affineX.toFixed(FIELD_SIZE) +
-                publicKey.w.affineY.toFixed(FIELD_SIZE)
+    fun generate(): TeslaKeyPair {
+        val keyPair = ecdh.keyPairGenerator(EC.Curve.P256).generateKeyBlocking()
         return TeslaKeyPair(
-            privateKeyPkcs8 = keyPair.private.encoded,
-            publicKeyRaw = raw,
+            privateKeyPkcs8 = keyPair.privateKey.encodeToByteArrayBlocking(EC.PrivateKey.Format.DER.Generic),
+            // Uncompressed point; the car and the Go implementation agree on it.
+            publicKeyRaw = keyPair.publicKey.encodeToByteArrayBlocking(EC.PublicKey.Format.RAW),
         )
     }
-
-    private fun BigInteger.toFixed(size: Int): ByteArray {
-        val bytes = toByteArray()
-        val trimmed = if (bytes.size > size) bytes.copyOfRange(bytes.size - size, bytes.size) else bytes
-        return ByteArray(size - trimmed.size) + trimmed
-    }
-
-    private const val FIELD_SIZE = 32
 }
+
+@OptIn(DelicateCryptographyApi::class)
+private val sha1 = CryptographyProvider.Default.get(SHA1)

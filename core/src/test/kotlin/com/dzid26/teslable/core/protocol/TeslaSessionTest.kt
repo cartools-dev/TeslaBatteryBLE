@@ -124,13 +124,13 @@ class TeslaSessionTest {
 
         val first =
             session.decrypt(
-                vehicleResponse(firstId, "first".toByteArray(), counter = 0),
+                vehicleResponse(firstId, "first".toByteArray(), counter = 0, nonceSeed = 1),
                 firstId,
                 AntiReplayWindow(),
             )
         val second =
             session.decrypt(
-                vehicleResponse(secondId, "second".toByteArray(), counter = 0),
+                vehicleResponse(secondId, "second".toByteArray(), counter = 0, nonceSeed = 2),
                 secondId,
                 AntiReplayWindow(),
             )
@@ -175,6 +175,7 @@ class TeslaSessionTest {
         requestId: ByteArray,
         plaintext: ByteArray,
         counter: Int,
+        nonceSeed: Byte = 2,
     ): RoutableMessage {
         val metadata =
             Metadata
@@ -188,7 +189,10 @@ class TeslaSessionTest {
                 .addUint32(Tag.TAG_FLAGS.value, 0)
                 .add(Tag.TAG_REQUEST_HASH.value, requestId)
                 .addUint32(Tag.TAG_FAULT.value, 0)
-        val nonce = ByteArray(12) { 2 }
+        // GCM forbids reusing a nonce under one key (the provider pools its
+        // cipher, and SunJCE refuses the second init), so each response gets
+        // its own nonce. Production nonces are random per message.
+        val nonce = ByteArray(12) { nonceSeed }
         val (ciphertext, tag) =
             TeslaCrypto.encryptGcm(
                 sessionKey,
