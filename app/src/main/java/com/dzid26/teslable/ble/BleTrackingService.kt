@@ -169,6 +169,12 @@ class BleTrackingService : Service() {
         runCatching { unregisterReceiver(bluetoothReceiver) }
         BleControllerHolder.get(this).recordAppState(AppState.Event.TRACKING_STOPPED)
         scope.cancel()
+        // stopService removes only the foreground notification; the grouped per-car ones are ours to cancel.
+        val manager = NotificationManagerCompat.from(this)
+        postedCarIds.values.forEach(manager::cancel)
+        postedCarIds.clear()
+        lastCarModels.clear()
+        manager.cancel(NOTIFICATION_ID)
         super.onDestroy()
     }
 
