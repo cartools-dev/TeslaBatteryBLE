@@ -302,9 +302,15 @@ jobs:
             echo "== $f"
             grep -oE '(text|content-desc)="[^"]+"' "$f" | head -n 30 || true
           done
+          # Only the first crash dump: every later one repeats it.
+          for f in smoke-screenshots/debug/*-crash.txt; do
+            echo "== $f"
+            head -n 120 "$f"
+            break
+          done
           for f in smoke-screenshots/debug/*-logcat.txt; do
             echo "== $f"
-            grep -E -A 40 'FATAL EXCEPTION|AndroidRuntime|ClassNotFound|NoSuchMethod|NoSuchField|teslable' "$f" | head -n 150 || true
+            grep -E 'com\.dzid26' "$f" | head -n 60 || true
           done
 
       - name: Upload screenshots and logs
