@@ -66,7 +66,7 @@ fun chargeProjection(
             return ChargeProjection(
                 from = last,
                 targetPercent = target,
-                completionMillis = last.timestampMillis + (remainingMiles / milesRate * 3_600_000f).toLong(),
+                completionMillis = last.timestampMillis + (remainingMiles / milesRate * MILLIS_PER_HOUR).toLong(),
             )
         }
         return null
@@ -88,7 +88,7 @@ private fun ratedMilesPerHour(
     val lastMiles = last.ratedRangeMiles ?: return null
     val gainedMiles = lastMiles - firstMiles
     if (!gainedMiles.isFinite() || gainedMiles <= 0f) return null
-    return gainedMiles / (elapsedMillis / 3_600_000f)
+    return gainedMiles / (elapsedMillis / MILLIS_PER_HOUR)
 }
 
 /** The full rated range implied by one sample's range and level; null without both. */
@@ -114,3 +114,5 @@ private fun milesPerPercent(
 }
 
 private const val MIN_RATE_SPAN_MILLIS = 2 * 60_000L
+
+private const val MILLIS_PER_HOUR = 3_600_000f
