@@ -184,3 +184,20 @@ val MessageStatus.isRefusal: Boolean
     get() =
         operation_status == MessageOperationStatus.OPERATIONSTATUS_ERROR ||
             signed_message_fault != MessageFault_E.MESSAGEFAULT_ERROR_NONE
+
+/**
+ * Whether the car rejected the message because our session with that domain is stale: the car
+ * rotated its epoch, lost our counter or its clock moved on (after sleep or an infotainment
+ * reboot). The car asks the client to take new session info and try again; every later request
+ * on the old session fails the same way.
+ */
+val MessageStatus.isStaleSession: Boolean
+    get() = signed_message_fault in STALE_SESSION_FAULTS
+
+private val STALE_SESSION_FAULTS =
+    setOf(
+        MessageFault_E.MESSAGEFAULT_ERROR_INVALID_SIGNATURE,
+        MessageFault_E.MESSAGEFAULT_ERROR_INVALID_TOKEN_OR_COUNTER,
+        MessageFault_E.MESSAGEFAULT_ERROR_INCORRECT_EPOCH,
+        MessageFault_E.MESSAGEFAULT_ERROR_TIME_EXPIRED,
+    )

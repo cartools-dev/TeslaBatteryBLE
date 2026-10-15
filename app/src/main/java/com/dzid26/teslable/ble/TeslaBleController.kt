@@ -25,6 +25,7 @@ import com.dzid26.teslable.core.protocol.TeslaVcsec
 import com.dzid26.teslable.core.protocol.asleep
 import com.dzid26.teslable.core.protocol.chargingStateKind
 import com.dzid26.teslable.core.protocol.isRefusal
+import com.dzid26.teslable.core.protocol.isStaleSession
 import com.dzid26.teslable.core.protocol.locked
 import com.dzid26.teslable.core.protocol.userPresent
 import com.dzid26.teslable.history.HistoryStore
@@ -1242,6 +1243,20 @@ class TeslaBleController(
             return sent
         }
 
+        /** Drops the [domain] session and handshakes again, at most once a minute so a broken link cannot loop. */
+        private fun rehandshake(
+            domain: Domain,
+            why: String,
+        ) {
+            val now = System.currentTimeMillis()
+            if (now - lastRehandshakeMs <= REHANDSHAKE_COOLDOWN_MS) return
+            lastRehandshakeMs = now
+            decryptFailures = 0
+            log("${name()}: re-handshaking ${domain.name} after $why")
+            sessions.remove(domain)
+            startSession()
+        }
+
         private fun handleEncryptedResponse(
             bytes: ByteArray,
             deviceTimestamp: Instant,
@@ -1260,6 +1275,8 @@ class TeslaBleController(
             if (pending.kind.isRead) readInFlight.onReply()
             if (!encrypted) {
                 log("${name()}: ${pending.kind.name.lowercase()} rejected (${fault?.signed_message_fault?.name})")
+                // Retrying on the old session fails forever; only a new handshake recovers.
+                if (fault?.isStaleSession == true) rehandshake(pending.domain, "stale session")
                 return true
             }
             val session = sessions[pending.domain] ?: return true
@@ -1267,19 +1284,8 @@ class TeslaBleController(
             if (plaintext == null) {
                 decryptFailures++
                 log("${name()}: response decryption failed (${pending.kind.name.lowercase()})")
-                if (decryptFailures >= 2) {
-                    // The car may have rotated its session (reboot, deep sleep);
-                    // handshake again, but at most once a minute so a broken link
-                    // cannot loop.
-                    val now = System.currentTimeMillis()
-                    if (now - lastRehandshakeMs > REHANDSHAKE_COOLDOWN_MS) {
-                        lastRehandshakeMs = now
-                        decryptFailures = 0
-                        log("${name()}: re-handshaking after repeated decryption failures")
-                        sessions.remove(pending.domain)
-                        startSession()
-                    }
-                }
+                // The car may have rotated its session (reboot, deep sleep).
+                if (decryptFailures >= 2) rehandshake(pending.domain, "repeated decryption failures")
                 return true
             }
             decryptFailures = 0

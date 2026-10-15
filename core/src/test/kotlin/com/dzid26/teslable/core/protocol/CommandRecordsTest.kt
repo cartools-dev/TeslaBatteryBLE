@@ -133,6 +133,19 @@ class CommandRecordsTest {
     }
 
     @Test
+    fun `a bad signature, counter, epoch or expiry means the session is stale, busy does not`() {
+        // The faults a car returned for every read after a drive until the app handshook again.
+        fun stale(fault: MessageFault_E) = MessageStatus(MessageOperationStatus.OPERATIONSTATUS_ERROR, fault).isStaleSession
+        assertTrue(stale(MessageFault_E.MESSAGEFAULT_ERROR_INVALID_SIGNATURE))
+        assertTrue(stale(MessageFault_E.MESSAGEFAULT_ERROR_INVALID_TOKEN_OR_COUNTER))
+        assertTrue(stale(MessageFault_E.MESSAGEFAULT_ERROR_INCORRECT_EPOCH))
+        assertTrue(stale(MessageFault_E.MESSAGEFAULT_ERROR_TIME_EXPIRED))
+        assertFalse(stale(MessageFault_E.MESSAGEFAULT_ERROR_BUSY))
+        assertFalse(stale(MessageFault_E.MESSAGEFAULT_ERROR_UNKNOWN_KEY_ID))
+        assertFalse(MessageStatus().isStaleSession)
+    }
+
+    @Test
     fun `a refusal is found by the domain of the command that was answered`() {
         val refusedRead = Response(actionStatus = ActionStatus(result = CarServerStatus.OPERATIONSTATUS_ERROR)).encode()
         val refusedWake = FromVCSECMessage(commandStatus = CommandStatus(operationStatus = VcsecStatus.OPERATIONSTATUS_ERROR)).encode()
