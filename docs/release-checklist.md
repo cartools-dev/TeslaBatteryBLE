@@ -33,7 +33,7 @@
 
 ## Store distribution (when signed)
 
-- [ ] F-Droid: metadata lives in `fastlane/` (this repo). Follow the F-Droid submission process for a new app pointing at this metadata, then keep changelogs (`fastlane/metadata/android/en-US/changelogs/<versionCode>.txt`) current per release.
+- [ ] F-Droid: metadata lives in `fastlane/` (this repo). Follow the F-Droid submission process for a new app pointing at this metadata, then generate its changelog (`fastlane/metadata/android/en-US/changelogs/<versionCode>.txt`) from the commits at tag time; it is not hand-edited.
 - [ ] IzzyOnDroid: submit once a signed stable release exists.
 - [ ] Obtainium: already documented in `README.md` (tracks GitHub releases, include prereleases for tagged betas).
 - [ ] Signature-change caveat: switching signing keys (e.g. debug/preview to stable, or GitHub to F-Droid) requires users to uninstall and reinstall — Android treats different signatures as different apps, and data does not migrate.

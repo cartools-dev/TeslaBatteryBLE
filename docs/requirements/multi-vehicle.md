@@ -1,6 +1,6 @@
 # Requirements: multiple vehicles and per-vehicle VINs
 
-Status: Implemented (2026-10-05): per-vehicle storage, links and VIN, per-car notifications, cars list → car view navigation. All open questions decided (section 12).
+Status: Implemented (2026-10-05; sections 3, 4, 5, 9 and 10 were superseded by ADR-0004 and ADR-0005, see the notes inline): per-vehicle storage, links and VIN, per-car notifications, cars list → car view navigation. All open questions decided (section 12).
 Date: 2026-10-04 · Updated: 2026-10-05
 Related: `docs/adr/0001-battery-tracker.md` (ADR-0001), `docs/adr/0002-battery-history-storage.md`, `docs/master-plan.md`
 
@@ -35,8 +35,7 @@ Out of scope (unchanged unless stated):
   (e.g. `Se1f0941734830fe7C`). Stable per VIN, no PII on the air.
 - **BLE address**: the address Android connects to. It may rotate; it is an
   attribute of a vehicle, never its identity.
-- **Phone key**: the app's single P-256 key pair, created once per install. It
-  can be enrolled in any number of vehicles; enrollment is per vehicle.
+- **Phone key**: a P-256 key pair per vehicle (ADR-0005), generated at pairing.
 - **Paired**: the app's key ID is present in that vehicle's whitelist.
 
 ## 4. Vehicle identity and VIN
@@ -57,13 +56,12 @@ Out of scope (unchanged unless stated):
 - A vehicle may exist without a VIN (discovered, not yet paired). Authenticated
   features (pairing check, sessions, SOC) stay disabled until a VIN is set and
   the vehicle is paired.
-- Privacy: the VIN is stored locally only, masked in the UI by default
-  (e.g. `5YJ…3421`, with an explicit reveal), and **never logged or shown in
+- Privacy: the VIN is stored locally only, shown in full in the UI today (masking is tracked in #117), and **never logged or shown in
   notifications**.
 
 ## 5. Pairing and key enrollment
 
-- Keep one app key pair per install. Enrollment and key slot are per vehicle.
+- One app key pair per vehicle (ADR-0005). Enrollment and key slot are per vehicle.
 - Pairing is per vehicle: select the vehicle → Pair → tap the NFC card →
   confirm on the car screen → poll that vehicle's whitelist until the app key
   ID appears → store the key slot and mark the vehicle paired.
@@ -122,9 +120,11 @@ Out of scope (unchanged unless stated):
   rows when the VIN becomes known, or accept the advertised name as the key and
   map VIN → key in the vehicle record).
 - Charts and statistics filter by the selected vehicle. Retention unchanged.
-- ADR-0002 is extended (not replaced) with the new schema and migration.
+- ADR-0002 is extended (not replaced) with the new schema (no migration, ADR-0004).
 
 ## 10. Migration of existing installs
+
+Superseded: ADR-0004 decided on no migration code (pre-1.0, no users). Kept for history.
 
 - `known_cars` entries become vehicles; their display name starts from the
   stored GATT name.

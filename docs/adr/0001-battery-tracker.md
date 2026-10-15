@@ -13,8 +13,8 @@ SOC. No cloud. Kotlin + Compose with a Kotlin protocol core; no FFI.
 - Framing: 2-byte big-endian length, `MTU - 3` chunks, MTU 256.
 - `UniversalMessage.RoutableMessage`, per-domain sessions: VCSEC (lock, closures;
   pollable while asleep) and Infotainment (charge state; requires awake car).
-- Auth: P-256 ECDH session, AES-GCM (4-byte nonce on BLE) or HMAC-SHA256.
-  Sessions persist; cache them or re-handshake.
+- Auth: P-256 ECDH session, AES-GCM (12-byte nonce on BLE) or HMAC-SHA256.
+  Sessions are kept in memory and re-established by handshake; see Correction.
 - Advertised name: `S` + `sha1(vin)[0..8]` hex + `C`. Advertising stops when the
   car is at its maximum number of BLE connections.
 - Pairing: unsigned `addKey`, NFC card tap on the console plus vehicle confirm.
@@ -43,22 +43,22 @@ SOC. No cloud. Kotlin + Compose with a Kotlin protocol core; no FFI.
 2. Framing + session handshake, with JVM tests ported from Go vectors.
 3. Pairing: unsigned addKey.
 4. `BodyControllerState` + `GetState(Charge)` -> SOC on screen.
-5. Foreground service, polling, encrypted session persistence.
+5. Foreground service, polling. (Encrypted session persistence was dropped: sessions live in memory and re-handshake.)
 6. Hardening, then the KMP/iOS decision.
 
 ## Risks
 
-- Crypto edge cases: 4-byte nonce AES-GCM, SHA-1-truncated KDF, metadata hash,
+- Crypto edge cases: 12-byte nonce AES-GCM, SHA-1-truncated KDF, metadata hash,
   counters, clock sync. Pin the proto commit; use `tesla-control` as an oracle.
 - Android OEM battery management kills background BLE; treat collection as
   best-effort, foreground service when needed.
 
 ## Correction (2026-10-07)
 
-The "4-byte nonce" in Protocol facts and Risks is wrong (found in the docs audit,
-#128). The BLE protocol uses standard 12-byte AES-GCM nonces: the Go
-implementation takes the size from `gcm.NonceSize()`, and `TeslaCrypto.NONCE_SIZE`
-is 12. The text above is left as written.
+The original "4-byte nonce" was wrong (found in the docs audit, #128): the BLE
+protocol uses standard 12-byte AES-GCM nonces (Go takes the size from
+`gcm.NonceSize()`, `TeslaCrypto.NONCE_SIZE` is 12), and the text above now says so.
+Session persistence (milestone 5) was never built; sessions are in memory only.
 
 ## References
 
