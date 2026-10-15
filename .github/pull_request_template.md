@@ -24,4 +24,5 @@
 - [ ] Protocol changes ship test vectors; `expected.txt` regenerated, not hand-edited
 - [ ] No VINs, keys, or decrypted payloads in logs
 - [ ] Docs/master-plan updated where relevant
+- [ ] Docs and ADRs affected by this change are updated
 - [ ] New source files carry `SPDX-License-Identifier: AGPL-3.0-only`
