@@ -8,10 +8,11 @@ name: PR paparazzi
 # only: 48 PNGs total. This workflow builds pull
 # request code, so it runs without secrets and with a read-only token: it
 # records the 48 snapshots for the AFTER commit and the BEFORE commit (the
-# pushed commit's parent) through .github/scripts/paparazzi-diff.sh — the
+# merge base with the default branch, so the diff is the PR's whole visual
+# change, not only its last push) through .github/scripts/paparazzi-diff.sh — the
 # same script reviewers run locally — byte-compares the PNGs, and uploads
 # only the differing ones (before/after pairs, or after-only when a snapshot
-# is new or the parent predates Paparazzi) plus the PR number and the short
+# is new or the merge base predates Paparazzi) plus the PR number and the short
 # SHAs as the `pr-paparazzi` artifact.
 # pr-paparazzi-comment.yml posts the diffs from the default branch. One
 # comment per ready revision (tagged by SHA), so flipping a PR back to ready
@@ -61,8 +62,8 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           ref: ${{ github.event.pull_request.head.sha || github.sha }}
-          # HEAD plus its parent: the diff is before/after the pushed commit.
-          fetch-depth: 2
+          # Full history: the BEFORE record is the merge base with the base branch.
+          fetch-depth: 0
 
       - name: Set up JDK 21
         uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6 # v6
@@ -80,15 +81,23 @@ jobs:
       - name: Make gradlew executable
         run: chmod +x gradlew
 
-      # The shared diff script: records AFTER (the PR head) and BEFORE (its
-      # parent commit, not the merge base) and prints which snapshots differ.
+      # The shared diff script: records AFTER (the PR head) and BEFORE (the
+      # merge base with the base branch, so a follow-up push that changes no
+      # pixels still shows the PR's whole change; the parent commit for a
+      # manual run) and prints which snapshots differ.
       # The script restores this checkout itself, even on failure.
       - name: Record and diff the snapshots
         id: diff
+        env:
+          BASE_REF: ${{ github.base_ref }}
         run: |
           set -euo pipefail
           after_sha="${{ github.event.pull_request.head.sha || github.sha }}"
-          bash .github/scripts/paparazzi-diff.sh "$after_sha~1" "$after_sha" \
+          before_ref="$after_sha~1"
+          if [ -n "$BASE_REF" ]; then
+            before_ref="$(git merge-base "$after_sha" "origin/$BASE_REF")"
+          fi
+          bash .github/scripts/paparazzi-diff.sh "$before_ref" "$after_sha" \
             "$RUNNER_TEMP/before" "$RUNNER_TEMP/after" | tee "$RUNNER_TEMP/diff-report.txt"
 
       # Hand-off to pr-paparazzi-comment.yml: the differing PNGs as
