@@ -20,10 +20,12 @@ import com.dzid26.teslable.core.protocol.PairingHost
 import com.dzid26.teslable.core.protocol.PairingKeys
 import com.dzid26.teslable.core.protocol.PairingPhase
 import com.dzid26.teslable.core.protocol.PairingTimer
+import com.dzid26.teslable.core.protocol.SessionHandshake
+import com.dzid26.teslable.core.protocol.SessionHost
+import com.dzid26.teslable.core.protocol.SessionKeys
 import com.dzid26.teslable.core.protocol.TeslaCommands
 import com.dzid26.teslable.core.protocol.TeslaCrypto
 import com.dzid26.teslable.core.protocol.TeslaKeyPair
-import com.dzid26.teslable.core.protocol.TeslaSession
 import com.dzid26.teslable.core.protocol.TeslaSessionRequests
 import com.dzid26.teslable.core.protocol.TeslaVcsec
 import com.dzid26.teslable.core.protocol.asleep
@@ -675,10 +677,6 @@ class TeslaBleController(
 
     // ------------------------------------------------------------- per-vehicle link
 
-    private data class PendingSession(
-        val domain: Domain,
-    )
-
     private data class PendingCommand(
         val domain: Domain,
         val requestId: ByteArray,
@@ -713,11 +711,8 @@ class TeslaBleController(
         var nextRetryAtMs: Long = 0L
 
         private var transport: TeslaTransport? = null
-        private val sessions = mutableMapOf<Domain, TeslaSession>()
-        private val pendingSessions = mutableMapOf<String, PendingSession>()
         private val pendingCommands = mutableMapOf<String, PendingCommand>()
         private var wakeAfterSession = false
-        private var sessionRetryAttempts = 0
         var reconnectAttempts = 0
         private var wakeRefreshAttempts = 0
         private var decryptFailures = 0
@@ -800,22 +795,7 @@ class TeslaBleController(
                 }
             }
 
-        val sessionRetry =
-            object : Runnable {
-                override fun run() {
-                    if (phase != ConnectionPhase.READY) return
-                    val needed = neededSessions()
-                    if (needed.isEmpty()) return
-                    if (sessionRetryAttempts++ >= SESSION_MAX_ATTEMPTS) {
-                        log("${name()}: session not established (${needed.joinToString { it.name }})")
-                        infotainmentGate.onGaveUp()
-                        dropPendingInfotainment()
-                        return
-                    }
-                    sendSessionRequests(needed)
-                    handler.postDelayed(this, SESSION_RETRY_MS)
-                }
-            }
+        private val sessionRetry = Runnable { handshake.onRetryTimer() }
 
         private val pairingTimers: Map<PairingTimer, Runnable> =
             PairingTimer.entries.associateWith { timer -> Runnable { pairing.onTimer(timer) } }
@@ -890,6 +870,68 @@ class TeslaBleController(
                 host = pairingHost,
             )
 
+        private val sessionHost: SessionHost =
+            object : SessionHost {
+                override val isReady: Boolean get() = phase == ConnectionPhase.READY
+                override val isAwake: Boolean get() = this@VehicleLink.isAwake()
+                override val vin: String? get() = this@VehicleLink.vin().takeIf { it.length == Vehicle.VIN_LENGTH }
+
+                override fun log(message: String) {
+                    this@VehicleLink.log("${name()}: $message")
+                }
+
+                override fun transmitSessionRequest(request: ByteArray): Boolean =
+                    transmit(request, CommandRecords.sessionInfo(Command.Reason.SESSION_HANDSHAKE, request))
+
+                override fun publishSessions(domains: List<String>) {
+                    updateConnection(address) { it.copy(sessions = domains) }
+                }
+
+                override fun mayRequestInfotainment(awake: Boolean): Boolean = infotainmentGate.mayRequestSession(awake)
+
+                override fun onEstablished(domain: Domain) {
+                    rememberVehicle(address)
+                    if (domain == Domain.DOMAIN_INFOTAINMENT && infotainmentGate.onSessionEstablished()) {
+                        requestChargeState(waitingReadReason)
+                    }
+                    if (domain == Domain.DOMAIN_VEHICLE_SECURITY && wakeAfterSession) {
+                        wakeAfterSession = false
+                        sendWake()
+                    }
+                }
+
+                override fun onGaveUp() {
+                    infotainmentGate.onGaveUp()
+                }
+
+                override fun onKeyUnusable() {
+                    pairing.forgetEnrollment("the stored key can't be used on this phone")
+                }
+
+                override fun scheduleRetry(delayMs: Long) {
+                    handler.postDelayed(sessionRetry, delayMs)
+                }
+
+                override fun cancelRetry() {
+                    handler.removeCallbacks(sessionRetry)
+                }
+            }
+
+        /** Asks the car for sessions and keeps them; the handshake lives in core. */
+        private val handshake: SessionHandshake =
+            SessionHandshake(
+                keys =
+                    object : SessionKeys {
+                        override fun hasKey(): Boolean = keyStore.hasKey(bleName)
+
+                        override fun publicKeyRaw(): ByteArray? = keyStore.publicKeyRaw(bleName)
+
+                        override fun load(): TeslaKeyPair? = keyStore.load(bleName)
+                    },
+                host = sessionHost,
+                clientAddress = clientAddress,
+            )
+
         fun name(): String {
             val connection = _state.value.connections[address]
             return connection?.gattDeviceName ?: connection?.name ?: bleName
@@ -938,8 +980,7 @@ class TeslaBleController(
             transport?.close()
             transport = null
             phase = ConnectionPhase.IDLE
-            sessions.clear()
-            pendingSessions.clear()
+            handshake.clear()
             pendingCommands.clear()
             pairing.onLinkClosed()
             infotainmentGate.onLinkDropped()
@@ -956,8 +997,7 @@ class TeslaBleController(
 
         /** Drops the cached key slot and sessions after the pairing cache was cleared. */
         fun clearCachedPairing() {
-            sessions.clear()
-            pendingSessions.clear()
+            handshake.clear()
             pendingCommands.clear()
             readInFlight.onLinkDropped()
             pairing.onCacheCleared()
@@ -991,7 +1031,7 @@ class TeslaBleController(
             handler.removeCallbacks(rssiPoll)
             handler.removeCallbacks(reconnect)
             handler.removeCallbacks(wakeRefresh)
-            handler.removeCallbacks(sessionRetry)
+            handshake.cancelTimer()
             pairing.cancelTimers()
         }
 
@@ -1056,123 +1096,8 @@ class TeslaBleController(
                 ?.status
                 ?.asleep == false
 
-        /**
-         * VCSEC is always needed. Infotainment only while an awake car has a read waiting for it
-         * (a sleeping car cannot answer), never on connect.
-         */
-        private fun neededSessions(): List<Domain> =
-            SESSION_DOMAINS.filter { domain ->
-                sessions.containsKey(domain).not() &&
-                    (domain != Domain.DOMAIN_INFOTAINMENT || infotainmentGate.mayRequestSession(isAwake()))
-            }
-
-        /** Forgets unanswered Infotainment requests, so none is mistaken for a handshake still in flight. */
-        private fun dropPendingInfotainment() {
-            pendingSessions.values.removeAll { it.domain == Domain.DOMAIN_INFOTAINMENT }
-        }
-
         /** True when session requests went out. */
-        fun startSession(): Boolean {
-            if (!keyStore.hasKey(bleName)) {
-                log("${name()}: no pairing key yet")
-                return false
-            }
-            val vin = vin()
-            if (vin.length != Vehicle.VIN_LENGTH) {
-                log("${name()}: enter your VIN to establish a session")
-                return false
-            }
-            val needed = neededSessions()
-            if (needed.isEmpty()) return false
-            sessionRetryAttempts = 0
-            sendSessionRequests(needed)
-            handler.removeCallbacks(sessionRetry)
-            handler.postDelayed(sessionRetry, SESSION_RETRY_MS)
-            return true
-        }
-
-        private fun sendSessionRequests(domains: List<Domain>) {
-            val publicKeyRaw = keyStore.publicKeyRaw(bleName) ?: return
-            for (domain in domains) {
-                val uuid = TeslaCrypto.randomBytes(16)
-                val routing =
-                    if (domain == Domain.DOMAIN_VEHICLE_SECURITY) {
-                        TeslaCrypto.randomBytes(16)
-                    } else {
-                        clientAddress
-                    }
-                pendingSessions[uuid.toHex()] = PendingSession(domain)
-                val request =
-                    TeslaSessionRequests.buildSessionInfoRequest(
-                        domain = domain,
-                        publicKeyRaw = publicKeyRaw,
-                        routingAddress = routing,
-                        uuid = uuid,
-                    )
-                log("${name()}: session request ${domain.name}")
-                if (!transmit(request, CommandRecords.sessionInfo(Command.Reason.SESSION_HANDSHAKE, request))) {
-                    log("${name()}: failed to send session request")
-                }
-            }
-        }
-
-        private fun handleSessionInfo(bytes: ByteArray): Boolean {
-            val message =
-                runCatching { RoutableMessage.ADAPTER.decode(bytes) }.getOrNull()
-                    ?: return false
-            val encodedInfo = message.session_info?.toByteArray() ?: return false
-            val challenge = message.request_uuid.toByteArray()
-            val pending = pendingSessions.remove(challenge.toHex()) ?: return false
-            val tag =
-                message.signature_data
-                    ?.session_info_tag
-                    ?.tag
-                    ?.toByteArray()
-            if (tag == null) {
-                log("${name()}: session info missing tag")
-                return true
-            }
-            val keyPair = keyStore.load(bleName)
-            val session =
-                if (keyPair != null && vin().length == Vehicle.VIN_LENGTH) {
-                    TeslaSession.import(
-                        privateKeyPkcs8 = keyPair.privateKeyPkcs8,
-                        publicKeyRaw = keyPair.publicKeyRaw,
-                        vin = vin(),
-                        challenge = challenge,
-                        encodedInfo = encodedInfo,
-                        tag = tag,
-                    )
-                } else {
-                    null
-                }
-            if (session == null) {
-                if (keyPair == null && !keyStore.hasKey(bleName)) {
-                    // The store dropped a key this phone can never decrypt (for
-                    // example a device-only key restored from another phone).
-                    pairing.forgetEnrollment("the stored key can't be used on this phone")
-                }
-                log("${name()}: session verification failed (${pending.domain.name})")
-                return true
-            }
-            sessions[pending.domain] = session
-            updateConnection(address) {
-                it.copy(sessions = sessions.keys.map { domain -> domain.name }.sorted())
-            }
-            log("${name()}: session established (${pending.domain.name})")
-            rememberVehicle(address)
-            if (SESSION_DOMAINS.all { sessions.containsKey(it) }) {
-                handler.removeCallbacks(sessionRetry)
-            }
-            if (pending.domain == Domain.DOMAIN_INFOTAINMENT && infotainmentGate.onSessionEstablished()) {
-                requestChargeState(waitingReadReason)
-            }
-            if (pending.domain == Domain.DOMAIN_VEHICLE_SECURITY && wakeAfterSession) {
-                wakeAfterSession = false
-                sendWake()
-            }
-            return true
-        }
+        fun startSession(): Boolean = handshake.start()
 
         fun wake() {
             if (_state.value.connections[address]
@@ -1187,11 +1112,9 @@ class TeslaBleController(
             handler.postDelayed(wakeRefresh, WAKE_REFRESH_MS)
             // A long-sleeping car rotates its session; a command encrypted with
             // the old one is dropped without a reply, so handshake again first.
-            if (sessions.containsKey(Domain.DOMAIN_VEHICLE_SECURITY)) {
-                sessions.remove(Domain.DOMAIN_VEHICLE_SECURITY)
-                updateConnection(address) {
-                    it.copy(sessions = sessions.keys.map { domain -> domain.name }.sorted())
-                }
+            if (handshake.has(Domain.DOMAIN_VEHICLE_SECURITY)) {
+                handshake.drop(Domain.DOMAIN_VEHICLE_SECURITY)
+                handshake.publish()
             }
             wakeAfterSession = true
             log("${name()}: waking with a fresh session")
@@ -1199,7 +1122,7 @@ class TeslaBleController(
         }
 
         private fun sendWake() {
-            if (!sessions.containsKey(Domain.DOMAIN_VEHICLE_SECURITY)) {
+            if (!handshake.has(Domain.DOMAIN_VEHICLE_SECURITY)) {
                 log("${name()}: no VCSEC session to wake with")
                 return
             }
@@ -1214,7 +1137,7 @@ class TeslaBleController(
          */
         fun requestChargeState(reason: Command.Reason = CommandRecords.reasonOf(infotainmentPolicy.lastReadReason)) {
             if (reason == Command.Reason.USER_REFRESH) infotainmentPolicy.onUserRequest(System.currentTimeMillis())
-            when (infotainmentGate.onReadDue(isAwake(), sessions.containsKey(Domain.DOMAIN_INFOTAINMENT))) {
+            when (infotainmentGate.onReadDue(isAwake(), handshake.has(Domain.DOMAIN_INFOTAINMENT))) {
                 InfotainmentSessionGate.Action.SKIP -> {
                     log("${name()}: car is asleep; wake it first")
                     readInFlight.onSkipped()
@@ -1249,7 +1172,7 @@ class TeslaBleController(
             payload: ByteArray,
             kind: CommandKind,
         ) {
-            if (!isAwake() || !sessions.containsKey(Domain.DOMAIN_INFOTAINMENT)) return
+            if (!isAwake() || !handshake.has(Domain.DOMAIN_INFOTAINMENT)) return
             sendAuthenticated(domain = Domain.DOMAIN_INFOTAINMENT, payload = payload, kind = kind)
         }
 
@@ -1260,7 +1183,7 @@ class TeslaBleController(
             reason: Command.Reason = Command.Reason.FOLLOW_UP,
         ): Boolean {
             val session =
-                sessions[domain] ?: run {
+                handshake[domain] ?: run {
                     log("${name()}: no session for ${domain.name}")
                     return false
                 }
@@ -1295,7 +1218,7 @@ class TeslaBleController(
             lastRehandshakeMs = now
             decryptFailures = 0
             log("${name()}: re-handshaking ${domain.name} after $why")
-            sessions.remove(domain)
+            handshake.drop(domain)
             startSession()
         }
 
@@ -1321,7 +1244,7 @@ class TeslaBleController(
                 if (fault?.isStaleSession == true) rehandshake(pending.domain, "stale session")
                 return true
             }
-            val session = sessions[pending.domain] ?: return true
+            val session = handshake[pending.domain] ?: return true
             val plaintext = session.decrypt(message, pending.requestId, pending.window)
             if (plaintext == null) {
                 decryptFailures++
@@ -1384,7 +1307,7 @@ class TeslaBleController(
             // logs keep it beside the car's reply (ADR-0008). Whole milliseconds,
             // as stored before; Instant.now() can carry finer digits.
             val deviceTimestamp = Instant.ofEpochMilli(System.currentTimeMillis())
-            if (handleSessionInfo(message)) return
+            if (handshake.onMessage(message)) return
             if (handleEncryptedResponse(message, deviceTimestamp)) return
             if (pairing.onMessage(message)) return
 
@@ -1413,10 +1336,10 @@ class TeslaBleController(
                 // selected one; skip cars with no VIN (no session). The policy
                 // decides when a read is due so the car can fall asleep (ADR-0009).
                 // A read can be attempted when a session exists or can be started on demand.
-                val canRead = sessions.containsKey(Domain.DOMAIN_INFOTAINMENT) || vin().length == Vehicle.VIN_LENGTH
+                val canRead = handshake.has(Domain.DOMAIN_INFOTAINMENT) || vin().length == Vehicle.VIN_LENGTH
                 if (status.asleep) {
                     infotainmentGate.onAsleep()
-                    dropPendingInfotainment()
+                    handshake.dropPendingInfotainment()
                 }
                 if (infotainmentPolicy.onStatus(status, canRead, System.currentTimeMillis())) requestChargeState()
             } else {
@@ -1435,7 +1358,7 @@ class TeslaBleController(
                         handler.removeCallbacks(rssiPoll)
                         infotainmentGate.onLinkDropped()
                         readInFlight.onLinkDropped()
-                        pendingSessions.clear()
+                        handshake.clearPending()
                         val hadData =
                             _state.value.connections[address]?.let {
                                 it.sessions.isNotEmpty() || it.status != null || it.charge != null
@@ -1506,8 +1429,6 @@ class TeslaBleController(
     private companion object {
         const val LOG_MAX_LINES = 200
         const val COMMAND_EXPIRES_SECONDS = 5
-        const val SESSION_RETRY_MS = 3000L
-        const val SESSION_MAX_ATTEMPTS = 20
         const val POLL_MS = 10_000L
         const val RSSI_POLL_MS = 500L
         const val DEMO_SCAN_MS = 2_000L
@@ -1531,11 +1452,6 @@ class TeslaBleController(
                 ConnectionPhase.CONNECTED,
                 ConnectionPhase.DISCOVERING,
                 ConnectionPhase.READY,
-            )
-        val SESSION_DOMAINS =
-            listOf(
-                Domain.DOMAIN_VEHICLE_SECURITY,
-                Domain.DOMAIN_INFOTAINMENT,
             )
     }
 }
