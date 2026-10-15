@@ -268,22 +268,52 @@ private fun connectionStateText(
     connection: TeslaConnection?,
     durations: StatusDurations?,
 ): String =
-    when {
-        connection == null -> "Disconnected"
+    when (connectionLabel(connection)) {
+        ConnectionLabel.DISCONNECTED, ConnectionLabel.FAILED -> "Disconnected"
 
-        connection.phase == ConnectionPhase.READY && connection.status?.asleep == true ->
+        ConnectionLabel.CONNECTING -> "Connecting..."
+
+        ConnectionLabel.CONNECTED, ConnectionLabel.AWAKE -> "Connected"
+
+        ConnectionLabel.ASLEEP ->
             "Connected \uD83D\uDCA4" +
-                asleepForMillis(connection.status, durations)?.let(::compactDuration)?.let { " ·\u00A0$it" }.orEmpty()
+                asleepForMillis(connection?.status, durations)?.let(::compactDuration)?.let { " ·\u00A0$it" }.orEmpty()
+    }
 
-        connection.phase == ConnectionPhase.READY -> "Connected"
+/**
+ * What a car's connection amounts to for the owner. The status pill, the status line and its color all
+ * read it, so they cannot disagree; every phase is listed, so a new one does not build until it has a label.
+ */
+enum class ConnectionLabel(
+    /** The status pill's word. */
+    val pillText: String,
+) {
+    DISCONNECTED("Disconnected"),
+    FAILED("Failed"),
 
-        connection.phase == ConnectionPhase.FAILED -> "Disconnected"
+    /** Connecting, connected or discovering services: the link is not usable yet. */
+    CONNECTING("Connecting"),
 
-        connection.phase == ConnectionPhase.DISCONNECTED -> "Disconnected"
+    /** Ready, before the car's first VCSEC status says awake or asleep. */
+    CONNECTED("Connected"),
+    AWAKE("Awake"),
+    ASLEEP("Asleep"),
+}
 
-        connection.phase == ConnectionPhase.IDLE -> "Disconnected"
+fun connectionLabel(connection: TeslaConnection?): ConnectionLabel =
+    when (connection?.phase) {
+        null, ConnectionPhase.IDLE, ConnectionPhase.DISCONNECTED -> ConnectionLabel.DISCONNECTED
 
-        else -> "Connecting..."
+        ConnectionPhase.FAILED -> ConnectionLabel.FAILED
+
+        ConnectionPhase.CONNECTING, ConnectionPhase.CONNECTED, ConnectionPhase.DISCOVERING -> ConnectionLabel.CONNECTING
+
+        ConnectionPhase.READY ->
+            when (connection.status?.asleep) {
+                true -> ConnectionLabel.ASLEEP
+                false -> ConnectionLabel.AWAKE
+                null -> ConnectionLabel.CONNECTED
+            }
     }
 
 /**

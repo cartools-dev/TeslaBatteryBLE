@@ -59,6 +59,7 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.repeatOnLifecycle
 import com.dzid26.teslable.ble.BleUiState
+import com.dzid26.teslable.ble.ConnectionLabel
 import com.dzid26.teslable.ble.ConnectionPhase
 import com.dzid26.teslable.ble.LogEntry
 import com.dzid26.teslable.ble.READ_SPINNER_MIN_VISIBLE_MS
@@ -69,6 +70,7 @@ import com.dzid26.teslable.ble.Vehicle
 import com.dzid26.teslable.ble.ageLabel
 import com.dzid26.teslable.ble.batteryPercent
 import com.dzid26.teslable.ble.connectionDisplay
+import com.dzid26.teslable.ble.connectionLabel
 import com.dzid26.teslable.ble.spinnerHoldMs
 import com.dzid26.teslable.ble.stalenessTickDelayMs
 import com.dzid26.teslable.core.history.BatterySample
@@ -637,8 +639,6 @@ internal fun TrackingToggle(
     }
 }
 
-private val SETTING_UP_PHASES = setOf(ConnectionPhase.CONNECTING, ConnectionPhase.CONNECTED, ConnectionPhase.DISCOVERING)
-
 /** Shared by the cars list and the car view. */
 @Composable
 internal fun StatusPill(
@@ -646,43 +646,17 @@ internal fun StatusPill(
     onAsleepClick: (() -> Unit)? = null,
     modifier: Modifier = Modifier,
 ) {
-    val (container, content, label) =
-        when {
-            connection?.phase == ConnectionPhase.READY && connection.status?.asleep == false ->
-                Triple(
-                    MaterialTheme.colorScheme.primaryContainer,
-                    MaterialTheme.colorScheme.onPrimaryContainer,
-                    "Awake",
-                )
-
-            connection?.phase == ConnectionPhase.READY && connection.status?.asleep == true ->
-                Triple(
-                    MaterialTheme.colorScheme.secondaryContainer,
-                    MaterialTheme.colorScheme.onSecondaryContainer,
-                    "Asleep",
-                )
-
-            connection?.phase == ConnectionPhase.FAILED ->
-                Triple(
-                    MaterialTheme.colorScheme.errorContainer,
-                    MaterialTheme.colorScheme.onErrorContainer,
-                    "Failed",
-                )
-
-            else ->
-                Triple(
-                    MaterialTheme.colorScheme.surfaceVariant,
-                    MaterialTheme.colorScheme.onSurfaceVariant,
-                    // Match the status line: GATT setup still reads as connecting, and a ready link whose first
-                    // VCSEC status has not arrived yet is connected, not disconnected.
-                    when (connection?.phase) {
-                        in SETTING_UP_PHASES -> "Connecting"
-                        ConnectionPhase.READY -> "Connected"
-                        else -> "Disconnected"
-                    },
-                )
+    val label = connectionLabel(connection)
+    val colors = MaterialTheme.colorScheme
+    val (container, content) =
+        when (label) {
+            ConnectionLabel.AWAKE -> colors.primaryContainer to colors.onPrimaryContainer
+            ConnectionLabel.ASLEEP -> colors.secondaryContainer to colors.onSecondaryContainer
+            ConnectionLabel.FAILED -> colors.errorContainer to colors.onErrorContainer
+            ConnectionLabel.DISCONNECTED, ConnectionLabel.CONNECTING, ConnectionLabel.CONNECTED ->
+                colors.surfaceVariant to colors.onSurfaceVariant
         }
-    val asleep = connection?.phase == ConnectionPhase.READY && connection.status?.asleep == true
+    val asleep = label == ConnectionLabel.ASLEEP
     Surface(
         color = container,
         contentColor = content,
@@ -690,7 +664,7 @@ internal fun StatusPill(
         modifier = if (asleep && onAsleepClick != null) modifier.clickable { onAsleepClick() } else modifier,
     ) {
         Text(
-            text = label,
+            text = label.pillText,
             style = MaterialTheme.typography.labelMedium,
             modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
         )
@@ -756,12 +730,11 @@ internal fun ReadingSpinner(
 
 @Composable
 private fun statusColor(connection: TeslaConnection?): Color =
-    when {
-        connection?.phase == ConnectionPhase.READY && connection.status?.asleep == false ->
-            MaterialTheme.colorScheme.primary
-
-        connection?.phase == ConnectionPhase.FAILED -> MaterialTheme.colorScheme.error
-        else -> MaterialTheme.colorScheme.onSurfaceVariant
+    when (connectionLabel(connection)) {
+        ConnectionLabel.AWAKE -> MaterialTheme.colorScheme.primary
+        ConnectionLabel.FAILED -> MaterialTheme.colorScheme.error
+        ConnectionLabel.DISCONNECTED, ConnectionLabel.CONNECTING, ConnectionLabel.CONNECTED, ConnectionLabel.ASLEEP ->
+            MaterialTheme.colorScheme.onSurfaceVariant
     }
 
 /** The log card's share of the cars-list height; the list keeps the rest. */
