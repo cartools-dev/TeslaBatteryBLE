@@ -62,6 +62,11 @@ class TeslaGattClient(
         // From Android 8.1 (our minSdk) BluetoothGatt stores a notification's value inside the posted callback, so the
         // main-looper Handler can't deliver the next notification's bytes to onCharacteristicChanged.
         gatt = device.connectGatt(context, false, callback, BluetoothDevice.TRANSPORT_LE, BluetoothDevice.PHY_LE_1M_MASK, handler)
+        if (gatt == null) {
+            // Bluetooth is off or turning off: no callback will ever come, so fail now and let the backoff retry.
+            listener.onLog("connectGatt() returned null; Bluetooth is off?")
+            listener.onPhase(ConnectionPhase.FAILED)
+        }
     }
 
     @SuppressLint("MissingPermission")
