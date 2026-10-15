@@ -23,8 +23,11 @@ Date: 2026-10-10
   each (fresh, stale with age, asleep, disconnected, reading spinner, no
   reading) plus the cars list, the car view and Settings in one representative
   state each (a connected car with a fresh reading and seeded history) —
-  light AND dark, 30 PNGs total. Full screens render one representative state;
-  state coverage still comes from the card matrix.
+  light AND dark, plus each card state once more at Jelly Star width
+  (3-inch, 480x854 @320dpi → 240dp, hand-built via `DeviceConfig.copy()`
+  since no preset goes that narrow) in light only: 42 PNGs total. Full
+  screens render one representative state; state coverage still comes from
+  the card matrix, width coverage from the narrow render.
 - `pr-paparazzi.yml` records the snapshots for the AFTER commit (HEAD) and
   the BEFORE commit (HEAD~1, the pushed commit's parent — not the merge
   base), byte-compares them, and uploads only the differing PNGs (plus the PR
@@ -39,7 +42,9 @@ Date: 2026-10-10
   per-SHA comment. Light by default: each changed state shows its light
   image (before/after pair, or after-only when new); the dark image follows
   in a `<details>` block only when the dark render differs too, or on its own
-  when only dark differs (a theme-specific change). A footer in every comment
+  when only dark differs (a theme-specific change). The narrow Jelly Star
+  render follows the same pattern, one collapsed block per state, or on its
+  own when only the narrow width differs. A footer in every comment
   points at the manual emulator run (`PR screenshots` workflow).
 - No committed goldens: layout changes surface as posted diffs, never as CI
   failures, so `verify.sh` gains no Paparazzi gate. The tradeoff is

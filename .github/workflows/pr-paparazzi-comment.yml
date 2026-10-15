@@ -5,6 +5,7 @@ name: PR paparazzi comment
 # comment. The render builds pull request code, so it runs without secrets
 # and hands over only the `pr-paparazzi` artifact: the differing PNGs as
 # after/<name>.png (plus before/<name>.png when the snapshot existed before),
+# where <name> is <card>_<state>[_jelly]_<theme> or <screen>_<theme>,
 # the PR number, and the short SHAs of the after and before commits. This
 # workflow runs the default branch's copy of itself and of the scripts, never
 # checks out or runs pull request code, and treats the artifact as untrusted
@@ -57,7 +58,8 @@ jobs:
       # The artifact is untrusted: accept only a numeric PR number for the
       # pull request the render ran for, the short SHA of the rendered
       # commit, a hex before-SHA (or "none" when the parent predates
-      # Paparazzi), and PNGs with card-state-theme names and a PNG signature.
+      # Paparazzi), and PNGs with card-state-theme names (plus the narrow
+      # Jelly Star light render per card state) and a PNG signature.
       # Validated PNGs land in pr-shots/after and pr-shots/before.
       - name: Validate the artifact
         id: meta
@@ -93,7 +95,7 @@ jobs:
           for side in after before; do
             for file in "$ARTIFACT"/"$side"/*.png; do
               name="$(basename "$file")"
-              [[ "$name" =~ ^((vehicle-card|hero-card)_[a-z-]+|screen-[a-z-]+)_(light|dark)\.png$ ]] \
+              [[ "$name" =~ ^((vehicle-card|hero-card)_[a-z-]+(_jelly)?|screen-[a-z-]+)_(light|dark)\.png$ ]] \
                 || fail "unexpected snapshot name: $name"
               regular "$file" || fail "the artifact has no $side/$name"
               if [ "$(head -c 8 "$file" | od -An -tx1 | tr -d ' \n')" != 89504e470d0a1a0a ]; then
@@ -117,7 +119,10 @@ jobs:
       # or the releases, and build the comment body. Light by default: each
       # changed state shows its light image (before/after pair, or after-only
       # when new); the dark image follows in a <details> block only when the
-      # dark render differs too, or on its own when only dark differs.
+      # dark render differs too, or on its own when only dark differs. The
+      # narrow Jelly Star render (light only) follows the same pattern, one
+      # <details> block deeper in spirit: collapsed unless it is the only
+      # thing that changed.
       - name: Upload the shots and build the comment
         id: shots
         env:
@@ -166,6 +171,7 @@ jobs:
             printf '<!-- pr-paparazzi -->\n## Snapshots\n\n'
             stems="$(for f in "$SHOTS_DIR"/after/*.png; do
               name="${f##*/}"
+              name="${name%_jelly_light.png}"
               name="${name%_light.png}"
               printf '%s\n' "${name%_dark.png}"
             done | sort -u)"
@@ -191,12 +197,20 @@ jobs:
                     post_theme "$stem" dark
                     printf '</details>\n\n'
                   fi
+                  if [ -f "$SHOTS_DIR/after/${stem}_jelly_light.png" ]; then
+                    printf '<details><summary>Narrow (Jelly Star) also changed</summary>\n\n'
+                    post_theme "${stem}_jelly" light
+                    printf '</details>\n\n'
+                  fi
+                elif [ -f "$SHOTS_DIR/after/${stem}_jelly_light.png" ]; then
+                  printf '### %s · narrow only\n\n' "$(shot_title "$stem")"
+                  post_theme "${stem}_jelly" light
                 else
                   printf '### %s · dark only\n\n' "$(shot_title "$stem")"
                   post_theme "$stem" dark
                 fi
               done <<< "$stems"
-              printf 'Snapshots are light- and dark-theme JVM renders of the battery cards and screens.\n'
+              printf 'Snapshots are light- and dark-theme JVM renders of the battery cards and screens, plus a narrow Jelly Star render of each card state.\n'
             fi
             printf "\nFull-screen emulator shots: Actions → \`PR screenshots\` → Run workflow, choosing the head branch of this PR.\n"
           } > "$MSG"
