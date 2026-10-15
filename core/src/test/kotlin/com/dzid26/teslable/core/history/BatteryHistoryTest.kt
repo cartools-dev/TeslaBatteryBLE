@@ -47,7 +47,7 @@ class BatteryHistoryTest {
     }
 
     @Test
-    fun chargeStatsSinceLastChargeEnd() {
+    fun chargeStatsAnchorOnTheChargeEnd() {
         val samples =
             listOf(
                 sample(0, 70),
@@ -58,12 +58,14 @@ class BatteryHistoryTest {
             )
 
         val stats = chargeStats(samples)!!
-        assertEquals(90 * 60_000L, stats.sinceMillis)
-        assertEquals(84f, stats.startPercent)
+        // The reference is the charge's own end (the 85 at minute 60), not the
+        // first sample after it.
+        assertEquals(60 * 60_000L, stats.sinceMillis)
+        assertEquals(85f, stats.chargePercent)
         assertEquals(78f, stats.currentPercent)
         assertEquals(78f, stats.minPercent)
         assertEquals(84f, stats.maxPercent)
-        assertEquals(6f, stats.usedPercent)
+        assertEquals(7f, stats.usedPercent)
     }
 
     @Test
@@ -77,9 +79,47 @@ class BatteryHistoryTest {
             )
 
         val stats = chargeStats(samples)!!
-        assertEquals(90 * 60_000L, stats.sinceMillis)
-        assertEquals(75f, stats.startPercent)
-        assertEquals(0f, stats.usedPercent)
+        assertEquals(60 * 60_000L, stats.sinceMillis)
+        assertEquals(80f, stats.chargePercent)
+        assertEquals(5f, stats.usedPercent)
+    }
+
+    @Test
+    fun chargeStatsKeepTheChargeTimeAcrossAGap() {
+        // The charge ends at 47% (minute 60); the app sees nothing until a
+        // reading five days later at 28%. The charge is an hour ago, not five
+        // days, and 19 points were used since it ended.
+        val fiveDays = 5 * 24 * 60L
+        val samples =
+            listOf(
+                sample(30, 46, ChargingStateKind.Charging),
+                sample(60, 47, ChargingStateKind.Charging),
+                sample(60 + fiveDays, 28),
+            )
+
+        val stats = chargeStats(samples)!!
+        assertEquals(60 * 60_000L, stats.sinceMillis)
+        assertEquals(47f, stats.chargePercent)
+        assertEquals(28f, stats.currentPercent)
+        assertEquals(19f, stats.usedPercent)
+    }
+
+    @Test
+    fun chargeStatsIgnoreTimeOrder() {
+        // A late reply may land out of order; the newest sample by time must
+        // still win, both for the charge and for the current level.
+        val samples =
+            listOf(
+                sample(60, 80, ChargingStateKind.Charging),
+                sample(120, 75),
+                sample(30, 70, ChargingStateKind.Charging),
+            )
+
+        val stats = chargeStats(samples)!!
+        assertEquals(60 * 60_000L, stats.sinceMillis)
+        assertEquals(80f, stats.chargePercent)
+        assertEquals(75f, stats.currentPercent)
+        assertEquals(5f, stats.usedPercent)
     }
 
     @Test
