@@ -529,35 +529,38 @@ internal fun VehicleCard(
                     )
                 }
                 if (reading != null) {
-                    Text(
-                        text = "${reading.value}%",
-                        style = MaterialTheme.typography.headlineSmall,
-                        fontWeight = FontWeight.SemiBold,
-                        color =
-                            if (reading.stale) {
-                                MaterialTheme.colorScheme.outline
-                            } else {
-                                MaterialTheme.colorScheme.primary
-                            },
-                    )
+                    // How old a stale reading is sits under the percentage.
+                    Column(horizontalAlignment = Alignment.End) {
+                        Text(
+                            text = "${reading.value}%",
+                            style = MaterialTheme.typography.headlineSmall,
+                            fontWeight = FontWeight.SemiBold,
+                            color =
+                                if (reading.stale) {
+                                    MaterialTheme.colorScheme.outline
+                                } else {
+                                    MaterialTheme.colorScheme.primary
+                                },
+                        )
+                        reading.ageLabel(nowMillis, row.connection)?.let { age ->
+                            Text(
+                                text = age,
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
+                    }
                 } else {
                     StatusPill(row.connection)
                 }
             }
-            // The top-right corner: a spinner while a read is in flight, and how old a stale reading is.
+            // The top-right corner: a spinner while a read is in flight.
             Row(
                 modifier = Modifier.align(Alignment.TopEnd).padding(top = 6.dp, end = 12.dp),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(6.dp),
             ) {
                 ReadingSpinner(row.connection, forceVisible = spinnerOverride)
-                reading?.ageLabel(nowMillis, row.connection)?.let { age ->
-                    Text(
-                        text = age,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                }
             }
             DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
                 DropdownMenuItem(
