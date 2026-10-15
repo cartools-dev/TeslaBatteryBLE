@@ -797,7 +797,7 @@ private fun BatteryChart(
         charge?.let { target ->
             // The beam: where the limit lands if the supply voltage stayed at the
             // best or worst it showed this run.
-            chargeBeamPath(target, ::x, ::y)?.let { beam ->
+            chargeBeamPath(target, windowEnd, ::x, ::y)?.let { beam ->
                 drawPath(path = beam, color = chargingColor.copy(alpha = 0.25f))
             }
             val end =
@@ -857,14 +857,28 @@ private fun BatteryChart(
 /** The wedge from the latest sample to the earliest and latest completion; null without a beam. */
 private fun chargeBeamPath(
     projection: ChargeProjection,
+    windowEnd: Long,
     x: (Long) -> Float,
     y: (Int) -> Float,
 ): Path? {
     val (earliest, latest) = projection.beam ?: return null
+    val fromMillis = projection.from.timestampMillis
+    val fromPercent = projection.from.percent
+
+    // A completion past the chart's right edge would flatten the wedge onto the
+    // edge, so cut each side where it crosses the edge instead.
+    fun end(completionMillis: Long): Pair<Float, Float> {
+        if (completionMillis <= windowEnd) return x(completionMillis) to y(projection.targetPercent)
+        val share = (windowEnd - fromMillis).toFloat() / (completionMillis - fromMillis)
+        val percentAtEdge = fromPercent + (projection.targetPercent - fromPercent) * share
+        return x(windowEnd) to y(percentAtEdge.toInt())
+    }
+    val (earlyX, earlyY) = end(earliest)
+    val (lateX, lateY) = end(latest)
     return Path().apply {
-        moveTo(x(projection.from.timestampMillis), y(projection.from.percent))
-        lineTo(x(earliest), y(projection.targetPercent))
-        lineTo(x(latest), y(projection.targetPercent))
+        moveTo(x(fromMillis), y(fromPercent))
+        lineTo(earlyX, earlyY)
+        lineTo(lateX, lateY)
         close()
     }
 }

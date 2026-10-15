@@ -558,9 +558,9 @@ class CardSnapshots {
         private val stalledSamples =
             parkedSamples.dropLast(1) +
                 listOf(
-                    projectionSample(30L, 55, charging = true, ratedMiles = 165f),
-                    projectionSample(15L, 55, charging = true, ratedMiles = 166.5f),
-                    projectionSample(0L, 55, charging = true, ratedMiles = 168f),
+                    projectionSample(30L, 55, charging = true, ratedMiles = 165f).copy(chargerVoltage = 224),
+                    projectionSample(15L, 55, charging = true, ratedMiles = 166.5f).copy(chargerVoltage = 245),
+                    projectionSample(0L, 55, charging = true, ratedMiles = 168f).copy(chargerVoltage = 236),
                 )
 
         private fun chargeSample(
