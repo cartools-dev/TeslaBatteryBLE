@@ -680,7 +680,7 @@ internal fun BatteryHistoryCard(
                         text =
                             "Parked · projected ${it.projectedPercent}% by " +
                                 formatTime(it.projectedAtMillis, showDate = true) +
-                                " · ${"%.2f".format(it.percentPerHour)}%/h",
+                                " · ${"%.1f".format(it.percentPerHour * 24)}%/day",
                         style = MaterialTheme.typography.bodySmall,
                         // The measured line's colour; muted while a charge is
                         // the main story.
