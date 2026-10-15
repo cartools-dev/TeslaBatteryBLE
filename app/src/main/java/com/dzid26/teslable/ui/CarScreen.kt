@@ -669,7 +669,8 @@ internal fun BatteryHistoryCard(
                     Text(
                         text =
                             "Charging · projected ${it.targetPercent}% around " +
-                                formatTime(it.completionMillis, showDate = true),
+                                formatTime(it.completionMillis, showDate = true) +
+                                chargeBeamText(it),
                         style = MaterialTheme.typography.bodySmall,
                         color = chargingChartColor,
                     )
@@ -791,6 +792,22 @@ private fun BatteryChart(
         }
 
         charge?.let { target ->
+            // The beam: where the limit lands if the charge power stayed at the
+            // best or worst the supply showed this run.
+            val earliest = target.earliestMillis
+            val latest = target.latestMillis
+            if (earliest != null && latest != null) {
+                drawPath(
+                    path =
+                        Path().apply {
+                            moveTo(x(target.from.timestampMillis), y(target.from.percent))
+                            lineTo(x(earliest), y(target.targetPercent))
+                            lineTo(x(latest), y(target.targetPercent))
+                            close()
+                        },
+                    color = chargingColor.copy(alpha = 0.18f),
+                )
+            }
             val end =
                 Offset(
                     x(target.completionMillis),
@@ -843,6 +860,13 @@ private fun BatteryChart(
             topLeft = Offset(left + width - endLabel.size.width, size.height - endLabel.size.height),
         )
     }
+}
+
+/** " (14:20–15:40)" when the supply varied enough to give the charge a beam; empty otherwise. */
+private fun chargeBeamText(projection: ChargeProjection): String {
+    val earliest = projection.earliestMillis ?: return ""
+    val latest = projection.latestMillis ?: return ""
+    return " (${formatTime(earliest, showDate = false)}–${formatTime(latest, showDate = false)})"
 }
 
 private fun HistoryRange.label(): String =

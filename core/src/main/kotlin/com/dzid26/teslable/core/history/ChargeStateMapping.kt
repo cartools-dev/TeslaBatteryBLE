@@ -24,5 +24,7 @@ fun ChargeState.toBatterySample(vehicleId: String): BatterySample? {
         ratedRangeMiles = battery_range,
         chargeEnergyAdded = charge_energy_added,
         chargeMilesAddedRated = charge_miles_added_rated,
+        chargerVoltage = charger_voltage,
+        chargerActualCurrent = charger_actual_current,
     )
 }

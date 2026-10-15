@@ -546,12 +546,13 @@ class CardSnapshots {
                 projectionSample(0L, 55, charging = false, ratedMiles = 165f),
             )
 
+        // The AC supply sagging and recovering around 240 V: the beam around the green line.
         private val chargingSamples =
             parkedSamples.dropLast(1) +
                 listOf(
-                    projectionSample(60L, 55, charging = true, ratedMiles = 165f),
-                    projectionSample(30L, 58, charging = true, ratedMiles = 174f),
-                    projectionSample(0L, 61, charging = true, ratedMiles = 183f),
+                    projectionSample(60L, 55, charging = true, ratedMiles = 165f).copy(chargerVoltage = 252, chargerActualCurrent = 12),
+                    projectionSample(30L, 58, charging = true, ratedMiles = 174f).copy(chargerVoltage = 204, chargerActualCurrent = 12),
+                    projectionSample(0L, 61, charging = true, ratedMiles = 183f).copy(chargerVoltage = 236, chargerActualCurrent = 12),
                 )
 
         private val stalledSamples =
