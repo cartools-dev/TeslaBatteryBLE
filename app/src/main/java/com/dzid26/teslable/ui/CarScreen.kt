@@ -55,6 +55,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.drawText
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.rememberTextMeasurer
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.dzid26.teslable.ble.BatteryPercent
 import com.dzid26.teslable.ble.BleUiState
@@ -356,8 +357,8 @@ private fun ChargeDetails(charge: ChargeState?) {
     if (charge == null) return
     val details =
         buildList {
-            charge.battery_range?.let { add("Range\u00A0${formatRangeMiles(it)}\u00A0mi") }
             charge.charge_limit_soc?.let { add("Charge limit\u00A0$it%") }
+            chargerElectricalText(charge)?.let { add(it) }
             charge.chargingStateKind?.let { add(chargingStateText(it)) }
         }
     if (details.isNotEmpty()) {
@@ -429,14 +430,15 @@ private fun SocBlock(
                 modifier = Modifier.alignByBaseline().padding(start = 6.dp),
             )
         }
-        // The range sits on the right, just above the progress bar.
+        // The range hugs the top-right, above the progress bar, and wraps
+        // right-aligned instead of crowding the age on narrow screens.
         rangeMiles?.let { miles ->
-            Spacer(Modifier.weight(1f))
             Text(
                 text = "Range ${formatRangeMiles(miles)} mi",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.alignByBaseline(),
+                textAlign = TextAlign.End,
+                modifier = Modifier.weight(1f).align(Alignment.Top).padding(start = 8.dp),
             )
         }
     }
