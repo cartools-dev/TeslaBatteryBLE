@@ -20,7 +20,15 @@ data class ChargeProjection(
     val earliestMillis: Long? = null,
     /** The latest, at the lowest charge power seen this run; null like [earliestMillis]. */
     val latestMillis: Long? = null,
-)
+) {
+    /** The earliest and latest completion together; null when there is no beam. */
+    val beam: Pair<Long, Long>?
+        get() {
+            val earliest = earliestMillis ?: return null
+            val latest = latestMillis ?: return null
+            return earliest to latest
+        }
+}
 
 /**
  * Projects when the charge limit is reached while charging.

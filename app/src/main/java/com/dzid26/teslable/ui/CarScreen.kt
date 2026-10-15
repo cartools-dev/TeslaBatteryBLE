@@ -670,7 +670,10 @@ internal fun BatteryHistoryCard(
                         text =
                             "Charging · projected ${it.targetPercent}% around " +
                                 formatTime(it.completionMillis, showDate = true) +
-                                chargeBeamText(it),
+                                it.beam
+                                    ?.let { (earliest, latest) ->
+                                        " (${formatTime(earliest, showDate = false)}–${formatTime(latest, showDate = false)})"
+                                    }.orEmpty(),
                         style = MaterialTheme.typography.bodySmall,
                         color = chargingChartColor,
                     )
@@ -794,19 +797,8 @@ private fun BatteryChart(
         charge?.let { target ->
             // The beam: where the limit lands if the charge power stayed at the
             // best or worst the supply showed this run.
-            val earliest = target.earliestMillis
-            val latest = target.latestMillis
-            if (earliest != null && latest != null) {
-                drawPath(
-                    path =
-                        Path().apply {
-                            moveTo(x(target.from.timestampMillis), y(target.from.percent))
-                            lineTo(x(earliest), y(target.targetPercent))
-                            lineTo(x(latest), y(target.targetPercent))
-                            close()
-                        },
-                    color = chargingColor.copy(alpha = 0.18f),
-                )
+            chargeBeamPath(target, ::x, ::y)?.let { beam ->
+                drawPath(path = beam, color = chargingColor.copy(alpha = 0.25f))
             }
             val end =
                 Offset(
@@ -862,11 +854,19 @@ private fun BatteryChart(
     }
 }
 
-/** " (14:20–15:40)" when the supply varied enough to give the charge a beam; empty otherwise. */
-private fun chargeBeamText(projection: ChargeProjection): String {
-    val earliest = projection.earliestMillis ?: return ""
-    val latest = projection.latestMillis ?: return ""
-    return " (${formatTime(earliest, showDate = false)}–${formatTime(latest, showDate = false)})"
+/** The wedge from the latest sample to the earliest and latest completion; null without a beam. */
+private fun chargeBeamPath(
+    projection: ChargeProjection,
+    x: (Long) -> Float,
+    y: (Int) -> Float,
+): Path? {
+    val (earliest, latest) = projection.beam ?: return null
+    return Path().apply {
+        moveTo(x(projection.from.timestampMillis), y(projection.from.percent))
+        lineTo(x(earliest), y(projection.targetPercent))
+        lineTo(x(latest), y(projection.targetPercent))
+        close()
+    }
 }
 
 private fun HistoryRange.label(): String =
