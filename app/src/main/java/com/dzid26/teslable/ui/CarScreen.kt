@@ -662,7 +662,7 @@ private fun BatteryHistoryCard(
                 Spacer(Modifier.height(8.dp))
                 Text(
                     text =
-                        "Last charge:\u00A0${formatPercent(it.maxPercent)}% ${formatDuration(now - it.sinceMillis)}\u00A0ago - " +
+                        "Last charge:\u00A0${formatPercent(it.maxPercent)}% · ${formatDuration(now - it.sinceMillis)}\u00A0ago · " +
                             "${formatPercent(it.usedPercent)}%\u00A0used",
                     style = MaterialTheme.typography.bodySmall,
                 )
