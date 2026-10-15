@@ -81,6 +81,7 @@ import com.dzid26.teslable.core.history.compactDuration
 import com.dzid26.teslable.core.history.dischargeProjection
 import com.dzid26.teslable.core.history.statusDurations
 import com.dzid26.teslable.core.history.within
+import com.dzid26.teslable.core.protocol.ChargingStateKind
 import com.dzid26.teslable.core.protocol.PairingPhase
 import com.dzid26.teslable.core.protocol.asleep
 import com.dzid26.teslable.core.protocol.chargingStateKind
@@ -372,9 +373,11 @@ private fun ChargeDetails(charge: ChargeState?) {
 
 /**
  * "240 V · 16/32 A": the charger's voltage, then the actual current over the
- * requested limit. The pieces are dropped when the car reports none (unplugged).
+ * requested limit. Shown only while charging, and each piece is dropped when the car reports none.
  */
 private fun chargerElectricalText(charge: ChargeState): String? {
+    // Plugged in but idle, the car can still report the pilot's numbers; only a live charge is worth showing.
+    if (charge.chargingStateKind != ChargingStateKind.Charging) return null
     val volts = charge.charger_voltage?.takeIf { it > 0 }
     val limit = (charge.charge_current_request ?: charge.charger_pilot_current)?.takeIf { it > 0 }
     val actual = charge.charger_actual_current
@@ -438,7 +441,7 @@ private fun SocBlock(
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 textAlign = TextAlign.End,
-                modifier = Modifier.weight(1f).align(Alignment.Bottom).padding(start = 8.dp),
+                modifier = Modifier.weight(1f).alignByBaseline().padding(start = 8.dp),
             )
         }
     }

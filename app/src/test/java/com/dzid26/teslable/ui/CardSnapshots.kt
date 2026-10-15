@@ -469,9 +469,6 @@ class CardSnapshots {
                 battery_level = LIVE_PERCENT,
                 battery_range = LIVE_RANGE_MILES,
                 charge_limit_soc = CHARGE_LIMIT,
-                charger_voltage = 240,
-                charger_actual_current = 16,
-                charge_current_request = 32,
             )
         private val awake =
             VehicleStatus(
