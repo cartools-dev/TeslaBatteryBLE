@@ -18,12 +18,7 @@ class FakeTeslaTransport(
     private val listener: TeslaTransport.Listener,
 ) : TeslaTransport {
     private val handler = Handler(Looper.getMainLooper())
-    private val vin: String =
-        context
-            .getSharedPreferences("teslable", Context.MODE_PRIVATE)
-            .getString("vin", DemoMode.DEMO_VIN)
-            ?.takeIf { it.length == 17 }
-            ?: DemoMode.DEMO_VIN
+    private val vin: String = DemoMode.DEMO_VIN
     private val protocol =
         FakeCarProtocol(vin).apply {
             setEnrolledKey(PairingKeyStore(context).load(TeslaNames.bleName(vin))?.publicKeyRaw)
