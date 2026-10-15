@@ -172,7 +172,13 @@ class CardSnapshots {
 
     @Test
     fun heroCardCharging() {
-        val charging = liveCharge.copy(charging_state = ChargeState.ChargingState(Charging = Void()))
+        val charging =
+            liveCharge.copy(
+                charging_state = ChargeState.ChargingState(Charging = Void()),
+                charger_voltage = 240,
+                charger_actual_current = 16,
+                charge_current_request = 32,
+            )
         snapCard("hero-card_charging") {
             HeroCard(
                 connection = liveConnection(readAt = NOW - FRESH_MINUTES * MINUTE, charge = charging),
