@@ -29,7 +29,6 @@ wire-runtime = { group = "com.squareup.wire", name = "wire-runtime", version.ref
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }
 paparazzi = { id = "app.cash.paparazzi", version.ref = "paparazzi" }
-kotlin-android = { id = "org.jetbrains.kotlin.android", version.ref = "kotlin" }
 kotlin-jvm = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin" }
 kotlin-compose = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
 wire = { id = "com.squareup.wire", version.ref = "wire" }
