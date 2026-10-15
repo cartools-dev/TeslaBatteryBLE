@@ -1363,7 +1363,9 @@ class TeslaBleController(
                             _state.value.connections[address]?.let {
                                 it.sessions.isNotEmpty() || it.status != null || it.charge != null
                             } == true
-                        val display = if (hadData) ConnectionPhase.DISCONNECTED else ConnectionPhase.FAILED
+                        // Failed is for faults a retry will not fix; a dropped or weak link just reads as disconnected.
+                        val display =
+                            if (phase == ConnectionPhase.FAILED && !hadData) ConnectionPhase.FAILED else ConnectionPhase.DISCONNECTED
                         this@VehicleLink.phase = display
                         updateConnection(address) {
                             it.copy(phase = display, disconnectedAtMillis = System.currentTimeMillis())

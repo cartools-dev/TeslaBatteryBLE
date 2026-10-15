@@ -145,8 +145,9 @@ class TeslaGattClient(
             ) {
                 when {
                     status != BluetoothGatt.GATT_SUCCESS -> {
+                        // A weak or interrupted link, not a fault: the backoff retries, so it reads as disconnected.
                         listener.onLog("GATT error status $status")
-                        listener.onPhase(ConnectionPhase.FAILED)
+                        listener.onPhase(ConnectionPhase.DISCONNECTED)
                     }
 
                     newState == BluetoothProfile.STATE_CONNECTED -> {
@@ -154,7 +155,7 @@ class TeslaGattClient(
                         listener.onPhase(ConnectionPhase.CONNECTED)
                         if (!gatt.discoverServices()) {
                             listener.onLog("discoverServices() returned false")
-                            listener.onPhase(ConnectionPhase.FAILED)
+                            listener.onPhase(ConnectionPhase.DISCONNECTED)
                         }
                     }
 
@@ -172,7 +173,7 @@ class TeslaGattClient(
             ) {
                 if (status != BluetoothGatt.GATT_SUCCESS) {
                     listener.onLog("Service discovery failed with status $status")
-                    listener.onPhase(ConnectionPhase.FAILED)
+                    listener.onPhase(ConnectionPhase.DISCONNECTED)
                     return
                 }
                 listener.onPhase(ConnectionPhase.DISCOVERING)
@@ -188,6 +189,9 @@ class TeslaGattClient(
                 val service = gatt.getService(TeslaGatt.SERVICE_UUID)
                 if (service == null) {
                     listener.onLog("Tesla GATT service not found")
+                    // Not a Tesla BLE endpoint: retrying the link will not fix it.
+                    listener.onPhase(ConnectionPhase.FAILED)
+                    return
                 } else {
                     txCharacteristic = service.getCharacteristic(TeslaGatt.TO_VEHICLE_UUID)
                     rxCharacteristic = service.getCharacteristic(TeslaGatt.FROM_VEHICLE_UUID)
