@@ -81,6 +81,7 @@ import com.dzid26.teslable.core.history.chargeProjection
 import com.dzid26.teslable.core.history.chargeStats
 import com.dzid26.teslable.core.history.compactDuration
 import com.dzid26.teslable.core.history.dischargeProjection
+import com.dzid26.teslable.core.history.soc
 import com.dzid26.teslable.core.history.statusDurations
 import com.dzid26.teslable.core.history.within
 import com.dzid26.teslable.core.protocol.ChargingStateKind
@@ -420,7 +421,7 @@ private fun SocBlock(
     // The number, the "%", and the reading's age share one text baseline.
     Row(verticalAlignment = Alignment.Bottom) {
         Text(
-            text = fineSocText(reading.value, rangeMiles, scale),
+            text = scale?.socPercent(rangeMiles)?.let { "%.1f".format(it) } ?: "${reading.value}",
             style = MaterialTheme.typography.displayLarge,
             fontWeight = FontWeight.SemiBold,
             color = color,
@@ -937,13 +938,3 @@ private fun formatPercent(value: Float): String {
     val rounded = value.roundToInt()
     return if (rounded.toFloat() == value) "$rounded" else String.format(Locale.getDefault(), "%.1f", value)
 }
-
-/** The sample's SOC for plotting: sub-percent from the fitted scale when it is pinned, else the int level. */
-private fun BatterySample.soc(scale: FullRangeScale?): Float = scale?.socPercent(ratedRangeMiles) ?: percent.toFloat()
-
-/** The big reading: one decimal from the fitted scale when known, else the integer level. */
-private fun fineSocText(
-    level: Int,
-    rangeMiles: Float?,
-    scale: FullRangeScale?,
-): String = scale?.socPercent(rangeMiles)?.let { "%.1f".format(it) } ?: "$level"

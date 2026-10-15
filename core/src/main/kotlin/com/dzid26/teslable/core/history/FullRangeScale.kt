@@ -173,3 +173,6 @@ object FullRangeScaleEstimator {
         return Line(slope, my - slope * mx, sqrt(inflate / sxx))
     }
 }
+
+/** The sample's SOC for plotting: sub-percent from the fitted [scale] when it is pinned, else the integer level. */
+fun BatterySample.soc(scale: FullRangeScale?): Float = scale?.socPercent(ratedRangeMiles) ?: batteryLevel.toFloat()
