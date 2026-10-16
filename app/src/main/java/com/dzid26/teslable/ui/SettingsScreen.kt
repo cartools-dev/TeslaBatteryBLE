@@ -39,19 +39,19 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.input.KeyboardType
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.dzid26.teslable.BuildConfig
 import com.dzid26.teslable.EnergyPriceStore
 import com.dzid26.teslable.R
 import com.dzid26.teslable.ble.PairingKeyStore
 import com.dzid26.teslable.ble.Vehicle
+import java.text.NumberFormat
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import java.text.NumberFormat
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
