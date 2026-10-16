@@ -15,6 +15,19 @@ internal object ReconnectBackoff {
     const val IDLE_AFTER_MS = 1_800_000L
     const val IDLE_CEILING_MS = 900_000L
 
+    /**
+     * An advert after this much silence is the car arriving. Longer than the advert interval and the
+     * scan's batching, so a car that keeps advertising but will not accept a connection (another phone
+     * holds the link, the edge of range, a failing handshake) is not retried every few seconds.
+     */
+    const val ARRIVAL_SILENCE_MS = 60_000L
+
+    /** Whether an advert at [now], the car's previous one having been at [previousSeenMillis], is an arrival. */
+    fun isArrival(
+        now: Long,
+        previousSeenMillis: Long,
+    ): Boolean = now - previousSeenMillis > ARRIVAL_SILENCE_MS
+
     /** Enough doublings to pass either ceiling: 5 s shifted this often is 5120 s. */
     private const val MAX_DOUBLINGS = 10
 

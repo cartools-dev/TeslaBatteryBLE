@@ -406,8 +406,11 @@ class TeslaBleController(
         for ((name, device) in strongestByName) {
             val known = vehicles[name] ?: continue
             vehicles[name] = known.copy(lastSeenMillis = now)
-            // The car is in range while its link waits out a backoff: try again within seconds.
-            links[name]?.takeIf { it.phase !in ACTIVE_PHASES }?.resetBackoff()
+            // The car turned up after a silence while its link waits out a backoff: try again within
+            // seconds. A car that never stops advertising but will not connect does not reset it.
+            if (ReconnectBackoff.isArrival(now, known.lastSeenMillis)) {
+                links[name]?.takeIf { it.phase !in ACTIVE_PHASES }?.resetBackoff()
+            }
             if (known.address == device.address) continue
             // The car is advertising from a new address; follow it.
             updateVehicle(name) { it.copy(address = device.address) }

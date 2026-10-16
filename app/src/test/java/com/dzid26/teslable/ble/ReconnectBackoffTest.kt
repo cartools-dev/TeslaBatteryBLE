@@ -2,6 +2,8 @@
 package com.dzid26.teslable.ble
 
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class ReconnectBackoffTest {
@@ -56,6 +58,22 @@ class ReconnectBackoffTest {
 
         assertEquals(1_000L, ReconnectBackoff.unseenForMs(now, lastSeenMillis = now - 1_000L, lastAliveMillis = now - 9_000_000L))
         assertEquals(2_000L, ReconnectBackoff.unseenForMs(now, lastSeenMillis = now - 9_000_000L, lastAliveMillis = now - 2_000L))
+    }
+
+    @Test
+    fun `an advert after a minute of silence is an arrival`() {
+        val now = 100_000_000L
+
+        assertTrue(ReconnectBackoff.isArrival(now, previousSeenMillis = now - 61_000L))
+        assertTrue(ReconnectBackoff.isArrival(now, previousSeenMillis = 0L))
+    }
+
+    @Test
+    fun `a car that keeps advertising is not an arrival each time`() {
+        val now = 100_000_000L
+
+        assertFalse(ReconnectBackoff.isArrival(now, previousSeenMillis = now - 2_000L))
+        assertFalse(ReconnectBackoff.isArrival(now, previousSeenMillis = now - ReconnectBackoff.ARRIVAL_SILENCE_MS))
     }
 
     @Test
