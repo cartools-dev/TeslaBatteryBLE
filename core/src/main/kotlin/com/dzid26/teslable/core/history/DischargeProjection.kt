@@ -27,8 +27,8 @@ data class DischargeProjection(
     val lowSoc: Float? = null,
     /** The upper edge of the beam at the horizon; null like [lowSoc]. */
     val highSoc: Float? = null,
-    /** The drain rate of the pairs the car slept through, percent per hour; null until it has slept enough to tell. */
-    val sleepPercentPerHour: Double? = null,
+    /** The mixed rate (asleep and awake pairs together), percent per hour, when [percentPerHour] is the deep-sleep rate; else null. */
+    val mixedPercentPerHour: Double? = null,
 ) {
     /** The beam's two edges together; null when the fit is too thin for one. */
     val beam: Pair<Float, Float>?
@@ -63,10 +63,12 @@ data class DischargeProjection(
  * levels stand in. The beam is two standard errors of that rate: the spread
  * of the pairs around it, never less than the readings' own resolution.
  *
- * The line follows the mixed rate (every parked pair, asleep or awake). The
- * rate of the pairs the car slept through (a VCSEC status inside the gap says
- * asleep and none says awake) is reported beside it, and the beam's upper edge
- * reaches that gentler line, so the beam spans deep sleep to the statistics.
+ * The line follows the deep-sleep rate once the car has slept enough to tell: the
+ * rate of the pairs it slept through (a VCSEC status inside the gap says asleep
+ * and none says awake). The mixed rate (every parked pair, asleep or awake) is
+ * reported beside it, and the beam's lower edge reaches the mixed line, so the
+ * beam spans deep sleep to what the battery really did. Without enough sleep
+ * the line is the mixed rate.
  *
  * While charging it still projects: the line shows where the battery would
  * head if unplugged now, next to the charge projection. Returns null once the
@@ -98,32 +100,29 @@ fun dischargeProjection(
     if (parked.millis < MIN_RATE_SPAN_MILLIS || parked.drop <= 0.0) return null
 
     val fromSoc = last.soc(scale)
-    val ratePerMilli = parked.drop / parked.millis
-    val projectedSoc = (fromSoc - ratePerMilli * horizon).toFloat().coerceIn(0f, FULL_PERCENT)
+    val mixedRate = parked.drop / parked.millis
+    // The line follows the deep-sleep rate when the car has slept enough to tell, else the mixed one.
+    val sleepRate = parked.sleepRatePerMilli?.takeIf { it < mixedRate }
+    val mainRate = sleepRate ?: mixedRate
+    val projectedSoc = (fromSoc - mainRate * horizon).toFloat().coerceIn(0f, FULL_PERCENT)
+    val mixedSoc = (fromSoc - mixedRate * horizon).toFloat().coerceIn(0f, FULL_PERCENT)
     val reach = 2.0 * parked.errorPerMilli * horizon
-    val sleepRate = parked.sleepRatePerMilli?.takeIf { it < ratePerMilli }
-    val sleepSoc = sleepRate?.let { (fromSoc - it * horizon).toFloat().coerceIn(0f, FULL_PERCENT) }
-    val hasBeam = parked.pairs >= MIN_BEAM_PAIRS || sleepSoc != null
-    val statHigh = if (parked.pairs >= MIN_BEAM_PAIRS) (projectedSoc + reach).toFloat() else projectedSoc
+    val hasStats = parked.pairs >= MIN_BEAM_PAIRS
+    val hasBeam = hasStats || sleepRate != null
+    // The beam: the statistics around the line, reaching down to the mixed line when the main one is the sleep rate.
+    val low = if (hasStats) minOf((projectedSoc - reach).toFloat(), mixedSoc) else mixedSoc
+    val high = if (hasStats) (projectedSoc + reach).toFloat() else projectedSoc
     return DischargeProjection(
         from = last,
         projectedPercent = projectedSoc.roundToInt(),
         projectedAtMillis = last.timestampMillis + horizon,
         horizonMillis = horizon,
-        percentPerHour = ratePerMilli * HOUR,
+        percentPerHour = mainRate * HOUR,
         fromSoc = fromSoc,
         projectedSoc = projectedSoc,
-        // With too few pairs for a statistical edge, only the sleep edge draws.
-        lowSoc =
-            if (hasBeam) {
-                (if (parked.pairs >= MIN_BEAM_PAIRS) projectedSoc - reach else projectedSoc.toDouble())
-                    .toFloat()
-                    .coerceIn(0f, FULL_PERCENT)
-            } else {
-                null
-            },
-        highSoc = if (hasBeam) maxOf(statHigh, sleepSoc ?: statHigh).coerceIn(0f, minOf(fromSoc, FULL_PERCENT)) else null,
-        sleepPercentPerHour = sleepRate?.let { it * HOUR },
+        lowSoc = if (hasBeam) low.coerceIn(0f, FULL_PERCENT) else null,
+        highSoc = if (hasBeam) high.coerceIn(0f, minOf(fromSoc, FULL_PERCENT)) else null,
+        mixedPercentPerHour = if (sleepRate != null) mixedRate * HOUR else null,
     )
 }
 

@@ -252,16 +252,17 @@ class DischargeProjectionTest {
         val samples = listOf(sample(0, 80), sample(120, 79), sample(240, 78), sample(360, 75))
         val statuses = listOf(status(60, asleep = true), status(180, asleep = true), status(300, asleep = false))
         val projection = assertNotNull(project(samples, context = ProjectionContext(statuses = statuses), rangeMillis = 24 * HOUR))
-        // Mixed: 5 points over 6 h; asleep: 2 points over 4 h = 0.5 %/h.
-        assertEquals(5.0 / 6.0, projection.percentPerHour, 1e-9)
-        assertEquals(0.5, projection.sleepPercentPerHour!!, 1e-9)
-        // The beam's upper edge is at least the gentler asleep line: 12 h at 0.5 %/h from 75 is 69.
-        assertTrue(projection.highSoc!! >= 69f)
+        // Asleep: 2 points over 4 h = 0.5 %/h is the line; mixed: 5 points over 6 h.
+        assertEquals(0.5, projection.percentPerHour, 1e-9)
+        assertEquals(5.0 / 6.0, projection.mixedPercentPerHour!!, 1e-9)
+        // 12 h at 0.5 %/h from 75 is 69; the beam's lower edge reaches the mixed line, 65.
+        assertEquals(69f, projection.projectedSoc, 0.01f)
+        assertTrue(projection.lowSoc!! <= 65f)
         // A single slept-through pair is not enough to call a rate.
         val one = listOf(sample(0, 80), sample(120, 79), sample(240, 76))
         val oneAsleep = listOf(status(60, asleep = true), status(180, asleep = false))
         assertNull(
-            assertNotNull(project(one, context = ProjectionContext(statuses = oneAsleep), rangeMillis = 24 * HOUR)).sleepPercentPerHour,
+            assertNotNull(project(one, context = ProjectionContext(statuses = oneAsleep), rangeMillis = 24 * HOUR)).mixedPercentPerHour,
         )
     }
 
@@ -271,12 +272,12 @@ class DischargeProjectionTest {
         assertNull(
             assertNotNull(
                 project(samples, context = ProjectionContext(statuses = emptyList()), rangeMillis = 24 * HOUR),
-            ).sleepPercentPerHour,
+            ).mixedPercentPerHour,
         )
         // A status inside the gap that says awake rules it out.
         val awake = listOf(status(60, asleep = true), status(90, asleep = false))
         assertNull(
-            assertNotNull(project(samples, context = ProjectionContext(statuses = awake), rangeMillis = 24 * HOUR)).sleepPercentPerHour,
+            assertNotNull(project(samples, context = ProjectionContext(statuses = awake), rangeMillis = 24 * HOUR)).mixedPercentPerHour,
         )
     }
 

@@ -934,7 +934,7 @@ private fun chargeProjectionPaths(
     return line to beam
 }
 
-/** "Parked · projected 52% (51–53%) by … · 1.6%/day (asleep 1.1)": the parked projection in words. */
+/** "Parked · projected 52% (51–53%) by … · 1.6%/day (mixed 2.4)": the parked projection in words. */
 private fun parkedText(projection: DischargeProjection): String {
     val range =
         projection.beam
@@ -942,12 +942,12 @@ private fun parkedText(projection: DischargeProjection): String {
             ?.let { (low, high) -> " (${low.roundToInt()}–${high.roundToInt()}%)" }
             .orEmpty()
     val perDay = "%.1f".format(Locale.getDefault(), projection.percentPerHour * 24)
-    val asleep =
-        projection.sleepPercentPerHour
-            ?.let { " (asleep ${"%.1f".format(Locale.getDefault(), it * 24)})" }
+    val mixed =
+        projection.mixedPercentPerHour
+            ?.let { " (mixed ${"%.1f".format(Locale.getDefault(), it * 24)})" }
             .orEmpty()
     return "Parked · projected ${projection.projectedPercent}%$range by " +
-        formatTime(projection.projectedAtMillis, showDate = true) + " · $perDay%/day$asleep"
+        formatTime(projection.projectedAtMillis, showDate = true) + " · $perDay%/day$mixed"
 }
 
 private fun HistoryRange.label(): String =
