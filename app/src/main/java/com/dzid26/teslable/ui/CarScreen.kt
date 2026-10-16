@@ -638,6 +638,8 @@ internal fun BatteryHistoryCard(
     val now = nowMillis
     val visible = samples.within(range, now)
     val stats = chargeStats(samples)
+    // Fitted once: the stats, the projection and the chart all read it.
+    val scale = remember(samples) { FullRangeScaleEstimator.estimate(samples) }
 
     Card(modifier = Modifier.fillMaxWidth()) {
         Column(Modifier.padding(12.dp)) {
@@ -667,7 +669,6 @@ internal fun BatteryHistoryCard(
                     range.durationMillis
                         ?: (visible.last().timestampMillis - visible.first().timestampMillis)
                             .coerceAtLeast(1L)
-                val scale = FullRangeScaleEstimator.estimate(samples)
                 val charge = chargeProjection(samples, fullRangeMiles = scale?.fullRangeMiles, scale = scale)
                 // Parked drain: the drive samples' odometer marks the
                 // stretches the car moved. Shown next to the charge
@@ -729,8 +730,10 @@ internal fun BatteryHistoryCard(
                 Spacer(Modifier.height(8.dp))
                 Text(
                     text =
-                        "Last charge:\u00A0${formatPercent(it.chargePercent)}% · ${formatDuration(now - it.sinceMillis)}\u00A0ago · " +
-                            "${formatPercent(it.usedPercent)}%\u00A0used",
+                        "Last charge:\u00A0${formatPercent(
+                            it.chargePercent(scale),
+                        )}% · ${formatDuration(now - it.sinceMillis)}\u00A0ago · " +
+                            "${formatPercent(it.usedPercent(scale))}%\u00A0used",
                     style = MaterialTheme.typography.bodySmall,
                 )
             }

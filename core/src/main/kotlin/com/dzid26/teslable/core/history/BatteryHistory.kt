@@ -64,16 +64,52 @@ fun List<BatterySample>.within(
     return filter { it.timestampMillis >= cutoff }
 }
 
-/** Summary since the last charge: the level it reached, and the drain since. */
+/**
+ * Summary since the last charge: the level it reached, and the drain since.
+ *
+ * Kept in rated miles, the car's own unit: the drain is a difference of two
+ * rated-range readings, so it is exact to the reading's resolution, where the
+ * whole-percent level steps by up to a point. Percent is derived at the end
+ * with [chargePercent], [currentPercent] and [usedPercent] from the fitted
+ * [FullRangeScale]. The whole-percent levels stay as the fallback for samples
+ * with no rated range, or while the scale is not pinned.
+ */
 data class ChargeStats(
     val sinceMillis: Long,
-    /** The level the charge ended at (the newest charging sample). */
-    val chargePercent: Float,
-    val currentPercent: Float,
-    val minPercent: Float,
-    val maxPercent: Float,
+    /** The rated range at the end of the charge (the newest charging sample); null when it has none. */
+    val chargeMiles: Float?,
+    val currentMiles: Float?,
+    val minMiles: Float?,
+    val maxMiles: Float?,
+    /** The displayed whole-percent levels, the fallback for the percent figures. */
+    val chargeLevel: Int,
+    val currentLevel: Int,
+    val minLevel: Int,
+    val maxLevel: Int,
 ) {
-    val usedPercent: Float get() = (chargePercent - currentPercent).coerceAtLeast(0f)
+    /** Rated miles drained since the charge; null when either end has no rated range. */
+    val usedMiles: Float?
+        get() = if (chargeMiles != null && currentMiles != null) (chargeMiles - currentMiles).coerceAtLeast(0f) else null
+
+    /** The level the charge ended at, in percent: sub-percent with a pinned [scale], else the whole level. */
+    fun chargePercent(scale: FullRangeScale?): Float = scale?.socPercent(chargeMiles) ?: chargeLevel.toFloat()
+
+    fun currentPercent(scale: FullRangeScale?): Float = scale?.socPercent(currentMiles) ?: currentLevel.toFloat()
+
+    fun minPercent(scale: FullRangeScale?): Float = scale?.socPercent(minMiles) ?: minLevel.toFloat()
+
+    fun maxPercent(scale: FullRangeScale?): Float = scale?.socPercent(maxMiles) ?: maxLevel.toFloat()
+
+    /** Percent used since the charge: the drained miles over the scale's miles per percent, else the level difference. */
+    fun usedPercent(scale: FullRangeScale?): Float {
+        val miles = usedMiles
+        val milesPerPercent = scale?.takeIf { it.pinned }?.milesPerPercent
+        return if (miles != null && milesPerPercent != null && milesPerPercent > 0f) {
+            miles / milesPerPercent
+        } else {
+            (chargeLevel - currentLevel).coerceAtLeast(0).toFloat()
+        }
+    }
 }
 
 /**
@@ -90,11 +126,16 @@ fun chargeStats(samples: List<BatterySample>): ChargeStats? {
     val newest = samples.maxByOrNull { it.timestampMillis } ?: return null
     if (newest.timestampMillis <= charged.timestampMillis) return null
     val tail = samples.filter { it.timestampMillis > charged.timestampMillis }
+    val tailMiles = tail.mapNotNull { it.ratedRangeMiles }
     return ChargeStats(
         sinceMillis = charged.timestampMillis,
-        chargePercent = charged.percent.toFloat(),
-        currentPercent = newest.percent.toFloat(),
-        minPercent = tail.minOf { it.percent.toFloat() },
-        maxPercent = tail.maxOf { it.percent.toFloat() },
+        chargeMiles = charged.ratedRangeMiles,
+        currentMiles = newest.ratedRangeMiles,
+        minMiles = tailMiles.minOrNull(),
+        maxMiles = tailMiles.maxOrNull(),
+        chargeLevel = charged.percent,
+        currentLevel = newest.percent,
+        minLevel = tail.minOf { it.percent },
+        maxLevel = tail.maxOf { it.percent },
     )
 }

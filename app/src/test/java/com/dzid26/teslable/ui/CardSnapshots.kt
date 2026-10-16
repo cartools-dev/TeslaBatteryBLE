@@ -365,6 +365,18 @@ class CardSnapshots {
     }
 
     @Test
+    fun historyCardPrecise() {
+        snapCard("history-card_precise") {
+            BatteryHistoryCard(
+                samples = preciseSamples,
+                drives = emptyList(),
+                nowMillis = NOW,
+                initialRange = HistoryRange.DAY,
+            )
+        }
+    }
+
+    @Test
     fun historyCardParkedDrain() {
         // A parked car losing a point every few hours: the "Parked" projection
         // line and its rate, no charge in sight.
@@ -920,6 +932,32 @@ class CardSnapshots {
                             )
                         },
                 ).sortedBy { it.timestampMillis }
+
+        // The rated-range climb above pins the scale (270 mi, 2.7 mi per percent),
+        // then a charge ending at 70.1% and a parked drain to 69.3%: 0.8 points
+        // used, where the whole levels (70 -> 69) would say 1.
+        private val preciseSamples =
+            learntSamples.filter { it.chargingState == null } +
+                listOf(
+                    preciseSample(60L, 70, 70.1f, ChargingStateKind.Charging),
+                    preciseSample(30L, 70, 69.6f, ChargingStateKind.Disconnected),
+                    preciseSample(5L, 69, 69.3f, ChargingStateKind.Disconnected),
+                )
+
+        private fun preciseSample(
+            minutesAgo: Long,
+            level: Int,
+            soc: Float,
+            state: ChargingStateKind,
+        ) = BatterySample(
+            timestampMillis = NOW - minutesAgo * MINUTE,
+            batteryLevel = level,
+            chargingState = state,
+            chargeLimit = null,
+            vehicleId = BLE_NAME,
+            ratedRangeMiles = 2.7f * soc,
+            readAtMillis = NOW - minutesAgo * MINUTE,
+        )
 
         // A charge five days before the newest reading, with nothing recorded
         // in between: the stats must name the charge (47%, five days ago) and
