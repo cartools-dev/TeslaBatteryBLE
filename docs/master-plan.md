@@ -76,7 +76,7 @@ A trustworthy shell around the existing protocol work. No user-facing features.
 - [x] Fake BLE transport + simulated car (`FakeCarProtocol`, round-trip tests, CI demo run).
 - [ ] Controller state-machine tests.
 - [ ] Store tests.
-- [x] Compose UI smoke tests + screenshot tests in CI (2026-10-10): Paparazzi JVM snapshots of the cars-list and car-view cards (light + dark, 24 states) diffed before/after the pushed commit and posted on PRs (light by default, dark on demand); no committed goldens. The emulator stays for the release smoke test and the demo smoke canary, plus a manual full-screen fallback on demand; release screenshots come from the Paparazzi full-screen snapshots.
+- [x] Compose UI smoke tests + screenshot tests in CI (2026-10-10): Paparazzi JVM snapshots of the cars-list and car-view cards (light + dark, 24 states) diffed before/after the pushed commit and posted on PRs (light by default, dark on demand); no committed goldens. The emulator stays for the release smoke test only; release screenshots come from the Paparazzi full-screen snapshots.
 - [ ] Protocol vectors: nonce/metadata/counter/clock-skew edge cases (negative tests partly done in #41).
 - [x] Static analysis: Android lint + ktlint + type-resolved detekt 2.x at default thresholds in CI; existing findings tracked in `detekt-baseline-*.xml` (#127).
 - [x] R8 + resource shrinking and LeakCanary (debug only) added in #38; the release build is smoke-tested on an emulator in CI (#115).

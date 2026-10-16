@@ -4,8 +4,9 @@
 #
 # Usage: paparazzi-diff.sh [before-ref] [after-ref] [before-dir] [after-dir]
 #
-# before-ref defaults to HEAD~1 (the pushed commit's parent, not the merge
-# base) and after-ref to HEAD. Run from anywhere inside the repo; the working
+# before-ref defaults to the merge base of HEAD and origin/main (HEAD~1 when
+# origin/main is unknown), so the diff is the branch's whole visual change,
+# not just its last commit; after-ref defaults to HEAD. Run from anywhere inside the repo; the working
 # tree must be clean, since both commits are checked out in turn. The snapshot
 # dirs default to fresh temporary directories; pass explicit dirs (for
 # example $RUNNER_TEMP/before and $RUNNER_TEMP/after) to keep the PNGs.
@@ -18,12 +19,12 @@
 #
 # Exit 0 whether or not anything differs: this is a local review tool, not a
 # gate. Non-zero only when the after record itself fails. The before record
-# is best-effort (the parent may predate Paparazzi): when it fails every
+# is best-effort (the merge base may predate Paparazzi): when it fails every
 # after snapshot counts as new and before_sha is "none". The original HEAD
 # checkout is always restored, even on failure.
 set -euo pipefail
 
-BEFORE_REF="${1:-HEAD~1}"
+BEFORE_REF="${1:-$(git merge-base HEAD origin/main 2>/dev/null || echo HEAD~1)}"
 AFTER_REF="${2:-HEAD}"
 
 if ! git diff --quiet || ! git diff --cached --quiet; then
@@ -111,7 +112,7 @@ if BEFORE_COUNT="$(render "$BEFORE_REF" "$BEFORE_DIR")"; then
         echo "::warning::no card snapshots were recorded for $BEFORE_REF; every after snapshot counts as new" >&2
     fi
 else
-    echo "::warning::before snapshots unavailable for $BEFORE_REF (the parent may predate Paparazzi); every after snapshot counts as new" >&2
+    echo "::warning::before snapshots unavailable for $BEFORE_REF (the merge base may predate Paparazzi); every after snapshot counts as new" >&2
 fi
 
 echo "after_dir $AFTER_DIR"

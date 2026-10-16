@@ -29,6 +29,7 @@ import kotlin.math.roundToInt
  */
 @Composable
 internal fun BatteryHealthCard(summary: HealthSummary) {
+    val unit = LocalDistanceUnit.current
     Card(modifier = Modifier.fillMaxWidth()) {
         Column(Modifier.padding(12.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -59,14 +60,14 @@ internal fun BatteryHealthCard(summary: HealthSummary) {
                     value = "~${(kwh * 10).roundToInt() / 10f} kWh",
                     detail =
                         summary.ratedKwhPerMile?.let { constant ->
-                            "rated constant ${(constant * 100).roundToInt() / 100f} kWh/mi"
+                            "rated constant ${(unit.energyPerUnit(constant) * WH_PER_KWH).roundToInt()} Wh/${unit.symbol}"
                         } ?: "energy added over the last charge",
                 )
             }
             summary.fullRangeMiles?.let { miles ->
                 EstimateRow(
                     label = "Full range",
-                    value = "~${miles.roundToInt()} mi",
+                    value = "~${unit.format(miles)}",
                     detail = "fitted from ${summary.fullRangeSteps} percent steps",
                 )
             }
@@ -185,3 +186,5 @@ private fun confidenceLine(summary: HealthSummary): String =
 
         HealthConfidence.HIGH -> "${summary.sessions} charge sessions recorded."
     }
+
+private const val WH_PER_KWH = 1000f

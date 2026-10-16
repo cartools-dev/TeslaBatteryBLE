@@ -91,3 +91,12 @@ Paparazzi full-screen snapshots cover the same screens on every UI pull
 request, the release smoke test and the demo canary cover the real app on an
 emulator, and the PR comment no longer points at the manual run. The shared
 `capture-screenshots.sh` stays for those two.
+
+## Update (2026-10-16): demo smoke canary removed
+
+`demo-smoke.yml` is deleted. It ran the same capture as the `Release smoke
+test` job on a daily schedule, but the smoke job already drives the simulated
+car on every app change on main, against the minified release build, so the
+canary only added a second emulator block and a stale comment about the
+windowed emulator default. `capture-screenshots.sh` stays for the smoke job and
+`tools/demo-emulator.sh`.
