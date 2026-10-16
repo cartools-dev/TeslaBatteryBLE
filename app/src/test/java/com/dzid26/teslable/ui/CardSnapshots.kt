@@ -637,6 +637,8 @@ class CardSnapshots {
                 address = ADDRESS,
                 gattName = "Model 3",
                 displayName = "Model 3",
+                // Enrolled, so the app-key card stays out of the car screen.
+                keySlot = 3,
             )
         private val advert = TeslaAdvert(name = BLE_NAME, address = ADDRESS, rssi = -70)
 
