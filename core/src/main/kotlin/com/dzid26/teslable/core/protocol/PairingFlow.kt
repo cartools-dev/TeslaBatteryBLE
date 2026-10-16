@@ -266,10 +266,13 @@ class PairingFlow(
     private fun handlePairingResponse(message: ByteArray): Boolean {
         // Any VCSEC reply can carry a command status (an error to a status request, say);
         // it is an add-key result only while an enrollment waits for one.
-        if (phase !in AWAITING_ADD_KEY_RESULT) return false
         val pairing =
-            runCatching { TeslaPairing.parseAddKeyResponse(message) }.getOrNull()
-                ?: return false
+            if (phase in AWAITING_ADD_KEY_RESULT) {
+                runCatching { TeslaPairing.parseAddKeyResponse(message) }.getOrNull()
+            } else {
+                null
+            }
+        if (pairing == null) return false
         host.cancel(PairingTimer.RESPONSE_TIMEOUT)
         val newPhase =
             when (pairing) {

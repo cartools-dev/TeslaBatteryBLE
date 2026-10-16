@@ -11,8 +11,9 @@ internal fun sessionCostText(
     charge: ChargeState,
     pricePerKwh: Float?,
 ): String? {
-    val energy = charge.charge_energy_added ?: return null
-    val cost = chargeSessionCost(energy, pricePerKwh) ?: return null
+    val energy = charge.charge_energy_added
+    val cost = chargeSessionCost(energy, pricePerKwh)
+    if (energy == null || cost == null) return null
     val money = NumberFormat.getCurrencyInstance().format(cost.toDouble())
     return String.format(Locale.getDefault(), "%.1f kWh · %s", energy, money)
 }
