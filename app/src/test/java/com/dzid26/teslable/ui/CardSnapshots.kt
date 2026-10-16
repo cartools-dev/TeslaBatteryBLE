@@ -2,7 +2,6 @@
 package com.dzid26.teslable.ui
 
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.MaterialTheme
@@ -446,8 +445,8 @@ class CardSnapshots {
     fun screenCarsList() {
         snapScreen("screen-cars-list") {
             ConnectionsScreen(
-                state = screenState,
-                history = screenSamples,
+                state = DemoScreenFixtures.listState(NOW),
+                history = DemoScreenFixtures.history(NOW),
                 permissionsGranted = true,
                 locationServicesEnabled = true,
                 onRequestPermissions = {},
@@ -466,12 +465,12 @@ class CardSnapshots {
     fun screenCarDetail() {
         snapScreen("screen-car-detail") {
             CarScreen(
-                state = screenState,
-                vehicle = vehicle,
-                advert = advert,
-                address = ADDRESS,
-                history = screenSamples,
-                driveHistory = emptyList(),
+                state = DemoScreenFixtures.carState(NOW),
+                vehicle = DemoScreenFixtures.vehicle,
+                advert = DemoScreenFixtures.carAdvert,
+                address = DemoScreenFixtures.DEMO_ADDRESS,
+                history = DemoScreenFixtures.history(NOW),
+                driveHistory = DemoScreenFixtures.drives(NOW),
                 statusHistory = emptyList(),
                 onBack = {},
                 onPair = {},
@@ -488,11 +487,11 @@ class CardSnapshots {
         snapScreen("screen-settings") {
             SettingsScreen(
                 keyStore = PairingKeyStore(LocalContext.current),
-                vehicles = listOf(vehicle),
+                vehicles = listOf(DemoScreenFixtures.vehicle),
                 onClearPairingCache = {},
                 onOpenAbout = {},
                 onBack = {},
-                versionName = "0.0.0-snapshot",
+                versionName = DemoScreenFixtures.VERSION_NAME,
             )
         }
     }
@@ -556,16 +555,17 @@ class CardSnapshots {
     }
 
     /**
-     * One screen, two images: the full screen in NORMAL mode on a tall
-     * S24-Ultra-like phone (Pixel 7 Pro preset: 1440x3120, 19.5:9
-     * portrait), so scrolled content gets vertical room. Light and dark.
+     * One screen, two images: the full screen in NORMAL mode on a 1080x2400
+     * phone at 420 dpi (the old emulator's size, 411x914 dp), so the PNGs
+     * match the website images and scrolled content gets vertical room.
+     * Light and dark.
      */
     private fun snapScreen(
         name: String,
         content: @Composable () -> Unit,
     ) {
         paparazzi.unsafeUpdateConfig(
-            deviceConfig = DeviceConfig.PIXEL_7_PRO,
+            deviceConfig = screenPhone,
             renderingMode = SessionParams.RenderingMode.NORMAL,
         )
         paparazzi.snapshot(name + "_light") {
@@ -790,6 +790,15 @@ class CardSnapshots {
                 ydpi = 327,
                 density = Density.XHIGH,
             )
+        private val screenPhone =
+            DeviceConfig.NEXUS_5.copy(
+                screenWidth = 1080,
+                screenHeight = 2400,
+                xdpi = 420,
+                ydpi = 420,
+                density = Density.create(DENSITY_DPI),
+            )
+        private const val DENSITY_DPI = 420
         private val screenState =
             BleUiState(
                 trackingEnabled = true,
@@ -904,17 +913,14 @@ private fun CardFrame(
 }
 
 /**
- * The full-screen frame: the same fixed schemes, with the screen filling the
- * device frame as it does on the phone.
+ * The full-screen frame: the app's blue Material You scheme (see
+ * [demoColorScheme]) between fake system bars, so the render reads like the
+ * phone screenshots.
  */
 @Composable
 private fun ScreenFrame(
     darkTheme: Boolean,
     content: @Composable () -> Unit,
 ) {
-    MaterialTheme(colorScheme = if (darkTheme) darkColorScheme() else lightColorScheme()) {
-        Surface(modifier = Modifier.fillMaxSize()) {
-            content()
-        }
-    }
+    DemoSystemBars(darkTheme = darkTheme, content = content)
 }
