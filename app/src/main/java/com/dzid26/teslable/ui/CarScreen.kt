@@ -242,7 +242,12 @@ internal fun CarScreen(
                 if (!paired) {
                     KeyCard(connection, vehicle, onPair)
                 }
-                BatteryHistoryCard(vehicleHistory, vehicleDrives, nowMillis = nowMillis ?: System.currentTimeMillis())
+                BatteryHistoryCard(
+                    vehicleHistory,
+                    vehicleDrives,
+                    nowMillis = nowMillis ?: System.currentTimeMillis(),
+                    statuses = vehicleStatuses,
+                )
                 CompositionLocalProvider(LocalDistanceUnit provides distanceUnit) {
                     BatteryHealthCard(health)
                 }
@@ -625,6 +630,8 @@ internal fun BatteryHistoryCard(
     nowMillis: Long = System.currentTimeMillis(),
     // Injectable for the Paparazzi snapshots; production opens on the day range.
     initialRange: HistoryRange = HistoryRange.DAY,
+    // The VCSEC status log: when the car slept, for the deep-sleep drain rate.
+    statuses: List<StatusSample> = emptyList(),
 ) {
     var range by rememberSaveable { mutableStateOf(initialRange) }
     val now = nowMillis
@@ -664,7 +671,7 @@ internal fun BatteryHistoryCard(
                 // Parked drain: the drive samples' odometer marks the
                 // stretches the car moved. Shown next to the charge
                 // projection too: where the battery heads if unplugged now.
-                val discharge = dischargeProjection(samples, drives, baseMillis, now, scale)
+                val discharge = dischargeProjection(samples, drives, baseMillis, now, scale, statuses)
                 // The projection gets room on the x-axis: half the range ahead.
                 val windowEnd =
                     if (charge != null || discharge != null) {
@@ -712,7 +719,10 @@ internal fun BatteryHistoryCard(
                                     .orEmpty() +
                                 " by " +
                                 formatTime(it.projectedAtMillis, showDate = true) +
-                                " · ${"%.1f".format(it.percentPerHour * 24)}%/day",
+                                " · ${"%.1f".format(it.percentPerHour * 24)}%/day" +
+                                it.sleepPercentPerHour
+                                    ?.let { asleep -> " (asleep ${"%.1f".format(asleep * 24)})" }
+                                    .orEmpty(),
                         style = MaterialTheme.typography.bodySmall,
                         // The measured line's colour; muted while a charge is
                         // the main story.

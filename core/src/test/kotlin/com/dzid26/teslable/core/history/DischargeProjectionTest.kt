@@ -44,7 +44,8 @@ class DischargeProjectionTest {
         rangeMillis: Long = 6 * HOUR,
         nowMillis: Long = samples.last().timestampMillis + MINUTE,
         scale: FullRangeScale? = null,
-    ) = dischargeProjection(samples, drives, rangeMillis, nowMillis, scale)
+        statuses: List<StatusSample> = emptyList(),
+    ) = dischargeProjection(samples, drives, rangeMillis, nowMillis, scale, statuses)
 
     @Test
     fun `carries the parked rate half the range forward`() {
@@ -232,6 +233,39 @@ class DischargeProjectionTest {
         val looseWidth = loose.highSoc!! - loose.lowSoc!!
         assertEquals(true, tidyWidth > 0f)
         assertEquals(true, looseWidth > tidyWidth)
+    }
+
+    private fun status(
+        minutes: Long,
+        asleep: Boolean,
+    ) = StatusSample(
+        timestampMillis = minutes * MINUTE,
+        vehicleId = "",
+        asleep = asleep,
+        userPresent = false,
+        locked = true,
+    )
+
+    @Test
+    fun `the asleep rate comes from the gaps the car slept through`() {
+        // 0 -> 120: asleep (a status inside says so) and loses 1 point; 120 -> 240: awake and loses 3.
+        val samples = listOf(sample(0, 80), sample(120, 79), sample(240, 76))
+        val statuses = listOf(status(60, asleep = true), status(180, asleep = false))
+        val projection = assertNotNull(project(samples, statuses = statuses, rangeMillis = 24 * HOUR))
+        // Mixed: 4 points over 4 h = 1 %/h; asleep: 1 point over 2 h = 0.5 %/h.
+        assertEquals(1.0, projection.percentPerHour, 1e-9)
+        assertEquals(0.5, projection.sleepPercentPerHour!!, 1e-9)
+        // The beam reaches up to the gentler asleep line: 12 h at 0.5 %/h from 76 is 70, mixed is 64.
+        assertEquals(70f, projection.highSoc!!, 0.01f)
+    }
+
+    @Test
+    fun `no sleep evidence means no asleep rate`() {
+        val samples = listOf(sample(0, 80), sample(120, 79), sample(240, 76))
+        assertNull(assertNotNull(project(samples, statuses = emptyList(), rangeMillis = 24 * HOUR)).sleepPercentPerHour)
+        // A status inside the gap that says awake rules it out.
+        val awake = listOf(status(60, asleep = true), status(90, asleep = false))
+        assertNull(assertNotNull(project(samples, statuses = awake, rangeMillis = 24 * HOUR)).sleepPercentPerHour)
     }
 
     private companion object {
