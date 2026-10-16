@@ -380,6 +380,8 @@ class TeslaBleController(
         uiVisible = visible
         links.values.forEach { it.stopRssiPoll() }
         if (visible) {
+            // Opening the app is the signal to try again now, not after the long background wait.
+            links.values.forEach { it.resetBackoff() }
             selectedLink()?.takeIf { it.phase == ConnectionPhase.READY }?.startRssiPoll()
         }
     }
@@ -495,12 +497,19 @@ class TeslaBleController(
         }
     }
 
-    private fun startScanner() {
+    /**
+     * [background] is silent discovery of the known cars: filtered by their advertised names and
+     * scanned in low-power mode. A user's scan stays unfiltered and low-latency, because it has to
+     * find cars it has never seen.
+     */
+    private fun startScanner(background: Boolean = false) {
         if (demoCar() != null) {
             handler.removeCallbacks(demoScan)
             handler.post(demoScan)
+        } else if (background && vehicles.isNotEmpty()) {
+            scanner.start(deviceNames = vehicles.keys.toList(), lowPower = true)
         } else {
-            scanner.start()
+            scanner.start(lowPower = background)
         }
     }
 
@@ -517,7 +526,7 @@ class TeslaBleController(
         _state.update { it.copy(discovering = true, explicitScan = false) }
         handler.removeCallbacks(stopDiscovery)
         handler.postDelayed(stopDiscovery, DISCOVERY_TIMEOUT_MS)
-        startScanner()
+        startScanner(background = true)
     }
 
     /** Silent discovery is done once every known car has a live link. */
@@ -1096,12 +1105,19 @@ class TeslaBleController(
                 // stopped advertising or came back at a new address.
                 startDiscovery()
             }
-            val delay =
-                (RECONNECT_DELAY_MS * reconnectAttempts)
-                    .coerceAtMost(RECONNECT_MAX_DELAY_MS)
+            val delay = ReconnectBackoff.delayMs(reconnectAttempts)
             nextRetryAtMs = System.currentTimeMillis() + delay
             handler.removeCallbacks(reconnect)
             handler.postDelayed(reconnect, delay)
+        }
+
+        /** Brings a pending retry forward to the shortest wait and starts the backoff over. */
+        fun resetBackoff() {
+            if (reconnectAttempts == 0 || phase == ConnectionPhase.READY) return
+            reconnectAttempts = 0
+            nextRetryAtMs = System.currentTimeMillis() + ReconnectBackoff.FIRST_DELAY_MS
+            handler.removeCallbacks(reconnect)
+            handler.postDelayed(reconnect, ReconnectBackoff.FIRST_DELAY_MS)
         }
 
         private fun ensureConnectionEntry() {
@@ -1533,8 +1549,7 @@ class TeslaBleController(
         const val RSSI_POLL_MS = 500L
         const val DEMO_SCAN_MS = 2_000L
         const val REHANDSHAKE_COOLDOWN_MS = 60_000L
-        const val RECONNECT_DELAY_MS = 5000L
-        const val RECONNECT_MAX_DELAY_MS = 60_000L
+
         const val DISCOVERY_AFTER_ATTEMPTS = 3
         const val DISCOVERY_TIMEOUT_MS = 30_000L
 

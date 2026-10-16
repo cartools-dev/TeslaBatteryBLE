@@ -144,6 +144,13 @@ class BleTrackingService : Service() {
         flags: Int,
         startId: Int,
     ): Int {
+        // Without Bluetooth permission the connected-device foreground type is refused on Android 14+.
+        // start() never asks for the service in that state, so this is a sticky restart by the system
+        // (which has no start-foreground deadline) after the permission was revoked.
+        if (!foregroundStarted && !hasBlePermissions(this)) {
+            stopSelf()
+            return START_NOT_STICKY
+        }
         val controller = BleControllerHolder.get(this)
         if (!startLogged) {
             startLogged = true
@@ -215,16 +222,27 @@ class BleTrackingService : Service() {
     private fun publish(models: List<NotificationModel>) {
         val summary = summaryModel(models)
         if (!foregroundStarted) {
-            ServiceCompat.startForeground(
-                this,
-                NOTIFICATION_ID,
-                buildNotification(summary, groupSummary = models.size > 1),
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                    ServiceInfo.FOREGROUND_SERVICE_TYPE_CONNECTED_DEVICE
-                } else {
-                    0
-                },
-            )
+            // A sticky restart after Bluetooth permission was revoked: Android 14+ refuses the
+            // connected-device type without it, and a crash loop would be worse than no service.
+            try {
+                ServiceCompat.startForeground(
+                    this,
+                    NOTIFICATION_ID,
+                    buildNotification(summary, groupSummary = models.size > 1),
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                        ServiceInfo.FOREGROUND_SERVICE_TYPE_CONNECTED_DEVICE
+                    } else {
+                        0
+                    },
+                )
+            } catch (ignored: SecurityException) {
+                stopSelf()
+                return
+            } catch (ignored: IllegalStateException) {
+                // ForegroundServiceStartNotAllowedException (API 31+).
+                stopSelf()
+                return
+            }
             foregroundStarted = true
             lastSummary = summary
         } else if (shouldPost(lastSummary, summary)) {
@@ -482,6 +500,9 @@ class BleTrackingService : Service() {
             context: Context,
             reason: AppState.StartReason,
         ) {
+            // startForegroundService must be followed by startForeground within seconds, which the
+            // connected-device type refuses without Bluetooth permission; do not start it then.
+            if (!hasBlePermissions(context)) return
             try {
                 ContextCompat.startForegroundService(
                     context,
