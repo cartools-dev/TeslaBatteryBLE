@@ -40,6 +40,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalInspectionMode
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.input.KeyboardType
@@ -49,6 +50,7 @@ import com.dzid26.teslable.EnergyPriceStore
 import com.dzid26.teslable.R
 import com.dzid26.teslable.UnitPreference
 import com.dzid26.teslable.UnitStore
+import com.dzid26.teslable.ble.DebugSwitches
 import com.dzid26.teslable.ble.PairingKeyStore
 import com.dzid26.teslable.ble.Vehicle
 import kotlinx.coroutines.Dispatchers
@@ -149,6 +151,11 @@ fun SettingsScreen(
             )
             Spacer(Modifier.height(16.dp))
             AboutCard(onOpenAbout = onOpenAbout, versionName = versionName)
+            // Debug builds only, and not in the Paparazzi renders, which feed the release screenshots.
+            if (BuildConfig.DEBUG && !LocalInspectionMode.current) {
+                Spacer(Modifier.height(16.dp))
+                DebugCard()
+            }
         }
     }
 
@@ -311,6 +318,40 @@ private fun EnergyPriceCard(priceStore: EnergyPriceStore) {
             Spacer(Modifier.height(8.dp))
             Text(
                 text = stringResource(R.string.settings_energy_cost_hint),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+    }
+}
+
+@Composable
+private fun DebugCard() {
+    val context = LocalContext.current
+    val switches = remember { DebugSwitches(context) }
+    var autoConnect by remember { mutableStateOf(switches.autoConnect) }
+    Card(modifier = Modifier.fillMaxWidth()) {
+        Column(Modifier.padding(16.dp)) {
+            Text(text = "Debug", style = MaterialTheme.typography.titleMedium)
+            Spacer(Modifier.height(12.dp))
+            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
+                Text(
+                    text = "Connect with autoConnect",
+                    style = MaterialTheme.typography.bodyLarge,
+                    modifier = Modifier.weight(1f),
+                )
+                Spacer(Modifier.width(12.dp))
+                Switch(
+                    checked = autoConnect,
+                    onCheckedChange = {
+                        autoConnect = it
+                        switches.autoConnect = it
+                    },
+                )
+            }
+            Spacer(Modifier.height(8.dp))
+            Text(
+                text = "Takes effect on the next connection. Needs the car's BLE address to stay stable between visits.",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
