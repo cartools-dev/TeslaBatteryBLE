@@ -36,9 +36,9 @@ While no car is in range the app keeps retrying in the background, and it
 keeps the retries cheap. A scan in the background looks only for your own
 cars' advertised names and runs at low power, which Android keeps running with
 the screen off. Reconnect attempts back off from 5 seconds up to every 5
-minutes, and to every 15 minutes once the car has not been seen for 30
-minutes. Opening the app starts the backoff over, so the first attempt then
-comes within seconds. A car that is in range and connected costs one
+minutes, and to every 15 minutes once the car has not been seen or connected
+for 30 minutes. When the car advertises while a retry is waiting, or when you
+open the app, the next attempt comes within seconds. A car that is in range and connected costs one
 Bluetooth link; the real-world figure depends on the phone, so measure it in
 Android's battery usage screen. If you do not want any background activity,
 turn off tracking in the app.

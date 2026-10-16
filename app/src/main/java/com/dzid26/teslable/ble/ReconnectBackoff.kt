@@ -18,6 +18,20 @@ internal object ReconnectBackoff {
     /** Enough doublings to pass either ceiling: 5 s shifted this often is 5120 s. */
     private const val MAX_DOUBLINGS = 10
 
+    /**
+     * How long the car has been out of sight at [now]: since the later of the last advert and the last
+     * time its link was alive. A car connected for hours does not advertise, so the advert alone would
+     * make it look gone the moment it drops. Zero when neither is known.
+     */
+    fun unseenForMs(
+        now: Long,
+        lastSeenMillis: Long,
+        lastAliveMillis: Long,
+    ): Long {
+        val lastSign = maxOf(lastSeenMillis, lastAliveMillis)
+        return if (lastSign > 0L) (now - lastSign).coerceAtLeast(0L) else 0L
+    }
+
     /** [unseenForMs] is how long since the car last showed any sign of life: connected, or advertising. */
     fun delayMs(
         attempt: Int,
