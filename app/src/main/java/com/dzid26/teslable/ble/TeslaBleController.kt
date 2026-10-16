@@ -1105,7 +1105,8 @@ class TeslaBleController(
                 // stopped advertising or came back at a new address.
                 startDiscovery()
             }
-            val delay = ReconnectBackoff.delayMs(reconnectAttempts)
+            val lastSeen = vehicles[bleName]?.lastSeenMillis ?: 0L
+            val delay = ReconnectBackoff.delayMs(reconnectAttempts, unseenForMs = System.currentTimeMillis() - lastSeen)
             nextRetryAtMs = System.currentTimeMillis() + delay
             handler.removeCallbacks(reconnect)
             handler.postDelayed(reconnect, delay)

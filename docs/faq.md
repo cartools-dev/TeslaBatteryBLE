@@ -30,6 +30,19 @@ Common causes:
   services must be on for BLE scanning to return results. The app never reads
   or stores device location.
 
+## How much battery does it use?
+
+While no car is in range the app keeps retrying in the background, and it
+keeps the retries cheap. A scan in the background looks only for your own
+cars' advertised names and runs at low power, which Android keeps running with
+the screen off. Reconnect attempts back off from 5 seconds up to every 5
+minutes, and to every 15 minutes once the car has not been seen for 30
+minutes. Opening the app starts the backoff over, so the first attempt then
+comes within seconds. A car that is in range and connected costs one
+Bluetooth link; the real-world figure depends on the phone, so measure it in
+Android's battery usage screen. If you do not want any background activity,
+turn off tracking in the app.
+
 ## Does it wake my car?
 
 Only when you explicitly ask it to. The app never wakes the car in the

@@ -19,6 +19,19 @@ class ReconnectBackoffTest {
     }
 
     @Test
+    fun `a car unseen for half an hour is retried less often, up to fifteen minutes`() {
+        val unseen = ReconnectBackoff.IDLE_AFTER_MS
+        val seconds = (6..10).map { ReconnectBackoff.delayMs(it, unseen) / 1000 }
+
+        assertEquals(listOf(160L, 320L, 640L, 900L, 900L), seconds)
+    }
+
+    @Test
+    fun `a car seen recently keeps the five minute ceiling`() {
+        assertEquals(ReconnectBackoff.CEILING_MS, ReconnectBackoff.delayMs(9, ReconnectBackoff.IDLE_AFTER_MS - 1))
+    }
+
+    @Test
     fun `an attempt number below one is treated as the first`() {
         assertEquals(ReconnectBackoff.FIRST_DELAY_MS, ReconnectBackoff.delayMs(0))
         assertEquals(ReconnectBackoff.FIRST_DELAY_MS, ReconnectBackoff.delayMs(-3))

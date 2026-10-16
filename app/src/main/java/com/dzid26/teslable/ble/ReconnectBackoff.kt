@@ -2,16 +2,28 @@
 package com.dzid26.teslable.ble
 
 /**
- * How long to wait before reconnect attempt number [attempt] (1 for the first retry): the first
+ * How long to wait before reconnect attempt number `attempt` (1 for the first retry): the first
  * delay doubled each time up to a ceiling, so a car that is out of range for hours costs a
- * handful of attempts an hour rather than one a minute.
+ * handful of attempts an hour rather than one a minute. A car not seen for [IDLE_AFTER_MS] is
+ * treated as away for a long stretch (at work, on a trip) and gets the higher [IDLE_CEILING_MS].
  */
 internal object ReconnectBackoff {
     const val FIRST_DELAY_MS = 5_000L
     const val CEILING_MS = 300_000L
 
-    /** [FIRST_DELAY_MS] doubled this often reaches the ceiling: 5, 10, 20, 40, 80, 160, 300 s. */
-    private const val MAX_DOUBLINGS = 6
+    /** No sign of the car for this long: the link is idle. */
+    const val IDLE_AFTER_MS = 1_800_000L
+    const val IDLE_CEILING_MS = 900_000L
 
-    fun delayMs(attempt: Int): Long = (FIRST_DELAY_MS shl (attempt - 1).coerceIn(0, MAX_DOUBLINGS)).coerceAtMost(CEILING_MS)
+    /** Enough doublings to pass either ceiling: 5 s shifted this often is 5120 s. */
+    private const val MAX_DOUBLINGS = 10
+
+    /** [unseenForMs] is how long since the car last showed any sign of life: connected, or advertising. */
+    fun delayMs(
+        attempt: Int,
+        unseenForMs: Long = 0L,
+    ): Long {
+        val ceiling = if (unseenForMs >= IDLE_AFTER_MS) IDLE_CEILING_MS else CEILING_MS
+        return (FIRST_DELAY_MS shl (attempt - 1).coerceIn(0, MAX_DOUBLINGS)).coerceAtMost(ceiling)
+    }
 }
