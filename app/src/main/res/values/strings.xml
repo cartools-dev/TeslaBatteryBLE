@@ -80,4 +80,16 @@
     <string name="vin_saved">Saved for this car; never logged.</string>
     <string name="vin_hint">Printed on the windshield or the driver\'s door jamb.</string>
     <string name="action_save">Save</string>
+
+    <string name="main_pull_scan">Scan for cars</string>
+    <string name="main_permission_title">Allow Bluetooth access</string>
+    <string name="main_permission_body">TeslaBatteryBLE finds and talks to your Tesla over Bluetooth. Android also requires location permission for BLE scans; the app never reads your location and nothing leaves the phone.</string>
+    <string name="main_permission_button">Grant permissions</string>
+    <string name="main_location_off">Location services are off. BLE scans return no results until it is enabled.</string>
+    <string name="main_car_summary">%1$d car(s), %2$d connected</string>
+    <string name="main_no_scan">No scan yet</string>
+    <string name="main_looking">Looking for your cars…</string>
+    <string name="main_no_cars">No cars yet</string>
+    <string name="main_keep_open">Keep the app open and stay near the car.</string>
+    <string name="main_pull_down">Pull down to scan.</string>
 </resources>

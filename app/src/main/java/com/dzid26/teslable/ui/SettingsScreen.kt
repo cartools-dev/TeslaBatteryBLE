@@ -48,10 +48,10 @@ import com.dzid26.teslable.EnergyPriceStore
 import com.dzid26.teslable.R
 import com.dzid26.teslable.ble.PairingKeyStore
 import com.dzid26.teslable.ble.Vehicle
-import java.text.NumberFormat
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import java.text.NumberFormat
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable

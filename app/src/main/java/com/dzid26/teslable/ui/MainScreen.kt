@@ -328,7 +328,7 @@ internal fun ConnectionsScreen(
                     RefreshPill(
                         state = pullState,
                         isRefreshing = state.scanning,
-                        pullLabel = "Scan for cars",
+                        pullLabel = stringResource(R.string.main_pull_scan),
                         refreshingLabel = null,
                     )
                 }
@@ -346,19 +346,16 @@ internal fun ConnectionsScreen(
                 Column(modifier = Modifier.fillMaxSize()) {
                     if (!permissionsGranted) {
                         PermissionCard(
-                            title = "Allow Bluetooth access",
-                            body =
-                                "TeslaBatteryBLE finds and talks to your Tesla over Bluetooth. " +
-                                    "Android also requires location permission for BLE scans; the app " +
-                                    "never reads your location and nothing leaves the phone.",
-                            button = "Grant permissions",
+                            title = stringResource(R.string.main_permission_title),
+                            body = stringResource(R.string.main_permission_body),
+                            button = stringResource(R.string.main_permission_button),
                             onClick = onRequestPermissions,
                         )
                         Spacer(Modifier.height(8.dp))
                     }
                     if (!locationServicesEnabled) {
                         Text(
-                            text = "Location services are off. BLE scans return no results until it is enabled.",
+                            text = stringResource(R.string.main_location_off),
                             color = MaterialTheme.colorScheme.error,
                             style = MaterialTheme.typography.bodySmall,
                         )
@@ -370,9 +367,9 @@ internal fun ConnectionsScreen(
                         Text(
                             text =
                                 if (rows.isNotEmpty()) {
-                                    "${rows.size} car(s), $connectedCount connected"
+                                    stringResource(R.string.main_car_summary, rows.size, connectedCount)
                                 } else {
-                                    "No scan yet"
+                                    stringResource(R.string.main_no_scan)
                                 },
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -425,17 +422,12 @@ private fun VehicleList(
         ) {
             Spacer(Modifier.height(48.dp))
             Text(
-                text = if (scanning) "Looking for your cars…" else "No cars yet",
+                text = stringResource(if (scanning) R.string.main_looking else R.string.main_no_cars),
                 style = MaterialTheme.typography.titleMedium,
             )
             Spacer(Modifier.height(4.dp))
             Text(
-                text =
-                    if (scanning) {
-                        "Keep the app open and stay near the car."
-                    } else {
-                        "Pull down to scan."
-                    },
+                text = stringResource(if (scanning) R.string.main_keep_open else R.string.main_pull_down),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
