@@ -204,4 +204,56 @@ class BatteryChartTest {
         assertNull(projection.earliestMillis)
         assertNull(projection.latestMillis)
     }
+
+    private val pinnedScale =
+        FullRangeScale(fullRangeMiles = 300f, offsetMiles = 0f, standardErrorMiles = 0.3f, samples = 20, pinned = true)
+
+    private fun ranged(
+        minutes: Long,
+        level: Int,
+        miles: Float,
+    ) = sample(minutes, level, ChargingStateKind.Charging, limit = 80).copy(ratedRangeMiles = miles)
+
+    @Test
+    fun theFittedScaleTurnsAStuckLevelIntoARate() {
+        // The level sits at 50 while the range climbs 1.5 mi (0.5 points at 3 mi per
+        // point) every 10 min: 3 points per hour.
+        val samples =
+            listOf(
+                ranged(0, 50, 150f),
+                ranged(10, 50, 151.5f),
+                ranged(20, 50, 153f),
+                ranged(30, 50, 154.5f),
+            )
+        val projection = chargeProjection(samples, scale = pinnedScale)!!
+        // 154.5 mi reads 51.5%: 28.5 points to the 80% limit at 3 points per hour is 9.5 h.
+        val expected = 30 * 60_000L + (9.5 * 3_600_000L).toLong()
+        assertEquals(expected.toDouble(), projection.completionMillis.toDouble(), 60_000.0)
+    }
+
+    @Test
+    fun aNoisyRateWidensTheBeamAndATidyOneNarrowsIt() {
+        val tidy =
+            listOf(
+                ranged(0, 50, 150f),
+                ranged(10, 52, 156f),
+                ranged(20, 54, 162f),
+                ranged(30, 56, 168f),
+                ranged(40, 58, 174f),
+            )
+        val noisy =
+            listOf(
+                ranged(0, 50, 150f),
+                ranged(10, 53, 159f),
+                ranged(20, 53, 159.5f),
+                ranged(30, 57, 171f),
+                ranged(40, 58, 174f),
+            )
+        val tidyBeam = chargeProjection(tidy, scale = pinnedScale)!!
+        val noisyBeam = chargeProjection(noisy, scale = pinnedScale)!!
+        val tidyWidth = tidyBeam.latestMillis!! - tidyBeam.earliestMillis!!
+        val noisyWidth = noisyBeam.latestMillis!! - noisyBeam.earliestMillis!!
+        assertEquals(true, tidyWidth >= 0L)
+        assertEquals(true, noisyWidth > tidyWidth)
+    }
 }

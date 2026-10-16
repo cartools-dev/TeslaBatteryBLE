@@ -43,7 +43,8 @@ class DischargeProjectionTest {
         drives: List<DriveSample> = stationary(samples),
         rangeMillis: Long = 6 * HOUR,
         nowMillis: Long = samples.last().timestampMillis + MINUTE,
-    ) = dischargeProjection(samples, drives, rangeMillis, nowMillis)
+        scale: FullRangeScale? = null,
+    ) = dischargeProjection(samples, drives, rangeMillis, nowMillis, scale)
 
     @Test
     fun `carries the parked rate half the range forward`() {
@@ -160,7 +161,7 @@ class DischargeProjectionTest {
         val projection = assertNotNull(project(samples))
         // One parked hour lost 1 point: 1 %/h, 3 points down from the latest 80.
         assertEquals(77, projection.projectedPercent)
-        assertEquals(1.0, projection.percentPerHour)
+        assertEquals(1.0, projection.percentPerHour, 1e-9)
     }
 
     @Test
@@ -177,6 +178,60 @@ class DischargeProjectionTest {
     @Test
     fun `null with under ten minutes of parked time`() {
         assertNull(project(listOf(sample(0, 80), sample(5, 79))))
+    }
+
+    private val scale = FullRangeScale(fullRangeMiles = 300f, offsetMiles = 0f, standardErrorMiles = 0.3f, samples = 20, pinned = true)
+
+    private fun ranged(
+        minutes: Long,
+        percent: Int,
+        miles: Float,
+    ) = sample(minutes, percent).copy(ratedRangeMiles = miles)
+
+    @Test
+    fun `the range sees a drain the whole level hides`() {
+        // The level sits at 80 all day, but the rated range slips 0.9 mi
+        // (0.3 points at 3 mi per point) every two hours.
+        val samples =
+            listOf(
+                ranged(0, 80, 241.5f),
+                ranged(120, 80, 240.6f),
+                ranged(240, 80, 239.7f),
+                ranged(360, 80, 238.8f),
+            )
+        val projection = assertNotNull(project(samples, scale = scale, rangeMillis = 24 * HOUR))
+        // 0.9 points over 6 h = 0.15 %/h = 3.6 %/day; 12 h ahead is 1.8 points down from 79.6.
+        assertEquals(0.15, projection.percentPerHour, 1e-6)
+        assertEquals(77.8f, projection.projectedSoc, 0.01f)
+        // Without the scale the integer levels see no drop at all.
+        assertNull(project(samples, rangeMillis = 24 * HOUR))
+    }
+
+    @Test
+    fun `a beam needs several parked pairs and widens with noisy ones`() {
+        val steady =
+            listOf(
+                ranged(0, 80, 241.5f),
+                ranged(120, 80, 240.6f),
+                ranged(240, 80, 239.7f),
+                ranged(360, 80, 238.8f),
+            )
+        val noisy =
+            listOf(
+                ranged(0, 80, 241.5f),
+                ranged(120, 80, 240.0f),
+                ranged(240, 80, 239.7f),
+                ranged(360, 80, 238.8f),
+            )
+        val twoPairs = steady.take(3)
+        assertNull(assertNotNull(project(twoPairs, scale = scale, rangeMillis = 24 * HOUR)).lowSoc)
+
+        val tidy = assertNotNull(project(steady, scale = scale, rangeMillis = 24 * HOUR))
+        val loose = assertNotNull(project(noisy, scale = scale, rangeMillis = 24 * HOUR))
+        val tidyWidth = tidy.highSoc!! - tidy.lowSoc!!
+        val looseWidth = loose.highSoc!! - loose.lowSoc!!
+        assertEquals(true, tidyWidth > 0f)
+        assertEquals(true, looseWidth > tidyWidth)
     }
 
     private companion object {
