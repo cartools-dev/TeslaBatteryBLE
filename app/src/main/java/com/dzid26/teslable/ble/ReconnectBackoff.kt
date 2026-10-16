@@ -2,16 +2,55 @@
 package com.dzid26.teslable.ble
 
 /**
- * How long to wait before reconnect attempt number [attempt] (1 for the first retry): the first
+ * How long to wait before reconnect attempt number `attempt` (1 for the first retry): the first
  * delay doubled each time up to a ceiling, so a car that is out of range for hours costs a
- * handful of attempts an hour rather than one a minute.
+ * handful of attempts an hour rather than one a minute. A car not seen for [IDLE_AFTER_MS] is
+ * treated as away for a long stretch (at work, on a trip) and gets the higher [IDLE_CEILING_MS].
  */
 internal object ReconnectBackoff {
     const val FIRST_DELAY_MS = 5_000L
     const val CEILING_MS = 300_000L
 
-    /** [FIRST_DELAY_MS] doubled this often reaches the ceiling: 5, 10, 20, 40, 80, 160, 300 s. */
-    private const val MAX_DOUBLINGS = 6
+    /** No sign of the car for this long: the link is idle. */
+    const val IDLE_AFTER_MS = 1_800_000L
+    const val IDLE_CEILING_MS = 900_000L
 
-    fun delayMs(attempt: Int): Long = (FIRST_DELAY_MS shl (attempt - 1).coerceIn(0, MAX_DOUBLINGS)).coerceAtMost(CEILING_MS)
+    /**
+     * An advert after this much silence is the car arriving. Longer than the advert interval and the
+     * scan's batching, so a car that keeps advertising but will not accept a connection (another phone
+     * holds the link, the edge of range, a failing handshake) is not retried every few seconds.
+     */
+    const val ARRIVAL_SILENCE_MS = 60_000L
+
+    /** Whether an advert at [now], the car's previous one having been at [previousSeenMillis], is an arrival. */
+    fun isArrival(
+        now: Long,
+        previousSeenMillis: Long,
+    ): Boolean = now - previousSeenMillis > ARRIVAL_SILENCE_MS
+
+    /** Enough doublings to pass either ceiling: 5 s shifted this often is 5120 s. */
+    private const val MAX_DOUBLINGS = 10
+
+    /**
+     * How long the car has been out of sight at [now]: since the later of the last advert and the last
+     * time its link was alive. A car connected for hours does not advertise, so the advert alone would
+     * make it look gone the moment it drops. Zero when neither is known.
+     */
+    fun unseenForMs(
+        now: Long,
+        lastSeenMillis: Long,
+        lastAliveMillis: Long,
+    ): Long {
+        val lastSign = maxOf(lastSeenMillis, lastAliveMillis)
+        return if (lastSign > 0L) (now - lastSign).coerceAtLeast(0L) else 0L
+    }
+
+    /** [unseenForMs] is how long since the car last showed any sign of life: connected, or advertising. */
+    fun delayMs(
+        attempt: Int,
+        unseenForMs: Long = 0L,
+    ): Long {
+        val ceiling = if (unseenForMs >= IDLE_AFTER_MS) IDLE_CEILING_MS else CEILING_MS
+        return (FIRST_DELAY_MS shl (attempt - 1).coerceIn(0, MAX_DOUBLINGS)).coerceAtMost(ceiling)
+    }
 }

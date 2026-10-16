@@ -406,6 +406,11 @@ class TeslaBleController(
         for ((name, device) in strongestByName) {
             val known = vehicles[name] ?: continue
             vehicles[name] = known.copy(lastSeenMillis = now)
+            // The car turned up after a silence while its link waits out a backoff: try again within
+            // seconds. A car that never stops advertising but will not connect does not reset it.
+            if (ReconnectBackoff.isArrival(now, known.lastSeenMillis)) {
+                links[name]?.takeIf { it.phase !in ACTIVE_PHASES }?.resetBackoff()
+            }
             if (known.address == device.address) continue
             // The car is advertising from a new address; follow it.
             updateVehicle(name) { it.copy(address = device.address) }
@@ -718,6 +723,9 @@ class TeslaBleController(
     ) {
         var phase: ConnectionPhase = ConnectionPhase.IDLE
         var nextRetryAtMs: Long = 0L
+
+        /** The last time the link was up: when it went ready and at the first drop, not on each failed attempt. */
+        var lastAliveMillis: Long = 0L
 
         private var transport: TeslaTransport? = null
         private val pendingCommands = mutableMapOf<String, PendingCommand>()
@@ -1105,7 +1113,9 @@ class TeslaBleController(
                 // stopped advertising or came back at a new address.
                 startDiscovery()
             }
-            val delay = ReconnectBackoff.delayMs(reconnectAttempts)
+            val now = System.currentTimeMillis()
+            val unseenFor = ReconnectBackoff.unseenForMs(now, vehicles[bleName]?.lastSeenMillis ?: 0L, lastAliveMillis)
+            val delay = ReconnectBackoff.delayMs(reconnectAttempts, unseenFor)
             nextRetryAtMs = System.currentTimeMillis() + delay
             handler.removeCallbacks(reconnect)
             handler.postDelayed(reconnect, delay)
@@ -1114,6 +1124,8 @@ class TeslaBleController(
         /** Brings a pending retry forward to the shortest wait and starts the backoff over. */
         fun resetBackoff() {
             if (reconnectAttempts == 0 || phase == ConnectionPhase.READY) return
+            // Adverts arrive every few seconds; an attempt already that close is left to run.
+            if (nextRetryAtMs - System.currentTimeMillis() <= ReconnectBackoff.FIRST_DELAY_MS) return
             reconnectAttempts = 0
             nextRetryAtMs = System.currentTimeMillis() + ReconnectBackoff.FIRST_DELAY_MS
             handler.removeCallbacks(reconnect)
@@ -1458,6 +1470,7 @@ class TeslaBleController(
             object : TeslaTransport.Listener {
                 override fun onPhase(phase: ConnectionPhase) {
                     if (phase == ConnectionPhase.FAILED || phase == ConnectionPhase.DISCONNECTED) {
+                        if (this@VehicleLink.phase == ConnectionPhase.READY) lastAliveMillis = System.currentTimeMillis()
                         recordConnection(this@VehicleLink, ConnectionEvent.State.DISCONNECTED)
                         transport?.close()
                         transport = null
@@ -1492,6 +1505,7 @@ class TeslaBleController(
                     if (phase == ConnectionPhase.READY) {
                         reconnectAttempts = 0
                         nextRetryAtMs = 0
+                        lastAliveMillis = System.currentTimeMillis()
                         firstStatusAfterConnect = true
                         infotainmentPolicy.onLinkReady(System.currentTimeMillis())
                         recordConnection(this@VehicleLink, ConnectionEvent.State.CONNECTED)
