@@ -41,9 +41,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.dzid26.teslable.BuildConfig
 import com.dzid26.teslable.EnergyPriceStore
+import com.dzid26.teslable.R
 import com.dzid26.teslable.ble.PairingKeyStore
 import com.dzid26.teslable.ble.Vehicle
 import kotlinx.coroutines.Dispatchers
@@ -105,11 +107,11 @@ fun SettingsScreen(
                     IconButton(onClick = onBack) {
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = "Back",
+                            contentDescription = stringResource(R.string.action_back),
                         )
                     }
                 },
-                title = { Text("Settings") },
+                title = { Text(stringResource(R.string.settings_title)) },
             )
         },
     ) { innerPadding ->
@@ -184,7 +186,7 @@ private fun VehicleKeysCard(
     Card(modifier = Modifier.fillMaxWidth()) {
         Column(Modifier.padding(16.dp)) {
             Text(
-                text = "Vehicle keys",
+                text = stringResource(R.string.settings_vehicle_keys),
                 style = MaterialTheme.typography.titleMedium,
             )
             Spacer(Modifier.height(12.dp))
@@ -193,7 +195,7 @@ private fun VehicleKeysCard(
                 modifier = Modifier.fillMaxWidth(),
             ) {
                 Text(
-                    text = "Include vehicle keys in Android backup",
+                    text = stringResource(R.string.settings_backup_toggle),
                     style = MaterialTheme.typography.bodyLarge,
                     modifier = Modifier.weight(1f),
                 )
@@ -207,7 +209,7 @@ private fun VehicleKeysCard(
             if (!backupSupported) {
                 Spacer(Modifier.height(8.dp))
                 Text(
-                    text = "Key backup needs Android 12 or newer.",
+                    text = stringResource(R.string.settings_backup_needs_12),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -216,16 +218,11 @@ private fun VehicleKeysCard(
             Text(
                 text =
                     if (backupEnabled && backupSupported) {
-                        "Currently: vehicle keys are stored so Android can back them up. " +
-                            "Google backups are encrypted with your Google account and device lock, " +
-                            "so a new phone can restore pairing from them."
+                        stringResource(R.string.settings_backup_state_on)
                     } else if (backupEnabled) {
-                        "Currently: vehicle keys are stored without Keystore encryption, and " +
-                            "Android 11 and below leave them out of backups."
+                        stringResource(R.string.settings_backup_state_unencrypted)
                     } else {
-                        "Currently: vehicle keys are encrypted with this device's hardware-backed " +
-                            "Keystore (AES). An Android backup can't restore them on another phone, so " +
-                            "a new phone needs re-pairing with an NFC card tap."
+                        stringResource(R.string.settings_backup_state_off)
                     },
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -234,10 +231,7 @@ private fun VehicleKeysCard(
                 Spacer(Modifier.height(8.dp))
                 Text(
                     text =
-                        "Android decides when to back up (usually daily, while idle and charging). " +
-                            "Check or trigger one in system Settings \u2192 Backup. Android restores " +
-                            "it during phone setup, a device transfer, or an app install when " +
-                            "automatic restore is on; otherwise restore it manually or re-pair.",
+                        stringResource(R.string.settings_backup_schedule),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -261,7 +255,7 @@ private fun EnergyPriceCard(priceStore: EnergyPriceStore) {
     Card(modifier = Modifier.fillMaxWidth()) {
         Column(Modifier.padding(16.dp)) {
             Text(
-                text = "Energy cost",
+                text = stringResource(R.string.settings_energy_cost),
                 style = MaterialTheme.typography.titleMedium,
             )
             Spacer(Modifier.height(12.dp))
@@ -272,14 +266,14 @@ private fun EnergyPriceCard(priceStore: EnergyPriceStore) {
                     // A comma decimal is common; a half-typed or empty value clears the price.
                     priceStore.setPricePerKwh(input.replace(',', '.').toFloatOrNull())
                 },
-                label = { Text("Price per kWh ($currency)") },
+                label = { Text(stringResource(R.string.settings_price_per_kwh, currency)) },
                 singleLine = true,
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                 modifier = Modifier.fillMaxWidth(),
             )
             Spacer(Modifier.height(8.dp))
             Text(
-                text = "Shows what a charge session cost beside the car's charge details. Leave empty to hide it.",
+                text = stringResource(R.string.settings_energy_cost_hint),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -295,13 +289,13 @@ private fun PairingCard(
     Card(modifier = Modifier.fillMaxWidth()) {
         Column(Modifier.padding(16.dp)) {
             Text(
-                text = "Pairing",
+                text = stringResource(R.string.settings_pairing),
                 style = MaterialTheme.typography.titleMedium,
             )
             Spacer(Modifier.height(8.dp))
             if (keys.isEmpty()) {
                 Text(
-                    text = "No vehicle keys stored",
+                    text = stringResource(R.string.settings_no_keys),
                     style = MaterialTheme.typography.bodyMedium,
                 )
             } else {
@@ -316,10 +310,7 @@ private fun PairingCard(
             Spacer(Modifier.height(8.dp))
             Text(
                 text =
-                    "Each car has its own key, and pairing always enrolls a freshly generated one. " +
-                        "Clearing the cache forgets cached key slots and sessions so the pairing flow " +
-                        "can be tested again; stored keys are kept, and a car that still has its key " +
-                        "is marked paired by the next whitelist check.",
+                    stringResource(R.string.settings_pairing_hint),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -328,7 +319,7 @@ private fun PairingCard(
                 onClick = onClearCache,
                 enabled = keys.isNotEmpty(),
             ) {
-                Text("Clear pairing cache")
+                Text(stringResource(R.string.settings_clear_cache_button))
             }
         }
     }
@@ -347,17 +338,17 @@ private fun AboutCard(
     ) {
         Column(Modifier.padding(16.dp)) {
             Text(
-                text = "About",
+                text = stringResource(R.string.settings_about),
                 style = MaterialTheme.typography.titleMedium,
             )
             Spacer(Modifier.height(8.dp))
             Text(
-                text = "TeslaBatteryBLE version: $versionName",
+                text = stringResource(R.string.settings_version, versionName),
                 style = MaterialTheme.typography.bodyMedium,
             )
             Spacer(Modifier.height(8.dp))
             Text(
-                text = "More...",
+                text = stringResource(R.string.settings_about_more),
                 style = MaterialTheme.typography.labelLarge,
                 color = MaterialTheme.colorScheme.primary,
             )
@@ -372,24 +363,17 @@ private fun EnableBackupDialog(
 ) {
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Include vehicle keys in Android backup?") },
+        title = { Text(stringResource(R.string.settings_enable_backup_title)) },
         text = {
             Text(
-                "This applies to every car you have paired. Currently each vehicle key is " +
-                    "encrypted with this device's hardware-backed Keystore (AES), so only this phone can use it. " +
-                    "Turning this on stores the keys so Android backup can restore them on a new phone; Google backups are " +
-                    "encrypted with your Google account and device lock, so exposure requires someone " +
-                    "who can restore your backup and unlock your phone. Near the car, that person could " +
-                    "read vehicle data and control charging — they cannot unlock or drive, and new keys " +
-                    "still need the NFC card tap plus vehicle confirmation. If you turn this off later, " +
-                    "older backup copies may remain until they are replaced.",
+                stringResource(R.string.settings_enable_backup_body),
             )
         },
         confirmButton = {
-            TextButton(onClick = onConfirm) { Text("Include in backup") }
+            TextButton(onClick = onConfirm) { Text(stringResource(R.string.settings_enable_backup_confirm)) }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) { Text("Cancel") }
+            TextButton(onClick = onDismiss) { Text(stringResource(R.string.action_cancel)) }
         },
     )
 }
@@ -401,18 +385,17 @@ private fun DisableBackupDialog(
 ) {
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Stop backing up vehicle keys?") },
+        title = { Text(stringResource(R.string.settings_disable_backup_title)) },
         text = {
             Text(
-                "New backups can't restore the keys on another phone, but usable copies already " +
-                    "in Android backup may remain until they are replaced.",
+                stringResource(R.string.settings_disable_backup_body),
             )
         },
         confirmButton = {
-            TextButton(onClick = onConfirm) { Text("Stop backup") }
+            TextButton(onClick = onConfirm) { Text(stringResource(R.string.settings_disable_backup_confirm)) }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) { Text("Cancel") }
+            TextButton(onClick = onDismiss) { Text(stringResource(R.string.action_cancel)) }
         },
     )
 }
@@ -424,19 +407,17 @@ private fun ClearPairingCacheDialog(
 ) {
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Clear pairing cache?") },
+        title = { Text(stringResource(R.string.settings_clear_cache_title)) },
         text = {
             Text(
-                "The app forgets the cached key slots and sessions so the pairing flow can be " +
-                    "tested again. The stored key is kept and pairing again reuses it. If the car " +
-                    "still has the key in its whitelist, the next whitelist check may mark it paired again.",
+                stringResource(R.string.settings_clear_cache_body),
             )
         },
         confirmButton = {
-            TextButton(onClick = onConfirm) { Text("Clear cache") }
+            TextButton(onClick = onConfirm) { Text(stringResource(R.string.settings_clear_cache_confirm)) }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) { Text("Cancel") }
+            TextButton(onClick = onDismiss) { Text(stringResource(R.string.action_cancel)) }
         },
     )
 }

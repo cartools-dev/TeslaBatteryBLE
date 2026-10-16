@@ -33,8 +33,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import com.dzid26.teslable.R
 
 /**
  * The greeting page that opens the permission wizard: what the app is about to
@@ -51,15 +53,14 @@ fun PermissionWizardGreeting(
         IconBadge(Icons.Filled.Settings)
         Spacer(Modifier.height(32.dp))
         Text(
-            text = "Set up Bluetooth",
+            text = stringResource(R.string.wizard_title),
             style = MaterialTheme.typography.headlineMedium,
             textAlign = TextAlign.Center,
         )
         Spacer(Modifier.height(16.dp))
         Text(
             text =
-                "TeslaBatteryBLE talks to your Tesla directly over Bluetooth. " +
-                    "A few permissions are needed first; each one is explained as we go.",
+                stringResource(R.string.wizard_intro),
             style = MaterialTheme.typography.bodyLarge,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             textAlign = TextAlign.Center,
@@ -69,13 +70,13 @@ fun PermissionWizardGreeting(
             onClick = onContinue,
             modifier = Modifier.fillMaxWidth().height(52.dp),
         ) {
-            Text("Get started")
+            Text(stringResource(R.string.wizard_get_started))
         }
         TextButton(
             onClick = onDismiss,
             modifier = Modifier.fillMaxWidth(),
         ) {
-            Text("Not now")
+            Text(stringResource(R.string.wizard_not_now))
         }
     }
 }
@@ -100,13 +101,13 @@ fun PermissionWizardPage(
         IconBadge(stepIcon(step.permission))
         Spacer(Modifier.height(32.dp))
         Text(
-            text = step.title,
+            text = stringResource(step.title),
             style = MaterialTheme.typography.headlineMedium,
             textAlign = TextAlign.Center,
         )
         Spacer(Modifier.height(16.dp))
         Text(
-            text = step.why,
+            text = stringResource(step.why),
             style = MaterialTheme.typography.bodyLarge,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             textAlign = TextAlign.Center,
@@ -115,12 +116,9 @@ fun PermissionWizardPage(
             Spacer(Modifier.height(16.dp))
             Text(
                 text =
-                    if (deniedForever) {
-                        "Android will not show the permission dialog again. " +
-                            "Open app settings to allow it."
-                    } else {
-                        "Permission denied. You can try again."
-                    },
+                    stringResource(
+                        if (deniedForever) R.string.wizard_denied_forever else R.string.wizard_denied,
+                    ),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.error,
                 textAlign = TextAlign.Center,
@@ -130,7 +128,7 @@ fun PermissionWizardPage(
         StepDots(index = index, total = total)
         Spacer(Modifier.height(12.dp))
         Text(
-            text = "Step ${index + 1} of $total",
+            text = stringResource(R.string.wizard_step_counter, index + 1, total),
             style = MaterialTheme.typography.labelMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
@@ -141,9 +139,9 @@ fun PermissionWizardPage(
         ) {
             Text(
                 when {
-                    deniedForever -> "Open app settings"
-                    denied -> "Try again"
-                    else -> "Allow"
+                    deniedForever -> stringResource(R.string.wizard_open_settings)
+                    denied -> stringResource(R.string.wizard_try_again)
+                    else -> stringResource(R.string.wizard_allow)
                 },
             )
         }
@@ -151,7 +149,7 @@ fun PermissionWizardPage(
             onClick = onDismiss,
             modifier = Modifier.fillMaxWidth(),
         ) {
-            Text("Not now")
+            Text(stringResource(R.string.wizard_not_now))
         }
     }
 }
