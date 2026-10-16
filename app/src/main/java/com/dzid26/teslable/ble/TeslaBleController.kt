@@ -92,7 +92,7 @@ class TeslaBleController(
         listener: TeslaTransport.Listener,
     ): TeslaTransport =
         demoCar()?.createTransport(address, listener)
-            ?: TeslaGattClient(appContext, listener)
+            ?: TeslaGattClient(appContext, listener, autoConnect = DebugSwitches(appContext).autoConnect)
 
     /** Fake adverts in demo mode; the real BLE scanner otherwise. */
     private val demoScan =

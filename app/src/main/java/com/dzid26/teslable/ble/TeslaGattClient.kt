@@ -29,6 +29,8 @@ import com.dzid26.teslable.core.framing.BleFramer
 class TeslaGattClient(
     private val context: Context,
     private val listener: TeslaTransport.Listener,
+    /** Let Android connect in the background when the car comes into range (a debug experiment, see [DebugSwitches]). */
+    private val autoConnect: Boolean = false,
 ) : TeslaTransport {
     private var gatt: BluetoothGatt? = null
     private var txCharacteristic: BluetoothGattCharacteristic? = null
@@ -61,7 +63,8 @@ class TeslaGattClient(
         listener.onPhase(ConnectionPhase.CONNECTING)
         // From Android 8.1 (our minSdk) BluetoothGatt stores a notification's value inside the posted callback, so the
         // main-looper Handler can't deliver the next notification's bytes to onCharacteristicChanged.
-        gatt = device.connectGatt(context, false, callback, BluetoothDevice.TRANSPORT_LE, BluetoothDevice.PHY_LE_1M_MASK, handler)
+        if (autoConnect) listener.onLog("connecting with autoConnect (debug switch)")
+        gatt = device.connectGatt(context, autoConnect, callback, BluetoothDevice.TRANSPORT_LE, BluetoothDevice.PHY_LE_1M_MASK, handler)
         if (gatt == null) {
             // Bluetooth is off or turning off: no callback will ever come, so fail now and let the backoff retry.
             listener.onLog("connectGatt() returned null; Bluetooth is off?")
