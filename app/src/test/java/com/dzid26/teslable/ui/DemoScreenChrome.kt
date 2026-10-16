@@ -13,7 +13,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.ColorScheme
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -23,87 +22,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-
-/**
- * The Android 14 stock "blue" Material You scheme, which the app renders with
- * when dynamic color is on and the wallpaper is the default one (the old
- * emulator screenshots). Paparazzi has no wallpaper, so the scheme is spelled
- * out; the values are sampled from `website/images/02-scanning*.png`.
- */
-internal fun demoColorScheme(darkTheme: Boolean): ColorScheme = if (darkTheme) demoDark else demoLight
-
-private val demoLight =
-    lightColorScheme(
-        primary = Color(0xFF445E91),
-        onPrimary = Color(0xFFFFFFFF),
-        primaryContainer = Color(0xFFD8E2FF),
-        onPrimaryContainer = Color(0xFF001A41),
-        inversePrimary = Color(0xFFADC6FF),
-        secondary = Color(0xFF575E71),
-        onSecondary = Color(0xFFFFFFFF),
-        secondaryContainer = Color(0xFFDBE2F9),
-        onSecondaryContainer = Color(0xFF141B2C),
-        tertiary = Color(0xFF715573),
-        onTertiary = Color(0xFFFFFFFF),
-        tertiaryContainer = Color(0xFFFBD7FC),
-        onTertiaryContainer = Color(0xFF29132D),
-        background = Color(0xFFFAF9FD),
-        onBackground = Color(0xFF1A1B20),
-        surface = Color(0xFFFAF9FD),
-        onSurface = Color(0xFF1A1B20),
-        surfaceVariant = Color(0xFFE1E2EC),
-        onSurfaceVariant = Color(0xFF44474F),
-        surfaceTint = Color(0xFF445E91),
-        inverseSurface = Color(0xFF2F3036),
-        inverseOnSurface = Color(0xFFF1F0F4),
-        outline = Color(0xFF74777F),
-        outlineVariant = Color(0xFFC4C6D0),
-        surfaceBright = Color(0xFFFAF9FD),
-        surfaceDim = Color(0xFFDAD9DD),
-        surfaceContainerLowest = Color(0xFFFFFFFF),
-        surfaceContainerLow = Color(0xFFF4F3F7),
-        surfaceContainer = Color(0xFFEEEDF1),
-        surfaceContainerHigh = Color(0xFFE8E7EB),
-        surfaceContainerHighest = Color(0xFFE3E2E6),
-    )
-
-private val demoDark =
-    darkColorScheme(
-        primary = Color(0xFFADC6FF),
-        onPrimary = Color(0xFF102F60),
-        primaryContainer = Color(0xFF2B4678),
-        onPrimaryContainer = Color(0xFFD8E2FF),
-        inversePrimary = Color(0xFF445E91),
-        secondary = Color(0xFFBFC6DC),
-        onSecondary = Color(0xFF293041),
-        secondaryContainer = Color(0xFF3F4759),
-        onSecondaryContainer = Color(0xFFDBE2F9),
-        tertiary = Color(0xFFDEBCDF),
-        onTertiary = Color(0xFF402843),
-        tertiaryContainer = Color(0xFF583E5B),
-        onTertiaryContainer = Color(0xFFFBD7FC),
-        background = Color(0xFF121316),
-        onBackground = Color(0xFFE3E2E6),
-        surface = Color(0xFF121316),
-        onSurface = Color(0xFFE3E2E6),
-        surfaceVariant = Color(0xFF44474F),
-        onSurfaceVariant = Color(0xFFC4C6D0),
-        surfaceTint = Color(0xFFADC6FF),
-        inverseSurface = Color(0xFFE3E2E6),
-        inverseOnSurface = Color(0xFF2F3036),
-        outline = Color(0xFF8E9099),
-        outlineVariant = Color(0xFF44474F),
-        surfaceBright = Color(0xFF38393C),
-        surfaceDim = Color(0xFF121316),
-        surfaceContainerLowest = Color(0xFF0D0E11),
-        surfaceContainerLow = Color(0xFF1A1B1F),
-        surfaceContainer = Color(0xFF1E1F23),
-        surfaceContainerHigh = Color(0xFF292A2D),
-        surfaceContainerHighest = Color(0xFF333538),
-    )
 
 private const val STATUS_BAR_DP = 40
 private const val NAV_BAR_DP = 24
@@ -120,7 +40,7 @@ internal fun DemoSystemBars(
     darkTheme: Boolean,
     content: @Composable () -> Unit,
 ) {
-    MaterialTheme(colorScheme = demoColorScheme(darkTheme)) {
+    MaterialTheme(colorScheme = if (darkTheme) darkColorScheme() else lightColorScheme()) {
         Surface(modifier = Modifier.fillMaxSize()) {
             Column(modifier = Modifier.fillMaxSize()) {
                 Row(
