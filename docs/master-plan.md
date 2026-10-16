@@ -79,7 +79,8 @@ A trustworthy shell around the existing protocol work. No user-facing features.
 - [x] Compose UI smoke tests + screenshot tests in CI (2026-10-10): Paparazzi JVM snapshots of the cars-list and car-view cards (light + dark, 24 states) diffed before/after the pushed commit and posted on PRs (light by default, dark on demand); no committed goldens. The emulator stays for the release end-to-end capture and the demo smoke canary, plus a manual full-screen fallback on demand.
 - [ ] Protocol vectors: nonce/metadata/counter/clock-skew edge cases (negative tests partly done in #41).
 - [x] Static analysis zero baseline: Android lint + ktlint + detekt in CI.
-- [x] R8 + resource shrinking and LeakCanary (debug only) added in #38, not yet exercised on a release build (#115). [ ] Baseline Profile.
+- [x] R8 + resource shrinking and LeakCanary (debug only) added in #38; the release build is smoke-tested on an emulator in CI (#115).
+- [ ] Baseline Profile.
 - [x] Screenshots in `website/images/` (captured in CI, shared by the README and the landing page).
 - [x] Social preview image rendered (`website/images/social-preview.png`); upload in GitHub repo settings pending (owner action).
 - [x] Website v1 on GitHub Pages (plain, install-focused landing: https://dzid26.github.io/TeslaBatteryBLE/).

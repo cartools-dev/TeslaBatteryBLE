@@ -365,6 +365,8 @@ debug_dump() {
   fi
   adb shell dumpsys window 2>/dev/null | grep -E 'mCurrentFocus|mFocusedApp' | head -n 2 > "$OUT/debug/$label-focus.txt" || true
   adb logcat -d -v time -t 1000 > "$OUT/debug/$label-logcat.txt" 2>/dev/null || true
+  # The crash buffer keeps an app crash after the main buffer has scrolled past it.
+  adb logcat -d -v time -b crash > "$OUT/debug/$label-crash.txt" 2>/dev/null || true
   adb exec-out screencap -p > "$OUT/debug/$label-screen.png" 2>/dev/null || true
 }
 
