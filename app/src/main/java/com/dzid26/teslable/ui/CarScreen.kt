@@ -57,6 +57,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import com.dzid26.teslable.EnergyPriceStore
 import com.dzid26.teslable.ble.BatteryPercent
 import com.dzid26.teslable.ble.BleUiState
 import com.dzid26.teslable.ble.ConnectionDisplay
@@ -69,6 +70,7 @@ import com.dzid26.teslable.ble.batteryPercent
 import com.dzid26.teslable.ble.chargingStateText
 import com.dzid26.teslable.ble.connectionDisplay
 import com.dzid26.teslable.ble.vehicleStatusText
+import com.dzid26.teslable.core.health.chargeSessionCost
 import com.dzid26.teslable.core.history.BatterySample
 import com.dzid26.teslable.core.history.ChargeProjection
 import com.dzid26.teslable.core.history.DischargeProjection
@@ -91,6 +93,7 @@ import com.dzid26.teslable.core.protocol.chargingStateKind
 import com.dzid26.teslable.health.healthSummary
 import com.tesla.generated.carserver.vehicle.ChargeState
 import kotlinx.coroutines.delay
+import java.text.NumberFormat
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
@@ -218,7 +221,10 @@ internal fun CarScreen(
                         .padding(16.dp),
                 verticalArrangement = Arrangement.spacedBy(16.dp),
             ) {
+                val context = LocalContext.current
+                val pricePerKwh = remember { EnergyPriceStore(context).pricePerKwh() }
                 HeroCard(
+                    pricePerKwh = pricePerKwh,
                     connection = connection,
                     advert = advert,
                     vehicle = vehicle,
@@ -251,6 +257,8 @@ internal fun HeroCard(
     nowMillis: Long = rememberNowMillis(connection?.chargeAtMillis),
     // Injectable for the Paparazzi snapshots; null keeps the timed spinner.
     spinnerOverride: Boolean? = null,
+    // The owner's price per kWh, for the session cost; null shows none.
+    pricePerKwh: Float? = null,
 ) {
     val context = LocalContext.current
     val display = connectionDisplay(connection, advert, vehicle = vehicle)
@@ -331,7 +339,7 @@ internal fun HeroCard(
                     nowMillis = nowMillis,
                 )
                 Spacer(Modifier.height(8.dp))
-                ChargeDetails(charge)
+                ChargeDetails(charge, pricePerKwh)
             }
             // The card's top-right corner, clear of the title and the pill: a spinner while a
             // read is in flight.
@@ -361,13 +369,17 @@ private fun heroStatusText(
 
 /** Charge limit · AC voltage and current · charging state, as one quiet line under the hero. */
 @Composable
-private fun ChargeDetails(charge: ChargeState?) {
+private fun ChargeDetails(
+    charge: ChargeState?,
+    pricePerKwh: Float?,
+) {
     if (charge == null) return
     val details =
         buildList {
             charge.charge_limit_soc?.let { add("Charge limit\u00A0$it%") }
             chargerElectricalText(charge)?.let { add(it) }
             charge.chargingStateKind?.let { add(chargingStateText(it)) }
+            sessionCostText(charge, pricePerKwh)?.let { add(it) }
         }
     if (details.isNotEmpty()) {
         Text(
@@ -376,6 +388,17 @@ private fun ChargeDetails(charge: ChargeState?) {
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
     }
+}
+
+/** "12.5 kWh � $3.75": what the car added this session and what it cost; null without a price. */
+private fun sessionCostText(
+    charge: ChargeState,
+    pricePerKwh: Float?,
+): String? {
+    val energy = charge.charge_energy_added ?: return null
+    val cost = chargeSessionCost(energy, pricePerKwh) ?: return null
+    val money = NumberFormat.getCurrencyInstance().format(cost.toDouble())
+    return String.format(Locale.getDefault(), "%.1f�kWh � %s", energy, money)
 }
 
 /**
