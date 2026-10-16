@@ -136,7 +136,7 @@ internal object DemoScreenFixtures {
         val driving: Boolean = false,
     )
 
-    /** Points from `minutes.first` to `minutes.second` minutes ago, the level moving from `levels.first` to `.second`. */
+    /** Points from `minutes.first` to `.second` minutes ago, the level moving from `levels.first` to `.second`. */
     private fun segment(
         minutes: Pair<Long, Long>,
         levels: Pair<Int, Int>,
