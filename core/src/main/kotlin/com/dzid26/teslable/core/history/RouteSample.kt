@@ -31,7 +31,8 @@ data class RouteSample(
      * Read as a percent (Fleet Telemetry maps it to `ExpectedEnergyPercentAtTripArrival`);
      * the unit is not documented in the proto and still needs a real-car log to confirm.
      */
-    val energyAtArrivalPercent: Float?,) {
+    val energyAtArrivalPercent: Float?,
+) {
     override fun toString(): String =
         "RouteSample(timestampMillis=$timestampMillis, vehicleId=$vehicleId, destination=${if (destination != null) "<redacted>" else "null"}, " +
             "milesToArrival=$milesToArrival, minutesToArrival=$minutesToArrival, " +
