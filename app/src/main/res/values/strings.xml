@@ -67,4 +67,17 @@
     <string name="about_license_text">License text</string>
     <string name="about_notices">Third-party notices</string>
     <string name="about_no_browser">No browser app found to open this link.</string>
+
+    <string name="main_title">Cars</string>
+    <string name="log_title">Log</string>
+    <string name="log_empty">No activity yet.</string>
+    <string name="enable_toggle">Enable</string>
+    <string name="vin_add">Add VIN</string>
+    <string name="vin_edit">Edit VIN</string>
+    <string name="vin_title">VIN</string>
+    <string name="vin_label">17-character VIN</string>
+    <string name="vin_mismatch">Doesn\'t match this car\'s advertised name</string>
+    <string name="vin_saved">Saved for this car; never logged.</string>
+    <string name="vin_hint">Printed on the windshield or the driver\'s door jamb.</string>
+    <string name="action_save">Save</string>
 </resources>

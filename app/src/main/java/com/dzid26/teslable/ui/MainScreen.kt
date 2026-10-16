@@ -51,6 +51,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
@@ -58,6 +59,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.repeatOnLifecycle
+import com.dzid26.teslable.R
 import com.dzid26.teslable.ble.BleUiState
 import com.dzid26.teslable.ble.ConnectionLabel
 import com.dzid26.teslable.ble.ConnectionPhase
@@ -286,7 +288,7 @@ internal fun ConnectionsScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Cars") },
+                title = { Text(stringResource(R.string.main_title)) },
                 actions = {
                     TrackingToggle(
                         checked = state.trackingEnabled,
@@ -295,7 +297,7 @@ internal fun ConnectionsScreen(
                     IconButton(onClick = onOpenSettings) {
                         Icon(
                             imageVector = Icons.Filled.Settings,
-                            contentDescription = "Settings",
+                            contentDescription = stringResource(R.string.settings_title),
                         )
                     }
                 },
@@ -566,7 +568,7 @@ internal fun VehicleCard(
             }
             DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
                 DropdownMenuItem(
-                    text = { Text("Wake") },
+                    text = { Text(stringResource(R.string.tracking_wake)) },
                     enabled = canWake,
                     onClick = {
                         menuOpen = false
@@ -574,7 +576,7 @@ internal fun VehicleCard(
                     },
                 )
                 DropdownMenuItem(
-                    text = { Text(if (vin == null) "Add VIN" else "Edit VIN") },
+                    text = { Text(stringResource(if (vin == null) R.string.vin_add else R.string.vin_edit)) },
                     onClick = {
                         menuOpen = false
                         onEditVin()
@@ -593,11 +595,11 @@ private fun LogCard(
 ) {
     Card(modifier = Modifier.fillMaxWidth()) {
         Column(Modifier.padding(12.dp)) {
-            Text("Log", style = MaterialTheme.typography.titleSmall)
+            Text(stringResource(R.string.log_title), style = MaterialTheme.typography.titleSmall)
             Spacer(Modifier.height(4.dp))
             if (log.isEmpty()) {
                 Text(
-                    text = "No activity yet.",
+                    text = stringResource(R.string.log_empty),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -636,7 +638,7 @@ internal fun TrackingToggle(
         verticalAlignment = Alignment.CenterVertically,
         modifier = Modifier.padding(start = 8.dp, end = 4.dp),
     ) {
-        Text("Enable", style = MaterialTheme.typography.labelLarge)
+        Text(stringResource(R.string.enable_toggle), style = MaterialTheme.typography.labelLarge)
         Spacer(Modifier.width(6.dp))
         Switch(checked = checked, onCheckedChange = onCheckedChange)
     }
