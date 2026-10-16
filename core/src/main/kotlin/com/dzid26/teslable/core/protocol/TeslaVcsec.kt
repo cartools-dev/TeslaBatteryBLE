@@ -12,12 +12,12 @@ import com.tesla.generated.vcsec.UnsignedMessage
 import com.tesla.generated.vcsec.VehicleStatus
 import com.tesla.generated.vcsec.WhitelistEntryInfo
 import com.tesla.generated.vcsec.WhitelistInfo
+import dev.whyoleg.cryptography.CryptographySystem
 import okio.ByteString.Companion.toByteString
-import java.security.SecureRandom
 
 object TeslaVcsec {
     private const val ADDRESS_LENGTH = 16
-    private val random = SecureRandom()
+    private val random = CryptographySystem.getDefaultRandom()
 
     fun buildStatusRequest(): ByteArray = buildInformationRequest(InformationRequestType.INFORMATION_REQUEST_TYPE_GET_STATUS)
 

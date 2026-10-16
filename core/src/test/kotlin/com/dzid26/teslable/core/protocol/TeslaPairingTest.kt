@@ -10,16 +10,13 @@ import com.tesla.generated.vcsec.OperationStatus_E
 import com.tesla.generated.vcsec.SignatureType
 import com.tesla.generated.vcsec.ToVCSECMessage
 import com.tesla.generated.vcsec.UnsignedMessage
+import dev.whyoleg.cryptography.algorithms.EC
 import okio.ByteString.Companion.toByteString
 import org.junit.Assert.assertArrayEquals
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
-import java.math.BigInteger
-import java.security.KeyFactory
-import java.security.KeyPair
-import java.security.spec.ECPrivateKeySpec
 
 class TeslaPairingTest {
     @Test
@@ -39,14 +36,9 @@ class TeslaPairingTest {
         // must pad. Y starts b2, so it returns 33 bytes with a sign byte that
         // the encoding must drop.
         val publicKey = TeslaCrypto.rawToPublicKey(SHORT_X_PUBLIC.hex())
-        val privateKey =
-            KeyFactory
-                .getInstance("EC")
-                .generatePrivate(ECPrivateKeySpec(BigInteger(1, SHORT_X_SCALAR.hex()), publicKey.params))
+        val encoded = publicKey.encodeToByteArrayBlocking(EC.PublicKey.Format.RAW)
 
-        val keyPair = TeslaKeys.fromKeyPair(KeyPair(publicKey, privateKey))
-
-        assertArrayEquals(SHORT_X_PUBLIC.hex(), keyPair.publicKeyRaw)
+        assertArrayEquals(SHORT_X_PUBLIC.hex(), encoded)
     }
 
     @Test
@@ -108,7 +100,6 @@ class TeslaPairingTest {
     private fun String.hex(): ByteArray = chunked(2).map { it.toInt(16).toByte() }.toByteArray()
 
     private companion object {
-        const val SHORT_X_SCALAR = "6e6f707172737475767778797a7b7c7d7e7f808182838485868788898a8b8c8d"
         const val SHORT_X_PUBLIC =
             "04001b54c0f1f9c7ee4e7d2382a65a6190b43f1e4429d2b19a929351869355d7d2" +
                 "b2c7f4b35e385a906559d4cfa608d74ed583ce27c2993a84a0075dc5284861d8"

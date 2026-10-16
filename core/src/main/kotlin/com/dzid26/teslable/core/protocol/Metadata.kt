@@ -1,9 +1,10 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 package com.dzid26.teslable.core.protocol
 
-import java.security.MessageDigest
-import javax.crypto.Mac
-import javax.crypto.spec.SecretKeySpec
+import dev.whyoleg.cryptography.CryptographyProvider
+import dev.whyoleg.cryptography.algorithms.Digest
+import dev.whyoleg.cryptography.algorithms.HMAC
+import dev.whyoleg.cryptography.algorithms.SHA256
 
 interface HashContext {
     fun update(data: ByteArray)
@@ -12,30 +13,28 @@ interface HashContext {
 }
 
 class MessageDigestContext(
-    algorithm: String,
+    private val sha256: Digest = CryptographyProvider.Default.get(SHA256),
 ) : HashContext {
-    private val digest = MessageDigest.getInstance(algorithm)
+    private val buffer = Buffer()
 
-    override fun update(data: ByteArray) = digest.update(data)
+    override fun update(data: ByteArray) = buffer.append(data)
 
-    override fun digest(): ByteArray = digest.digest()
+    override fun digest(): ByteArray = sha256.hasher().hashBlocking(buffer.bytes())
 }
 
 class MacContext(
     key: ByteArray,
 ) : HashContext {
-    private val mac =
-        Mac.getInstance(HMAC_SHA256).apply {
-            init(SecretKeySpec(key, HMAC_SHA256))
-        }
+    private val hmacKey =
+        CryptographyProvider.Default
+            .get(HMAC)
+            .keyDecoder(SHA256)
+            .decodeFromByteArrayBlocking(HMAC.Key.Format.RAW, key)
+    private val buffer = Buffer()
 
-    override fun update(data: ByteArray) = mac.update(data)
+    override fun update(data: ByteArray) = buffer.append(data)
 
-    override fun digest(): ByteArray = mac.doFinal()
-
-    private companion object {
-        const val HMAC_SHA256 = "HmacSHA256"
-    }
+    override fun digest(): ByteArray = hmacKey.signatureGenerator().generateSignatureBlocking(buffer.bytes())
 }
 
 class Metadata(
@@ -81,8 +80,28 @@ class Metadata(
         const val TAG_END = 255
         const val MAX_FIELD_LENGTH = 255
 
-        fun sha256(): Metadata = Metadata(MessageDigestContext("SHA-256"))
+        fun sha256(): Metadata = Metadata(MessageDigestContext())
 
         fun hmacSha256(key: ByteArray): Metadata = Metadata(MacContext(key))
+    }
+}
+
+private class Buffer {
+    private val chunks = mutableListOf<ByteArray>()
+    private var size = 0
+
+    fun append(data: ByteArray) {
+        chunks.add(data)
+        size += data.size
+    }
+
+    fun bytes(): ByteArray {
+        val out = ByteArray(size)
+        var offset = 0
+        for (chunk in chunks) {
+            chunk.copyInto(out, offset)
+            offset += chunk.size
+        }
+        return out
     }
 }
