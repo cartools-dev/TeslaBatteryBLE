@@ -73,6 +73,17 @@ Date: 2026-10-10
   never the dynamic color: Paparazzi has no real context for it, so dynamic
   color would render nondeterministically.
 
+## Update (2026-10-16): release screenshots from Paparazzi
+
+The release job no longer boots an emulator for screenshots. It records the
+Paparazzi full-screen snapshots (`release-screenshots.sh` names the cars
+list, car view and Settings, light and dark, like the release page, README
+and landing page expect) and publishes those. The end-to-end check that the
+shrunk release build reaches the simulated car stays on the emulator in the
+`Release smoke test` job on main; the release job only requires that check to
+have passed for the tagged commit (`require-smoke.sh`), so no release waits for
+a second emulator run.
+
 ## Update (2026-10-16): manual emulator fallback removed
 
 `pr-screenshots.yml` and `pr-screenshots-comment.yml` are deleted: the

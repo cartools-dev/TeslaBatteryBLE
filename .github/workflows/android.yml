@@ -199,7 +199,7 @@ jobs:
 
   smoke:
     name: Release smoke test
-    # The release job runs the same check through its screenshot capture.
+    # The release job requires this check to have passed for the tagged commit.
     if: |
       !(startsWith(github.ref, 'refs/tags/') ||
         (github.event_name == 'workflow_dispatch' && (inputs.release || inputs.tag != '')))
@@ -321,16 +321,10 @@ jobs:
       startsWith(github.ref, 'refs/tags/') ||
       (github.event_name == 'workflow_dispatch' && (inputs.release || inputs.tag != ''))
     environment: release
-    env:
-      SMOKE_APK: app/build/outputs/apk/smoke/app-smoke.apk
-      SMOKE_PKG: com.dzid26.teslable.smoke
-      SMOKE_ACTIVITY: com.dzid26.teslable.smoke/com.dzid26.teslable.MainActivity
     permissions:
       contents: write
       actions: write # dispatch the Pages deploy after the screenshot commit
-    # Pinned: the emulator, KVM and adb steps are not yet validated on ubuntu-latest
-    # (migrating to Ubuntu 26 on 2026-10-19).
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
@@ -435,47 +429,22 @@ jobs:
           mkdir -p dist
           cp "$apk" "dist/TeslaBatteryBLE-${RELEASE_TAG}.apk"
 
-      # Screenshots come from the smoke build: the release build plus the
-      # simulated car. A release whose shrunk app cannot reach the car has no
-      # complete screenshot set, so it is never published.
-      - name: Build the smoke APK for screenshots
-        run: ./gradlew :app:assembleSmoke -PdemoCar=true
+      # The shrunk app must reach the simulated car before it ships. The smoke
+      # test runs the emulator on every app change on main; the release only
+      # confirms it passed for this commit instead of booting another one.
+      - name: Require a green smoke test for this commit
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: bash .github/scripts/require-smoke.sh
 
-      - name: Enable KVM
+      # Release screenshots are the Paparazzi full-screen snapshots (cars list,
+      # car view, Settings; light and dark), the same render the PR comments
+      # use, so a release needs no emulator and no retry.
+      - name: Render the screenshots
         run: |
-          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
-          sudo udevadm control --reload-rules
-          sudo udevadm trigger --name-match=kvm
-
-      - name: Capture screenshots
-        id: capture
-        continue-on-error: true
-        uses: ReactiveCircus/android-emulator-runner@a421e43855164a8197daf9d8d40fe71c6996bb0d # v2
-        with:
-          api-level: 34
-          target: google_apis
-          arch: x86_64
-          profile: pixel_6
-          emulator-boot-timeout: 420
-          disable-animations: true
-          script: bash .github/scripts/capture-screenshots.sh "$SMOKE_APK" screenshots "$SMOKE_PKG" "$SMOKE_ACTIVITY"
-
-      # Emulator flakes (GL context preemption, adb daemon) are common on CI
-      # runners; give the capture one fresh attempt. The publish script below
-      # still fails the job when no complete set is produced, so a release is
-      # never published without its screenshots.
-      - name: Retry the capture once
-        if: steps.capture.outcome == 'failure'
-        continue-on-error: true
-        uses: ReactiveCircus/android-emulator-runner@a421e43855164a8197daf9d8d40fe71c6996bb0d # v2
-        with:
-          api-level: 34
-          target: google_apis
-          arch: x86_64
-          profile: pixel_6
-          emulator-boot-timeout: 420
-          disable-animations: true
-          script: rm -rf screenshots && bash .github/scripts/capture-screenshots.sh "$SMOKE_APK" screenshots "$SMOKE_PKG" "$SMOKE_ACTIVITY"
+          set -euo pipefail
+          ./gradlew :app:recordPaparazziDebug --console=plain
+          bash .github/scripts/release-screenshots.sh app/src/test/snapshots/images screenshots
 
       - name: Push the release tag
         if: github.event_name == 'workflow_dispatch'
