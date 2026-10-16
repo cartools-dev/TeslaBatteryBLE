@@ -30,9 +30,15 @@ class DistanceUnitTest {
 
     @Test
     fun `format shows the converted value and the unit`() {
-        assertEquals("342.0 km", DistanceUnit.KILOMETERS.format(212.5f, decimals = 1))
-        assertEquals("212.5 mi", DistanceUnit.MILES.format(212.5f, decimals = 1))
-        assertEquals("342 km", DistanceUnit.KILOMETERS.format(212.5f))
-        assertEquals("342,0 km", DistanceUnit.KILOMETERS.format(212.5f, decimals = 1, decimalSeparator = ','))
+        assertEquals("342.0\u00A0km", DistanceUnit.KILOMETERS.format(212.5f, decimals = 1))
+        assertEquals("212.5\u00A0mi", DistanceUnit.MILES.format(212.5f, decimals = 1))
+        assertEquals("342\u00A0km", DistanceUnit.KILOMETERS.format(212.5f))
+        assertEquals("342,0\u00A0km", DistanceUnit.KILOMETERS.format(212.5f, decimals = 1, decimalSeparator = ','))
+    }
+
+    @Test
+    fun `a negative distance keeps its sign and its tenths`() {
+        assertEquals("-3.5\u00A0mi", DistanceUnit.MILES.format(-3.5f, decimals = 1))
+        assertEquals("-0.5\u00A0mi", DistanceUnit.MILES.format(-0.5f, decimals = 1))
     }
 }

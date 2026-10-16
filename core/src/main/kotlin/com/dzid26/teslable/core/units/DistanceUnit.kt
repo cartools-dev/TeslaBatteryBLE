@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 package com.dzid26.teslable.core.units
 
+import kotlin.math.abs
 import kotlin.math.roundToInt
 
 /**
@@ -37,10 +38,11 @@ enum class DistanceUnit(
             if (decimals <= 0) {
                 value.roundToInt().toString()
             } else {
-                val tenths = (value * 10f).roundToInt()
-                "${tenths / 10}$decimalSeparator${tenths % 10}"
+                val tenths = abs((value * 10f).roundToInt())
+                val sign = if (value < 0f) "-" else ""
+                "$sign${tenths / 10}$decimalSeparator${tenths % 10}"
             }
-        return "$number $symbol"
+        return "$number\u00A0$symbol"
     }
 }
 

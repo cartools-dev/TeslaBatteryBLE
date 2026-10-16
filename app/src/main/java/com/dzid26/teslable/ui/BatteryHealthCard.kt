@@ -60,7 +60,7 @@ internal fun BatteryHealthCard(summary: HealthSummary) {
                     value = "~${(kwh * 10).roundToInt() / 10f} kWh",
                     detail =
                         summary.ratedKwhPerMile?.let { constant ->
-                            "rated constant ${(unit.energyPerUnit(constant) * 100).roundToInt() / 100f} kWh/${unit.symbol}"
+                            "rated constant ${(unit.energyPerUnit(constant) * 1000).roundToInt()} Wh/${unit.symbol}"
                         } ?: "energy added over the last charge",
                 )
             }
