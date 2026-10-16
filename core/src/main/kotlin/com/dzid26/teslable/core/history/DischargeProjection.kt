@@ -27,6 +27,8 @@ data class DischargeProjection(
     val lowSoc: Float? = null,
     /** The upper edge of the beam at the horizon; null like [lowSoc]. */
     val highSoc: Float? = null,
+    /** The drain rate of the pairs the car slept through, percent per hour; null until it has slept enough to tell. */
+    val sleepPercentPerHour: Double? = null,
 ) {
     /** The beam's two edges together; null when the fit is too thin for one. */
     val beam: Pair<Float, Float>?
@@ -61,6 +63,11 @@ data class DischargeProjection(
  * levels stand in. The beam is two standard errors of that rate: the spread
  * of the pairs around it, never less than the readings' own resolution.
  *
+ * The line follows the mixed rate (every parked pair, asleep or awake). The
+ * rate of the pairs the car slept through (a VCSEC status inside the gap says
+ * asleep and none says awake) is reported beside it, and the beam's upper edge
+ * reaches that gentler line, so the beam spans deep sleep to the statistics.
+ *
  * While charging it still projects: the line shows where the battery would
  * head if unplugged now, next to the charge projection. Returns null once the
  * whole projection lies in the past (the last sample is older than the
@@ -72,6 +79,7 @@ data class DischargeProjection(
  * @param drives the same vehicle's drive samples, oldest first.
  * @param rangeMillis the selected range: its samples feed the rate, and the projection looks half of it ahead.
  * @param scale the fitted rated-range scale, or null to read the integer level.
+ * @param statuses the same vehicle's VCSEC status samples, oldest first; they say when the car slept.
  */
 fun dischargeProjection(
     samples: List<BatterySample>,
@@ -79,20 +87,24 @@ fun dischargeProjection(
     rangeMillis: Long,
     nowMillis: Long,
     scale: FullRangeScale? = null,
+    statuses: List<StatusSample> = emptyList(),
 ): DischargeProjection? {
     val last = samples.lastOrNull() ?: return null
     val horizon = rangeMillis / 2
     if (nowMillis - last.timestampMillis > horizon) return null
 
     val windowed = samples.filter { it.timestampMillis >= last.timestampMillis - rangeMillis }
-    val parked = parkedDrain(windowed, drives.filter { it.odometerInHundredthsOfAMile != null }, scale)
+    val parked = parkedDrain(windowed, drives.filter { it.odometerInHundredthsOfAMile != null }, scale, statuses)
     if (parked.millis < MIN_RATE_SPAN_MILLIS || parked.drop <= 0.0) return null
 
     val fromSoc = last.soc(scale)
     val ratePerMilli = parked.drop / parked.millis
     val projectedSoc = (fromSoc - ratePerMilli * horizon).toFloat().coerceIn(0f, FULL_PERCENT)
     val reach = 2.0 * parked.errorPerMilli * horizon
-    val hasBeam = parked.pairs >= MIN_BEAM_PAIRS
+    val sleepRate = parked.sleepRatePerMilli?.takeIf { it < ratePerMilli }
+    val sleepSoc = sleepRate?.let { (fromSoc - it * horizon).toFloat().coerceIn(0f, FULL_PERCENT) }
+    val hasBeam = parked.pairs >= MIN_BEAM_PAIRS || sleepSoc != null
+    val statHigh = if (parked.pairs >= MIN_BEAM_PAIRS) (projectedSoc + reach).toFloat() else projectedSoc
     return DischargeProjection(
         from = last,
         projectedPercent = projectedSoc.roundToInt(),
@@ -102,7 +114,8 @@ fun dischargeProjection(
         fromSoc = fromSoc,
         projectedSoc = projectedSoc,
         lowSoc = if (hasBeam) (projectedSoc - reach).toFloat().coerceIn(0f, FULL_PERCENT) else null,
-        highSoc = if (hasBeam) (projectedSoc + reach).toFloat().coerceIn(0f, minOf(fromSoc.toFloat(), FULL_PERCENT)) else null,
+        highSoc = if (hasBeam) maxOf(statHigh, sleepSoc ?: statHigh).coerceIn(0f, minOf(fromSoc.toFloat(), FULL_PERCENT)) else null,
+        sleepPercentPerHour = sleepRate?.let { it * HOUR },
     )
 }
 
@@ -115,7 +128,13 @@ private class ParkedDrain(
     val squaredResiduals: Double,
     /** The rounding variance of the summed drop: first minus last reading, so two readings' worth however many pairs. */
     val roundingVariance: Double = 0.0,
+    /** The drop and duration of the pairs the car slept through. */
+    val sleepDrop: Double = 0.0,
+    val sleepMillis: Long = 0L,
 ) {
+    /** The drain rate of the slept-through pairs, percent per millisecond; null with too little sleep. */
+    val sleepRatePerMilli: Double? get() = if (sleepMillis >= MIN_RATE_SPAN_MILLIS) sleepDrop / sleepMillis else null
+
     /**
      * One standard error of the rate, percent per millisecond: the pairs' scatter
      * (sample variance, over n - 1) and the rounding of the two end readings, in quadrature.
@@ -129,9 +148,11 @@ private fun parkedDrain(
     samples: List<BatterySample>,
     drives: List<DriveSample>,
     scale: FullRangeScale?,
+    statuses: List<StatusSample>,
 ): ParkedDrain {
     val drops = mutableListOf<Double>()
     val spans = mutableListOf<Long>()
+    val slept = mutableListOf<Boolean>()
     val readings = driveReadingsAt(samples, drives)
     for (index in 1 until samples.size) {
         val a = samples[index - 1]
@@ -147,10 +168,13 @@ private fun parkedDrain(
         if (stayed && !a.isCharging && !b.isCharging) {
             drops += (a.soc(scale) - b.soc(scale)).toDouble()
             spans += b.timestampMillis - a.timestampMillis
+            slept += sleptThrough(a, b, statuses)
         }
     }
     val drop = drops.sum()
     val millis = spans.sum()
+    val sleepDrop = drops.filterIndexed { index, _ -> slept[index] }.sum()
+    val sleepMillis = spans.filterIndexed { index, _ -> slept[index] }.sum()
     if (millis <= 0L) return ParkedDrain(drop, millis, drops.size, 0.0)
     val rate = drop / millis
     var squared = 0.0
@@ -163,7 +187,24 @@ private fun parkedDrain(
     // already carry some rounding noise, so adding it here counts it twice in part;
     // erring wide is the intended side.
     val rounding = TWO_READINGS_VARIANCE * readingResolution(scale) * readingResolution(scale)
-    return ParkedDrain(drop, millis, drops.size, squared, rounding)
+    return ParkedDrain(drop, millis, drops.size, squared, rounding, sleepDrop, sleepMillis)
+}
+
+/**
+ * True when the car slept through the gap between two reads: a status sample
+ * inside it says asleep and none says awake. The reads themselves are awake
+ * moments (the car answers only when awake), so only the inside counts. Times
+ * are the phone's clock, which the status samples share.
+ */
+private fun sleptThrough(
+    a: BatterySample,
+    b: BatterySample,
+    statuses: List<StatusSample>,
+): Boolean {
+    val from = a.readAtMillis ?: a.timestampMillis
+    val to = b.readAtMillis ?: b.timestampMillis
+    val inside = statuses.filter { it.timestampMillis > from && it.timestampMillis < to }
+    return inside.any { it.asleep } && inside.none { !it.asleep }
 }
 
 /** In R, N or D: the car is being driven even if the odometer has not ticked yet. */
