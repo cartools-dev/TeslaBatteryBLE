@@ -1,0 +1,113 @@
+<?xml version="1.0" ?>
+<SmellBaseline>
+  <ManuallySuppressedIssues/>
+  <CurrentIssues>
+    <ID>FunctionNaming:AutoStartTest.kt:AutoStartTest$@Test fun `does nothing when a Bluetooth permission was revoked`</ID>
+    <ID>FunctionNaming:AutoStartTest.kt:AutoStartTest$@Test fun `does nothing when the notification permission was revoked`</ID>
+    <ID>FunctionNaming:AutoStartTest.kt:AutoStartTest$@Test fun `does nothing when tracking was switched off`</ID>
+    <ID>FunctionNaming:AutoStartTest.kt:AutoStartTest$@Test fun `does nothing without a paired car`</ID>
+    <ID>FunctionNaming:AutoStartTest.kt:AutoStartTest$@Test fun `starts when tracking is on, a car is paired and permissions are granted`</ID>
+    <ID>FunctionNaming:BleLogsTest.kt:BleLogsTest$@Test fun `a reloaded command log trims by the count of the file it read`</ID>
+    <ID>FunctionNaming:BleLogsTest.kt:BleLogsTest$@Test fun `a vehicle's files are not read as the app log and the legacy raw files stay unread`</ID>
+    <ID>FunctionNaming:BleLogsTest.kt:BleLogsTest$@Test fun `app pblog is not read as any kind of vehicle log`</ID>
+    <ID>FunctionNaming:BleLogsTest.kt:BleLogsTest$@Test fun `the app log and the command logs are separate files in one directory`</ID>
+    <ID>FunctionNaming:BleLogsTest.kt:BleLogsTest$@Test fun `the app log keeps the same cap and trim as the vehicle logs`</ID>
+    <ID>FunctionNaming:ConnectionLabelTest.kt:ConnectionLabelTest$@Test fun `every phase and status reads the same on the pill and the status line`</ID>
+    <ID>FunctionNaming:ConnectionLabelTest.kt:ConnectionLabelTest$@Test fun `no connection at all reads disconnected`</ID>
+    <ID>FunctionNaming:FakeCarProtocolTest.kt:FakeCarProtocolTest$@Test fun `a drive request is not mistaken for a wake command`</ID>
+    <ID>FunctionNaming:FakeCarProtocolTest.kt:FakeCarProtocolTest$@Test fun `charge decrypts to a charge state`</ID>
+    <ID>FunctionNaming:FakeCarProtocolTest.kt:FakeCarProtocolTest$@Test fun `charging reports the charging state`</ID>
+    <ID>FunctionNaming:FakeCarProtocolTest.kt:FakeCarProtocolTest$@Test fun `charging stops at the limit`</ID>
+    <ID>FunctionNaming:FakeCarProtocolTest.kt:FakeCarProtocolTest$@Test fun `climate decrypts to a climate state with the climate off`</ID>
+    <ID>FunctionNaming:FakeCarProtocolTest.kt:FakeCarProtocolTest$@Test fun `closures and climate requests are not mistaken for a wake command`</ID>
+    <ID>FunctionNaming:FakeCarProtocolTest.kt:FakeCarProtocolTest$@Test fun `closures decrypts to a closures state with sentry off`</ID>
+    <ID>FunctionNaming:FakeCarProtocolTest.kt:FakeCarProtocolTest$@Test fun `discharge only happens while awake`</ID>
+    <ID>FunctionNaming:FakeCarProtocolTest.kt:FakeCarProtocolTest$@Test fun `drive decrypts to a parked drive state stamped by the car`</ID>
+    <ID>FunctionNaming:FakeCarProtocolTest.kt:FakeCarProtocolTest$@Test fun `empty whitelist when no key is enrolled`</ID>
+    <ID>FunctionNaming:FakeCarProtocolTest.kt:FakeCarProtocolTest$@Test fun `pairing waits for the card then succeeds`</ID>
+    <ID>FunctionNaming:FakeCarProtocolTest.kt:FakeCarProtocolTest$@Test fun `status starts locked and asleep`</ID>
+    <ID>FunctionNaming:FakeCarProtocolTest.kt:FakeCarProtocolTest$@Test fun `the odometer stays put between drive replies`</ID>
+    <ID>FunctionNaming:FakeCarProtocolTest.kt:FakeCarProtocolTest$@Test fun `wake decrypts, replies ok, and clears asleep`</ID>
+    <ID>FunctionNaming:FakeCarProtocolTest.kt:FakeCarProtocolTest$@Test fun `whitelist reports the enrolled key`</ID>
+    <ID>FunctionNaming:ReadInFlightTest.kt:ReadInFlightTest$@Test fun `a failure, a refusal or a reply without data ends it when no follow-up goes out`</ID>
+    <ID>FunctionNaming:ReadInFlightTest.kt:ReadInFlightTest$@Test fun `a reply with a follow-up keeps the read in flight, the last reply ends it`</ID>
+    <ID>FunctionNaming:ReadInFlightTest.kt:ReadInFlightTest$@Test fun `a spinner stays up for its minimum, then releases at once`</ID>
+    <ID>FunctionNaming:ReadInFlightTest.kt:ReadInFlightTest$@Test fun `an unanswered read ends after the command timeout and not before`</ID>
+    <ID>FunctionNaming:ReadInFlightTest.kt:ReadInFlightTest$@Test fun `each request restarts the timeout`</ID>
+    <ID>FunctionNaming:ReadInFlightTest.kt:ReadInFlightTest$@Test fun `it is off until a read request goes out`</ID>
+    <ID>FunctionNaming:ReadInFlightTest.kt:ReadInFlightTest$@Test fun `the car asleep, so the gate skips the read, ends it`</ID>
+    <ID>FunctionNaming:ReadInFlightTest.kt:ReadInFlightTest$@Test fun `the change callback fires once per change, never twice with the same value`</ID>
+    <ID>FunctionNaming:ReadInFlightTest.kt:ReadInFlightTest$@Test fun `the link dropping ends it`</ID>
+    <ID>FunctionNaming:ReadInFlightTest.kt:ReadInFlightTest$@Test fun `the timeout matches the command log's`</ID>
+    <ID>FunctionNaming:ReadingAgeTest.kt:ReadingAgeTest$@Test fun `a car that is not connected never reads now`</ID>
+    <ID>FunctionNaming:ReadingAgeTest.kt:ReadingAgeTest$@Test fun `a clock that ran backwards reads now`</ID>
+    <ID>FunctionNaming:ReadingAgeTest.kt:ReadingAgeTest$@Test fun `a connected car whose reading greyed by sleep under a minute ago reads now`</ID>
+    <ID>FunctionNaming:ReadingAgeTest.kt:ReadingAgeTest$@Test fun `a live charge with no read time is stale`</ID>
+    <ID>FunctionNaming:ReadingAgeTest.kt:ReadingAgeTest$@Test fun `a reading greyed by sleep soon after it was read is not called just read`</ID>
+    <ID>FunctionNaming:ReadingAgeTest.kt:ReadingAgeTest$@Test fun `a reading on a connection that is not ready is stale`</ID>
+    <ID>FunctionNaming:ReadingAgeTest.kt:ReadingAgeTest$@Test fun `a reading under a minute old reads now`</ID>
+    <ID>FunctionNaming:ReadingAgeTest.kt:ReadingAgeTest$@Test fun `a reading with no status yet is not stale because of sleep`</ID>
+    <ID>FunctionNaming:ReadingAgeTest.kt:ReadingAgeTest$@Test fun `a stored sample with no phone read time shows no age`</ID>
+    <ID>FunctionNaming:ReadingAgeTest.kt:ReadingAgeTest$@Test fun `a stored sample's age is the phone read time, not the car's timestamp`</ID>
+    <ID>FunctionNaming:ReadingAgeTest.kt:ReadingAgeTest$@Test fun `an awake connected reading is fresh until it is five minutes old`</ID>
+    <ID>FunctionNaming:ReadingAgeTest.kt:ReadingAgeTest$@Test fun `days round down`</ID>
+    <ID>FunctionNaming:ReadingAgeTest.kt:ReadingAgeTest$@Test fun `hours round down`</ID>
+    <ID>FunctionNaming:ReadingAgeTest.kt:ReadingAgeTest$@Test fun `minutes read whole from the first minute`</ID>
+    <ID>FunctionNaming:ReadingAgeTest.kt:ReadingAgeTest$@Test fun `only a stale reading shows its age`</ID>
+    <ID>FunctionNaming:ReadingAgeTest.kt:ReadingAgeTest$@Test fun `the clock ticks at the moment a fresh reading turns stale, then every minute`</ID>
+    <ID>FunctionNaming:ReadingAgeTest.kt:ReadingAgeTest$@Test fun `the same reading with an asleep status is stale and says how old it is`</ID>
+    <ID>FunctionNaming:VehicleStatusTextTest.kt:VehicleStatusTextTest$@Test fun `a duration for a different value than the live status is not shown`</ID>
+    <ID>FunctionNaming:VehicleStatusTextTest.kt:VehicleStatusTextTest$@Test fun `a duration that is unknown or under a minute is left out`</ID>
+    <ID>FunctionNaming:VehicleStatusTextTest.kt:VehicleStatusTextTest$@Test fun `asleep and locked each show how long they have held`</ID>
+    <ID>FunctionNaming:VehicleStatusTextTest.kt:VehicleStatusTextTest$@Test fun `without durations the line is the plain labels, asleep first`</ID>
+    <ID>LongParameterList:HealthSummaryTest.kt:HealthSummaryTest$private fun sample</ID>
+    <ID>MagicNumber:BleLogsTest.kt:BleLogsTest$3</ID>
+    <ID>MagicNumber:BleLogsTest.kt:BleLogsTest$4</ID>
+    <ID>MagicNumber:FakeCarProtocolTest.kt:FakeCarProtocolTest$0.01f</ID>
+    <ID>MagicNumber:FakeCarProtocolTest.kt:FakeCarProtocolTest$20</ID>
+    <ID>MagicNumber:FakeCarProtocolTest.kt:FakeCarProtocolTest$226.2f</ID>
+    <ID>MagicNumber:FakeCarProtocolTest.kt:FakeCarProtocolTest$234f</ID>
+    <ID>MagicNumber:FakeCarProtocolTest.kt:FakeCarProtocolTest$77</ID>
+    <ID>MagicNumber:FakeCarProtocolTest.kt:FakeCarProtocolTest$78</ID>
+    <ID>MagicNumber:FakeCarProtocolTest.kt:FakeCarProtocolTest$85</ID>
+    <ID>MagicNumber:ReadInFlightTest.kt:ReadInFlightTest$10</ID>
+    <ID>MagicNumber:ReadInFlightTest.kt:ReadInFlightTest$100</ID>
+    <ID>MagicNumber:ReadInFlightTest.kt:ReadInFlightTest$10_000</ID>
+    <ID>MagicNumber:ReadInFlightTest.kt:ReadInFlightTest$1_000</ID>
+    <ID>MagicNumber:ReadInFlightTest.kt:ReadInFlightTest$200</ID>
+    <ID>MagicNumber:ReadInFlightTest.kt:ReadInFlightTest$400</ID>
+    <ID>MagicNumber:ReadInFlightTest.kt:ReadInFlightTest$400L</ID>
+    <ID>MagicNumber:ReadInFlightTest.kt:ReadInFlightTest$600</ID>
+    <ID>MagicNumber:ReadingAgeTest.kt:ReadingAgeTest$10_000</ID>
+    <ID>MagicNumber:ReadingAgeTest.kt:ReadingAgeTest$10_001L</ID>
+    <ID>MagicNumber:ReadingAgeTest.kt:ReadingAgeTest$12</ID>
+    <ID>MagicNumber:ReadingAgeTest.kt:ReadingAgeTest$3</ID>
+    <ID>MagicNumber:ReadingAgeTest.kt:ReadingAgeTest$4</ID>
+    <ID>MagicNumber:ReadingAgeTest.kt:ReadingAgeTest$40</ID>
+    <ID>MagicNumber:ReadingAgeTest.kt:ReadingAgeTest$5_000</ID>
+    <ID>MagicNumber:ReadingAgeTest.kt:ReadingAgeTest$6</ID>
+    <ID>MagicNumber:ReadingAgeTest.kt:ReadingAgeTest$90_000</ID>
+    <ID>TooManyFunctions:FakeCarProtocolTest.kt:FakeCarProtocolTest</ID>
+    <ID>TooManyFunctions:ReadingAgeTest.kt:ReadingAgeTest</ID>
+    <ID>UnnecessaryNotNullOperator:FakeCarProtocolTest.kt:FakeCarProtocolTest$response.signature_data!! .session_info_tag!! .tag!!</ID>
+    <ID>UnnecessaryNotNullOperator:HealthSummaryTest.kt:HealthSummaryTest$summary.fullRangeMiles!!</ID>
+    <ID>UnsafeCallOnNullableType:FakeCarProtocolTest.kt:FakeCarProtocolTest$TeslaCommands.parseChargeState(plaintext)!!</ID>
+    <ID>UnsafeCallOnNullableType:FakeCarProtocolTest.kt:FakeCarProtocolTest$TeslaSession.import( privateKeyPkcs8 = client.privateKeyPkcs8, publicKeyRaw = client.publicKeyRaw, vin = vin, challenge = uuid, encodedInfo = response.session_info!!.toByteArray(), tag = response.signature_data!! .session_info_tag!! .tag!! .toByteArray(), )!!</ID>
+    <ID>UnsafeCallOnNullableType:FakeCarProtocolTest.kt:FakeCarProtocolTest$charge!!</ID>
+    <ID>UnsafeCallOnNullableType:FakeCarProtocolTest.kt:FakeCarProtocolTest$charge.est_battery_range!!</ID>
+    <ID>UnsafeCallOnNullableType:FakeCarProtocolTest.kt:FakeCarProtocolTest$climate!!</ID>
+    <ID>UnsafeCallOnNullableType:FakeCarProtocolTest.kt:FakeCarProtocolTest$closures!!</ID>
+    <ID>UnsafeCallOnNullableType:FakeCarProtocolTest.kt:FakeCarProtocolTest$drive!!</ID>
+    <ID>UnsafeCallOnNullableType:FakeCarProtocolTest.kt:FakeCarProtocolTest$entry!!</ID>
+    <ID>UnsafeCallOnNullableType:FakeCarProtocolTest.kt:FakeCarProtocolTest$first!!</ID>
+    <ID>UnsafeCallOnNullableType:FakeCarProtocolTest.kt:FakeCarProtocolTest$info!!</ID>
+    <ID>UnsafeCallOnNullableType:FakeCarProtocolTest.kt:FakeCarProtocolTest$response.session_info!!</ID>
+    <ID>UnsafeCallOnNullableType:FakeCarProtocolTest.kt:FakeCarProtocolTest$response.signature_data!!</ID>
+    <ID>UnsafeCallOnNullableType:FakeCarProtocolTest.kt:FakeCarProtocolTest$response.signature_data!! .session_info_tag!!</ID>
+    <ID>UnsafeCallOnNullableType:FakeCarProtocolTest.kt:FakeCarProtocolTest$second!!</ID>
+    <ID>UnsafeCallOnNullableType:FakeCarProtocolTest.kt:FakeCarProtocolTest$session.decrypt(response, requestId, AntiReplayWindow())!!</ID>
+    <ID>UnsafeCallOnNullableType:FakeCarProtocolTest.kt:FakeCarProtocolTest$session.encrypt(message, 5)!!</ID>
+    <ID>UnsafeCallOnNullableType:FakeCarProtocolTest.kt:FakeCarProtocolTest$session.requestId(encrypted)!!</ID>
+    <ID>UnsafeCallOnNullableType:FakeCarProtocolTest.kt:FakeCarProtocolTest$status!!</ID>
+  </CurrentIssues>
+</SmellBaseline>
