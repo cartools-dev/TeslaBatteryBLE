@@ -37,6 +37,7 @@ Light and dark themes, side by side.
 - **How long each state has held** — the car view shows how long the car has been asleep and locked ("Asleep 1h 12m · Locked 3h · User away")
   from the status history, and the notification shows how long the car has been asleep;
   no duration is shown when the history does not reach back to the change
+- **Charge session cost** � set your electricity price per kWh in Settings and the car view shows the energy added and what the session cost
 - **On-demand wake** — the car is only woken when you ask, never in the background
 - **Lets the car sleep** — while it is charging, driving, in Sentry mode or running the climate (the car stays
   awake and draws power anyway), readings refresh every 10 s. Otherwise the app keeps

@@ -194,6 +194,31 @@ class CardSnapshots {
     }
 
     @Test
+    fun heroCardChargeCost() {
+        val charging =
+            liveCharge.copy(
+                charging_state = ChargeState.ChargingState(Charging = Void()),
+                charger_voltage = 240,
+                charger_actual_current = 16,
+                charge_current_request = 32,
+                charge_energy_added = 12.5f,
+            )
+        // The cost is formatted in the default locale; pin it so the render does not depend on the machine.
+        java.util.Locale.setDefault(java.util.Locale.US)
+        snapCard("hero-card_charge-cost") {
+            HeroCard(
+                connection = liveConnection(readAt = NOW - FRESH_MINUTES * MINUTE, charge = charging),
+                advert = advert,
+                vehicle = vehicle,
+                history = emptyList(),
+                statusHistory = emptyList(),
+                nowMillis = NOW,
+                pricePerKwh = 0.30f,
+            )
+        }
+    }
+
+    @Test
     fun heroCardStale() {
         snapCard("hero-card_stale") {
             HeroCard(

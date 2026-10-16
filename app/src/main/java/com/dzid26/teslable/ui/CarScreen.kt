@@ -57,6 +57,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import com.dzid26.teslable.EnergyPriceStore
 import com.dzid26.teslable.ble.BatteryPercent
 import com.dzid26.teslable.ble.BleUiState
 import com.dzid26.teslable.ble.ConnectionDisplay
@@ -218,7 +219,10 @@ internal fun CarScreen(
                         .padding(16.dp),
                 verticalArrangement = Arrangement.spacedBy(16.dp),
             ) {
+                val context = LocalContext.current
+                val pricePerKwh = remember { EnergyPriceStore(context).pricePerKwh() }
                 HeroCard(
+                    pricePerKwh = pricePerKwh,
                     connection = connection,
                     advert = advert,
                     vehicle = vehicle,
@@ -251,6 +255,8 @@ internal fun HeroCard(
     nowMillis: Long = rememberNowMillis(connection?.chargeAtMillis),
     // Injectable for the Paparazzi snapshots; null keeps the timed spinner.
     spinnerOverride: Boolean? = null,
+    // The owner's price per kWh, for the session cost; null shows none.
+    pricePerKwh: Float? = null,
 ) {
     val context = LocalContext.current
     val display = connectionDisplay(connection, advert, vehicle = vehicle)
@@ -331,7 +337,7 @@ internal fun HeroCard(
                     nowMillis = nowMillis,
                 )
                 Spacer(Modifier.height(8.dp))
-                ChargeDetails(charge)
+                ChargeDetails(charge, pricePerKwh)
             }
             // The card's top-right corner, clear of the title and the pill: a spinner while a
             // read is in flight.
@@ -361,13 +367,17 @@ private fun heroStatusText(
 
 /** Charge limit · AC voltage and current · charging state, as one quiet line under the hero. */
 @Composable
-private fun ChargeDetails(charge: ChargeState?) {
+private fun ChargeDetails(
+    charge: ChargeState?,
+    pricePerKwh: Float?,
+) {
     if (charge == null) return
     val details =
         buildList {
             charge.charge_limit_soc?.let { add("Charge limit\u00A0$it%") }
             chargerElectricalText(charge)?.let { add(it) }
             charge.chargingStateKind?.let { add(chargingStateText(it)) }
+            sessionCostText(charge, pricePerKwh)?.let { add(it) }
         }
     if (details.isNotEmpty()) {
         Text(
