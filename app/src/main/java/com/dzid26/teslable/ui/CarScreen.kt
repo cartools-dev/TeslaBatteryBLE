@@ -70,7 +70,6 @@ import com.dzid26.teslable.ble.batteryPercent
 import com.dzid26.teslable.ble.chargingStateText
 import com.dzid26.teslable.ble.connectionDisplay
 import com.dzid26.teslable.ble.vehicleStatusText
-import com.dzid26.teslable.core.health.chargeSessionCost
 import com.dzid26.teslable.core.history.BatterySample
 import com.dzid26.teslable.core.history.ChargeProjection
 import com.dzid26.teslable.core.history.DischargeProjection
@@ -93,7 +92,6 @@ import com.dzid26.teslable.core.protocol.chargingStateKind
 import com.dzid26.teslable.health.healthSummary
 import com.tesla.generated.carserver.vehicle.ChargeState
 import kotlinx.coroutines.delay
-import java.text.NumberFormat
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
@@ -388,17 +386,6 @@ private fun ChargeDetails(
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
     }
-}
-
-/** "12.5 kWh � $3.75": what the car added this session and what it cost; null without a price. */
-private fun sessionCostText(
-    charge: ChargeState,
-    pricePerKwh: Float?,
-): String? {
-    val energy = charge.charge_energy_added ?: return null
-    val cost = chargeSessionCost(energy, pricePerKwh) ?: return null
-    val money = NumberFormat.getCurrencyInstance().format(cost.toDouble())
-    return String.format(Locale.getDefault(), "%.1f�kWh � %s", energy, money)
 }
 
 /**
