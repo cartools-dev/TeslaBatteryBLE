@@ -72,3 +72,11 @@ Date: 2026-10-10
 - Snapshots wrap the cards in a fixed `lightColorScheme` / `darkColorScheme`,
   never the dynamic color: Paparazzi has no real context for it, so dynamic
   color would render nondeterministically.
+
+## Update (2026-10-16): manual emulator fallback removed
+
+`pr-screenshots.yml` and `pr-screenshots-comment.yml` are deleted: the
+Paparazzi full-screen snapshots cover the same screens on every UI pull
+request, the release smoke test and the demo canary cover the real app on an
+emulator, and the PR comment no longer points at the manual run. The shared
+`capture-screenshots.sh` stays for those two.

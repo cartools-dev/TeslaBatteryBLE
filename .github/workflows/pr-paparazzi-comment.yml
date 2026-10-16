@@ -219,7 +219,6 @@ jobs:
               done <<< "$stems"
               printf 'Snapshots are light- and dark-theme JVM renders of the battery cards, the history card and the screens, plus a narrow Jelly Star render of each card state.\n'
             fi
-            printf "\nFull-screen emulator shots: Actions → \`PR screenshots\` → Run workflow, choosing the head branch of this PR.\n"
           } > "$MSG"
           {
             echo "message<<COMMENT_EOF"
