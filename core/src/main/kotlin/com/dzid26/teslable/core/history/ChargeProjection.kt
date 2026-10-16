@@ -105,9 +105,21 @@ private fun baseChargeProjection(
     return ChargeProjection(
         from = last,
         targetPercent = target,
-        completionMillis = last.timestampMillis + (remaining.toDouble() * elapsed / gained).toLong(),
+        completionMillis = last.timestampMillis + (remaining.toDouble() / levelSlope(run, scale, elapsed, gained)).toLong(),
     )
 }
+
+/**
+ * The rate the centre follows, percent per millisecond: the fitted slope of
+ * the run's levels once it has enough readings (the same line the beam's error
+ * comes from, so the beam is centred on it), else the endpoints' average.
+ */
+private fun levelSlope(
+    run: List<BatterySample>,
+    scale: FullRangeScale?,
+    elapsed: Long,
+    gained: Float,
+): Double = levelFit(run, scale)?.slope ?: (gained.toDouble() / elapsed)
 
 /**
  * Adds the beam: the remaining time, stretched by how far the rate could be
@@ -162,11 +174,27 @@ private fun rateFactors(
     return 1.0 / (1.0 + spread) to 1.0 / (1.0 - spread)
 }
 
+/** The least-squares line of level against time over a run. */
+private class LevelFit(
+    /** Percent per millisecond. */
+    val slope: Double,
+    /** Sum of squared time deviations, ms squared. */
+    val sxx: Double,
+    /** Standard deviation of the readings around the line, percent, never below one reading's resolution. */
+    val scatter: Double,
+)
+
 /** One standard error of the fitted level-over-time slope, as a share of the slope; null without a rising fit. */
 private fun relativeRateError(
     run: List<BatterySample>,
     scale: FullRangeScale?,
-): Double? {
+): Double? = levelFit(run, scale)?.let { it.scatter / sqrt(it.sxx) / it.slope }
+
+/** Fits the run's levels over time; null with too few readings or a line that does not rise. */
+private fun levelFit(
+    run: List<BatterySample>,
+    scale: FullRangeScale?,
+): LevelFit? {
     val t0 = run.first().timestampMillis
     val xs = run.map { (it.timestampMillis - t0).toDouble() }
     val ys = run.map { it.soc(scale).toDouble() }
@@ -180,19 +208,7 @@ private fun relativeRateError(
             val residual = ys[index] - (my + slope * (xs[index] - mx))
             residual * residual
         }
-    val scatter = maxOf(sqrt(squared / (run.size - 2)), readingResolution(scale))
-    return scatter / sqrt(sxx) / slope
-}
-
-/** Standard deviation of one level reading, percent: a uniformly rounded step. */
-private fun readingResolution(scale: FullRangeScale?): Double {
-    val stepPercent =
-        if (scale != null && scale.pinned) {
-            (RANGE_STEP_MILES / scale.milesPerPercent).toDouble()
-        } else {
-            1.0
-        }
-    return stepPercent / UNIFORM_STEP_DIVISOR
+    return LevelFit(slope, sxx, maxOf(sqrt(squared / (run.size - 2)), readingResolution(scale)))
 }
 
 /** Rated miles gained per hour over the run; null without both readings or a positive gain. */
@@ -241,9 +257,3 @@ private const val REACH_SIGMAS = 2.0
 
 /** The beam never claims the rate could be off by more than this share. */
 private const val MAX_RATE_SPREAD = 0.9
-
-/** The car's rated-range step in miles, as seen in the logs. */
-private const val RANGE_STEP_MILES = 0.082f
-
-/** sqrt(12): a uniform step's standard deviation is the step over this. */
-private const val UNIFORM_STEP_DIVISOR = 3.4641016

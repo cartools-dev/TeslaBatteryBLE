@@ -111,11 +111,17 @@ private class ParkedDrain(
     val drop: Double,
     val millis: Long,
     val pairs: Int,
-    /** Sum of each pair's squared residual from the mean rate, floored at the readings' resolution. */
+    /** Sum of each pair's squared residual from the mean rate. */
     val squaredResiduals: Double,
+    /** The rounding variance of the summed drop: first minus last reading, so two readings' worth however many pairs. */
+    val roundingVariance: Double = 0.0,
 ) {
-    /** One standard error of the rate, percent per millisecond; the resolution floor is already inside the sum. */
-    val errorPerMilli: Double get() = sqrt(squaredResiduals) / millis
+    /**
+     * One standard error of the rate, percent per millisecond: the pairs' scatter
+     * (sample variance, over n - 1) and the rounding of the two end readings, in quadrature.
+     */
+    val errorPerMilli: Double
+        get() = sqrt(squaredResiduals * pairs / maxOf(pairs - 1, 1) + roundingVariance) / millis
 }
 
 /** Sums the parked pairs of [samples]; [drives] all carry an odometer and are oldest first. */
@@ -147,27 +153,15 @@ private fun parkedDrain(
     val millis = spans.sum()
     if (millis <= 0L) return ParkedDrain(drop, millis, drops.size, 0.0)
     val rate = drop / millis
-    // A pair differs by two readings, each uniformly rounded: the floor says
-    // no spread can be smaller than that, so a handful of tidy pairs cannot
-    // claim a certainty the readings do not have.
-    val floor = pairResolution(scale)
     var squared = 0.0
     for (index in drops.indices) {
         val residual = drops[index] - rate * spans[index]
-        squared += maxOf(residual * residual, floor * floor)
+        squared += residual * residual
     }
-    return ParkedDrain(drop, millis, drops.size, squared)
-}
-
-/** Standard deviation of one pair's drop, percent: two uniformly rounded readings. */
-private fun pairResolution(scale: FullRangeScale?): Double {
-    val resolutionPercent =
-        if (scale != null && scale.pinned) {
-            (RANGE_RESOLUTION_MILES / scale.milesPerPercent).toDouble()
-        } else {
-            LEVEL_RESOLUTION_PERCENT
-        }
-    return resolutionPercent / UNIFORM_DIVISOR * TWO_READINGS
+    // The pairs telescope: their drops sum to first minus last, so rounding
+    // enters as two readings however many pairs there are.
+    val rounding = TWO_READINGS_VARIANCE * readingResolution(scale) * readingResolution(scale)
+    return ParkedDrain(drop, millis, drops.size, squared, rounding)
 }
 
 /** In R, N or D: the car is being driven even if the odometer has not ticked yet. */
@@ -199,17 +193,8 @@ private const val FULL_PERCENT = 100f
 /** A beam needs this many parked pairs behind the rate. */
 private const val MIN_BEAM_PAIRS = 3
 
-/** The car's rated-range step: 0.0816 mi, as seen in the logs. */
-private const val RANGE_RESOLUTION_MILES = 0.082f
-
-/** The displayed level steps in whole percent. */
-private const val LEVEL_RESOLUTION_PERCENT = 1.0
-
-/** sqrt(12): the standard deviation of a uniform step is the step over this. */
-private const val UNIFORM_DIVISOR = 3.4641016
-
-/** sqrt(2): a pair differs two independent readings. */
-private const val TWO_READINGS = 1.4142136
+/** Two end readings, each with the same rounding variance. */
+private const val TWO_READINGS_VARIANCE = 2.0
 
 private const val MINUTE = 60_000L
 

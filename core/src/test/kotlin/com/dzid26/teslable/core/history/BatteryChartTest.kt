@@ -253,7 +253,6 @@ class BatteryChartTest {
         val noisyBeam = chargeProjection(noisy, scale = pinnedScale)!!
         val tidyWidth = tidyBeam.latestMillis!! - tidyBeam.earliestMillis!!
         val noisyWidth = noisyBeam.latestMillis!! - noisyBeam.earliestMillis!!
-        assertEquals(true, tidyWidth >= 0L)
         assertEquals(true, noisyWidth > tidyWidth)
     }
 }

@@ -391,8 +391,8 @@ class CardSnapshots {
 
     @Test
     fun historyCardParkedDrainRange() {
-        // A slow parked drain read on the rated range: a fitted scale turns the level
-        // steps into sub-percent readings, so the line is smooth and the beam is thin.
+        // A slow parked drain (about 1.6 %/day) read on the rated range: a fitted scale turns
+        // the level steps into sub-percent readings, so the line is smooth and the beam is thin.
         snapCard("history-card_parked-drain-range") {
             BatteryHistoryCard(
                 samples = rangeParkedSamples,
@@ -686,20 +686,27 @@ class CardSnapshots {
             readAtMillis = NOW - minutesAgo * MINUTE,
         )
 
-        // 21 h parked, 70 -> 52.4 %, a read every 20 min.
-        private val rangeParkedSamples =
-            (0..63).map { step ->
-                val minutesAgo = (63 - step) * 20L
-                rangeSample(minutesAgo, 52.4 + (70.0 - 52.4) * (63 - step) / 63.0)
+        // Two days of driving down from 85 to 68 %, hourly, before the day shown: it gives
+        // the scale fit its level steps, as a real history does.
+        private val rangeDrivenSamples =
+            (0..47).map { step ->
+                rangeSample(1500L + (47 - step) * 60L, 68.0 + (85.0 - 68.0) * (47 - step) / 47.0)
             }
 
-        // Then a charge from 56 -> ~62 % over the last 4 h, a read every 10 min, supply 218-243 V.
+        // 21 h parked, 68 -> 66.6 % (about 1.6 %/day), a read every 20 min.
+        private val rangeParkedSamples =
+            rangeDrivenSamples +
+                (0..63).map { step ->
+                    rangeSample((63 - step) * 20L, 66.6 + (68.0 - 66.6) * (63 - step) / 63.0)
+                }
+
+        // Then a charge from 67 -> ~73 % over the last 4 h, a read every 10 min, supply 218-243 V.
         private val rangeChargingSamples =
             rangeParkedSamples.dropLast(12) +
                 (0..23).map { step ->
                     val minutesAgo = (23 - step) * 10L
                     val volts = listOf(243, 238, 226, 218, 231, 240)[step % 6]
-                    rangeSample(minutesAgo, 55.85 + step * 0.25, charging = true, volts = volts)
+                    rangeSample(minutesAgo, 66.95 + step * 0.25, charging = true, volts = volts)
                 }
 
         private val parkedSamples =
