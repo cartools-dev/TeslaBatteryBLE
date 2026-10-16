@@ -45,7 +45,7 @@ class DischargeProjectionTest {
         nowMillis: Long = samples.last().timestampMillis + MINUTE,
         scale: FullRangeScale? = null,
         statuses: List<StatusSample> = emptyList(),
-    ) = dischargeProjection(samples, drives, rangeMillis, nowMillis, scale, statuses)
+    ) = dischargeProjection(samples, drives, rangeMillis, nowMillis, ProjectionContext(scale, statuses))
 
     @Test
     fun `carries the parked rate half the range forward`() {

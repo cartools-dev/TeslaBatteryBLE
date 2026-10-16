@@ -79,6 +79,7 @@ import com.dzid26.teslable.core.history.DriveSample
 import com.dzid26.teslable.core.history.FullRangeScale
 import com.dzid26.teslable.core.history.FullRangeScaleEstimator
 import com.dzid26.teslable.core.history.HistoryRange
+import com.dzid26.teslable.core.history.ProjectionContext
 import com.dzid26.teslable.core.history.StatusSample
 import com.dzid26.teslable.core.history.chargeProjection
 import com.dzid26.teslable.core.history.chargeStats
@@ -671,7 +672,7 @@ internal fun BatteryHistoryCard(
                 // Parked drain: the drive samples' odometer marks the
                 // stretches the car moved. Shown next to the charge
                 // projection too: where the battery heads if unplugged now.
-                val discharge = dischargeProjection(samples, drives, baseMillis, now, scale, statuses)
+                val discharge = dischargeProjection(samples, drives, baseMillis, now, ProjectionContext(scale, statuses))
                 // The projection gets room on the x-axis: half the range ahead.
                 val windowEnd =
                     if (charge != null || discharge != null) {
@@ -711,18 +712,7 @@ internal fun BatteryHistoryCard(
                 discharge?.let {
                     Spacer(Modifier.height(6.dp))
                     Text(
-                        text =
-                            "Parked · projected ${it.projectedPercent}%" +
-                                it.beam
-                                    ?.takeIf { (low, high) -> low.roundToInt() != high.roundToInt() }
-                                    ?.let { (low, high) -> " (${low.roundToInt()}–${high.roundToInt()}%)" }
-                                    .orEmpty() +
-                                " by " +
-                                formatTime(it.projectedAtMillis, showDate = true) +
-                                " · ${"%.1f".format(it.percentPerHour * 24)}%/day" +
-                                it.sleepPercentPerHour
-                                    ?.let { asleep -> " (asleep ${"%.1f".format(asleep * 24)})" }
-                                    .orEmpty(),
+                        text = parkedText(it),
                         style = MaterialTheme.typography.bodySmall,
                         // The measured line's colour; muted while a charge is
                         // the main story.
@@ -942,6 +932,22 @@ private fun chargeProjectionPaths(
             close()
         }
     return line to beam
+}
+
+/** "Parked · projected 52% (51–53%) by … · 1.6%/day (asleep 1.1)": the parked projection in words. */
+private fun parkedText(projection: DischargeProjection): String {
+    val range =
+        projection.beam
+            ?.takeIf { (low, high) -> low.roundToInt() != high.roundToInt() }
+            ?.let { (low, high) -> " (${low.roundToInt()}–${high.roundToInt()}%)" }
+            .orEmpty()
+    val perDay = "%.1f".format(Locale.getDefault(), projection.percentPerHour * 24)
+    val asleep =
+        projection.sleepPercentPerHour
+            ?.let { " (asleep ${"%.1f".format(Locale.getDefault(), it * 24)})" }
+            .orEmpty()
+    return "Parked · projected ${projection.projectedPercent}%$range by " +
+        formatTime(projection.projectedAtMillis, showDate = true) + " · $perDay%/day$asleep"
 }
 
 private fun HistoryRange.label(): String =

@@ -78,17 +78,17 @@ data class DischargeProjection(
  * @param samples one vehicle's battery samples, oldest first.
  * @param drives the same vehicle's drive samples, oldest first.
  * @param rangeMillis the selected range: its samples feed the rate, and the projection looks half of it ahead.
- * @param scale the fitted rated-range scale, or null to read the integer level.
- * @param statuses the same vehicle's VCSEC status samples, oldest first; they say when the car slept.
+ * @param context the fitted scale and the status log that refine the rate.
  */
 fun dischargeProjection(
     samples: List<BatterySample>,
     drives: List<DriveSample>,
     rangeMillis: Long,
     nowMillis: Long,
-    scale: FullRangeScale? = null,
-    statuses: List<StatusSample> = emptyList(),
+    context: ProjectionContext = ProjectionContext(),
 ): DischargeProjection? {
+    val scale = context.scale
+    val statuses = context.statuses
     val last = samples.lastOrNull() ?: return null
     val horizon = rangeMillis / 2
     if (nowMillis - last.timestampMillis > horizon) return null
@@ -119,6 +119,22 @@ fun dischargeProjection(
     )
 }
 
+/**
+ * What refines the parked rate beyond the raw samples: the fitted rated-range
+ * [scale] (null reads the integer level) and the vehicle's VCSEC [statuses],
+ * oldest first, which say when the car slept.
+ */
+data class ProjectionContext(
+    val scale: FullRangeScale? = null,
+    val statuses: List<StatusSample> = emptyList(),
+)
+
+/** The drop (percent) and duration of the pairs the car slept through. */
+private class SleepSpan(
+    val drop: Double,
+    val millis: Long,
+)
+
 /** The summed signed drop (percent) and duration of the parked pairs, with their spread. */
 private class ParkedDrain(
     val drop: Double,
@@ -129,11 +145,10 @@ private class ParkedDrain(
     /** The rounding variance of the summed drop: first minus last reading, so two readings' worth however many pairs. */
     val roundingVariance: Double = 0.0,
     /** The drop and duration of the pairs the car slept through. */
-    val sleepDrop: Double = 0.0,
-    val sleepMillis: Long = 0L,
+    val sleep: SleepSpan = SleepSpan(0.0, 0L),
 ) {
     /** The drain rate of the slept-through pairs, percent per millisecond; null with too little sleep. */
-    val sleepRatePerMilli: Double? get() = if (sleepMillis >= MIN_RATE_SPAN_MILLIS) sleepDrop / sleepMillis else null
+    val sleepRatePerMilli: Double? get() = if (sleep.millis >= MIN_RATE_SPAN_MILLIS) sleep.drop / sleep.millis else null
 
     /**
      * One standard error of the rate, percent per millisecond: the pairs' scatter
@@ -187,7 +202,7 @@ private fun parkedDrain(
     // already carry some rounding noise, so adding it here counts it twice in part;
     // erring wide is the intended side.
     val rounding = TWO_READINGS_VARIANCE * readingResolution(scale) * readingResolution(scale)
-    return ParkedDrain(drop, millis, drops.size, squared, rounding, sleepDrop, sleepMillis)
+    return ParkedDrain(drop, millis, drops.size, squared, rounding, SleepSpan(sleepDrop, sleepMillis))
 }
 
 /**
