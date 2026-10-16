@@ -6,7 +6,7 @@ import com.tesla.generated.carserver.vehicle.ChargeState
 import java.text.NumberFormat
 import java.util.Locale
 
-/** "12.5 kWh � $3.75": what the car added this session and what it cost; null without a price. */
+/** The energy added this session and its cost, like "12.5 kWh, $3.75"; null without a price. */
 internal fun sessionCostText(
     charge: ChargeState,
     pricePerKwh: Float?,
@@ -14,5 +14,5 @@ internal fun sessionCostText(
     val energy = charge.charge_energy_added ?: return null
     val cost = chargeSessionCost(energy, pricePerKwh) ?: return null
     val money = NumberFormat.getCurrencyInstance().format(cost.toDouble())
-    return String.format(Locale.getDefault(), "%.1f�kWh � %s", energy, money)
+    return String.format(Locale.getDefault(), "%.1f kWh · %s", energy, money)
 }
