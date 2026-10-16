@@ -13,6 +13,7 @@ import com.dzid26.teslable.core.history.DriveSample
 import com.dzid26.teslable.core.history.StatusSample
 import com.dzid26.teslable.core.protocol.AntiReplayWindow
 import com.dzid26.teslable.core.protocol.CommandRecords
+import com.dzid26.teslable.core.protocol.FaultRecovery
 import com.dzid26.teslable.core.protocol.InfotainmentPollPolicy
 import com.dzid26.teslable.core.protocol.InfotainmentSessionGate
 import com.dzid26.teslable.core.protocol.PairingFlow
@@ -31,9 +32,8 @@ import com.dzid26.teslable.core.protocol.TeslaVcsec
 import com.dzid26.teslable.core.protocol.asleep
 import com.dzid26.teslable.core.protocol.chargingStateKind
 import com.dzid26.teslable.core.protocol.isRefusal
-import com.dzid26.teslable.core.protocol.isStaleSession
-import com.dzid26.teslable.core.protocol.isUnknownKey
 import com.dzid26.teslable.core.protocol.locked
+import com.dzid26.teslable.core.protocol.recovery
 import com.dzid26.teslable.core.protocol.userPresent
 import com.dzid26.teslable.history.HistoryStore
 import com.tesla.generated.universalmessage.Domain
@@ -1321,11 +1321,15 @@ class TeslaBleController(
                 // Retrying on the old session fails forever. The car usually attaches fresh session
                 // info to such a rejection; when it verifies, the session resyncs in place, and
                 // only otherwise does a new handshake recover.
-                if (fault?.isStaleSession == true && !resyncSession(pending.domain, message)) {
-                    rehandshake(pending.domain, "stale session")
+                when (fault?.recovery) {
+                    FaultRecovery.RESYNC_SESSION ->
+                        if (!resyncSession(pending.domain, message)) rehandshake(pending.domain, "stale session")
+
+                    // The owner removed this phone's key: no session recovers from that.
+                    FaultRecovery.PAIR_AGAIN -> pairing.forgetEnrollment("the car does not know this phone's key")
+
+                    FaultRecovery.NONE, null -> Unit
                 }
-                // The owner removed this phone's key: no session recovers from that.
-                if (fault?.isUnknownKey == true) pairing.forgetEnrollment("the car does not know this phone's key")
                 return true
             }
             val session = handshake[pending.domain] ?: return true
