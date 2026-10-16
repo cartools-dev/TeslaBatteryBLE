@@ -146,6 +146,15 @@ class CommandRecordsTest {
     }
 
     @Test
+    fun `only an unknown key fault means the car no longer knows this phone`() {
+        fun unknown(fault: MessageFault_E) = MessageStatus(MessageOperationStatus.OPERATIONSTATUS_ERROR, fault).isUnknownKey
+        assertTrue(unknown(MessageFault_E.MESSAGEFAULT_ERROR_UNKNOWN_KEY_ID))
+        assertFalse(unknown(MessageFault_E.MESSAGEFAULT_ERROR_INCORRECT_EPOCH))
+        assertFalse(unknown(MessageFault_E.MESSAGEFAULT_ERROR_BUSY))
+        assertFalse(MessageStatus().isUnknownKey)
+    }
+
+    @Test
     fun `a refusal is found by the domain of the command that was answered`() {
         val refusedRead = Response(actionStatus = ActionStatus(result = CarServerStatus.OPERATIONSTATUS_ERROR)).encode()
         val refusedWake = FromVCSECMessage(commandStatus = CommandStatus(operationStatus = VcsecStatus.OPERATIONSTATUS_ERROR)).encode()

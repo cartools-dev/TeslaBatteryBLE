@@ -194,6 +194,13 @@ val MessageStatus.isRefusal: Boolean
 val MessageStatus.isStaleSession: Boolean
     get() = signed_message_fault in STALE_SESSION_FAULTS
 
+/**
+ * Whether the car does not know the key that signed the message: the owner removed this phone's
+ * key (ADR-0005's theft recovery), so no session can recover and the car must be paired again.
+ */
+val MessageStatus.isUnknownKey: Boolean
+    get() = signed_message_fault == MessageFault_E.MESSAGEFAULT_ERROR_UNKNOWN_KEY_ID
+
 private val STALE_SESSION_FAULTS =
     setOf(
         MessageFault_E.MESSAGEFAULT_ERROR_INVALID_SIGNATURE,

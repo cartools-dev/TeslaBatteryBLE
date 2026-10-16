@@ -31,6 +31,7 @@ import com.dzid26.teslable.core.protocol.TeslaVcsec
 import com.dzid26.teslable.core.protocol.asleep
 import com.dzid26.teslable.core.protocol.chargingStateKind
 import com.dzid26.teslable.core.protocol.isRefusal
+import com.dzid26.teslable.core.protocol.isUnknownKey
 import com.dzid26.teslable.core.protocol.isStaleSession
 import com.dzid26.teslable.core.protocol.locked
 import com.dzid26.teslable.core.protocol.userPresent
@@ -683,6 +684,7 @@ class TeslaBleController(
         val kind: CommandKind,
         val reason: Command.Reason,
         val window: AntiReplayWindow = AntiReplayWindow(),
+        val sentAtMillis: Long = System.currentTimeMillis(),
     )
 
     private enum class CommandKind {
@@ -753,6 +755,7 @@ class TeslaBleController(
                     transport?.readRssi()
                     requestStatus()
                     commands.logUnanswered()
+                    expirePendingCommands(System.currentTimeMillis())
                     readInFlight.expire(System.currentTimeMillis())
                     handler.postDelayed(this, POLL_MS)
                 }
@@ -1208,6 +1211,12 @@ class TeslaBleController(
             return sent
         }
 
+        /** Forgets requests the car never answered, so they do not pile up for the life of the link. */
+        private fun expirePendingCommands(now: Long) {
+            val cutoff = now - PENDING_COMMAND_TTL_MS
+            pendingCommands.values.removeAll { it.sentAtMillis < cutoff }
+        }
+
         /** Drops the [domain] session and handshakes again, at most once a minute so a broken link cannot loop. */
         private fun rehandshake(
             domain: Domain,
@@ -1242,6 +1251,8 @@ class TeslaBleController(
                 log("${name()}: ${pending.kind.name.lowercase()} rejected (${fault?.signed_message_fault?.name})")
                 // Retrying on the old session fails forever; only a new handshake recovers.
                 if (fault?.isStaleSession == true) rehandshake(pending.domain, "stale session")
+                // The owner removed this phone's key: no session recovers from that.
+                if (fault?.isUnknownKey == true) pairing.forgetEnrollment("the car does not know this phone's key")
                 return true
             }
             val session = handshake[pending.domain] ?: return true
@@ -1432,6 +1443,9 @@ class TeslaBleController(
         const val LOG_MAX_LINES = 200
         const val COMMAND_EXPIRES_SECONDS = 5
         const val POLL_MS = 10_000L
+
+        /** A request the car has not answered within twice its validity window never will be. */
+        const val PENDING_COMMAND_TTL_MS = 2 * COMMAND_EXPIRES_SECONDS * 1000L
         const val RSSI_POLL_MS = 500L
         const val DEMO_SCAN_MS = 2_000L
         const val REHANDSHAKE_COOLDOWN_MS = 60_000L
