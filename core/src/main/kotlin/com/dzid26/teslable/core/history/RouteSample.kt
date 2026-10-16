@@ -33,8 +33,10 @@ data class RouteSample(
      */
     val energyAtArrivalPercent: Float?,
 ) {
-    override fun toString(): String =
-        "RouteSample(timestampMillis=$timestampMillis, vehicleId=$vehicleId, destination=${if (destination != null) "<redacted>" else "null"}, " +
+    override fun toString(): String {
+        val shownDestination = if (destination != null) "<redacted>" else "null"
+        return "RouteSample(timestampMillis=$timestampMillis, vehicleId=$vehicleId, destination=$shownDestination, " +
             "milesToArrival=$milesToArrival, minutesToArrival=$minutesToArrival, " +
             "trafficDelayMinutes=$trafficDelayMinutes, energyAtArrivalPercent=$energyAtArrivalPercent)"
+    }
 }
