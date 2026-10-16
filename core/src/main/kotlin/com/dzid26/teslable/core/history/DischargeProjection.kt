@@ -102,7 +102,7 @@ fun dischargeProjection(
         fromSoc = fromSoc,
         projectedSoc = projectedSoc,
         lowSoc = if (hasBeam) (projectedSoc - reach).toFloat().coerceIn(0f, FULL_PERCENT) else null,
-        highSoc = if (hasBeam) (projectedSoc + reach).toFloat().coerceIn(0f, FULL_PERCENT) else null,
+        highSoc = if (hasBeam) (projectedSoc + reach).toFloat().coerceIn(0f, minOf(fromSoc.toFloat(), FULL_PERCENT)) else null,
     )
 }
 
