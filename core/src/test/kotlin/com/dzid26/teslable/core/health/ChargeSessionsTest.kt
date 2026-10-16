@@ -44,7 +44,6 @@ class ChargeSessionsTest {
         val estimate = EnergyDeltaEstimator.estimate(session.energyAddedKwh!!, session.startPercent, session.endPercent)!!
         assertEquals(75f, estimate.usableCapacityKwh, 0.001f)
         // The rated backbone agrees: 0.225 kWh per mile over a 333 mile full range.
-        assertEquals(75f, session.kwhPerMile!! * session.fullRangeMiles!!, 0.01f)
     }
 
     @Test
@@ -259,18 +258,11 @@ class ChargeSessionsTest {
     }
 
     @Test
-    fun `rated constants need miles and a usable swing`() {
+    fun `the rated constant needs miles`() {
         val session = ChargeSession(startPercent = 20f, endPercent = 60f, energyAddedKwh = 26.25f, milesAddedRated = 120f)
         assertEquals(0.21875f, session.kwhPerMile!!, 0.0001f)
-        assertEquals(300f, session.fullRangeMiles!!, 0.01f)
 
         val noMiles = session.copy(milesAddedRated = null)
         assertNull(noMiles.kwhPerMile)
-        assertNull(noMiles.fullRangeMiles)
-
-        // Under the 5% minimum swing the scale is unusable, though the constant stands.
-        val thin = session.copy(endPercent = 24f)
-        assertNull(thin.fullRangeMiles)
-        assertEquals(0.21875f, thin.kwhPerMile!!, 0.0001f)
     }
 }

@@ -436,6 +436,30 @@ class CardSnapshots {
         }
     }
 
+    @Test
+    fun screenCarDetailLearnt() {
+        // Three charge sessions and a climb through 40-70% read in quarter
+        // steps: the health card is past Learning and shows the fitted full
+        // range, capacity and the rated constant.
+        snapScreen("screen-car-detail-learnt") {
+            CarScreen(
+                state = learntState,
+                vehicle = vehicle,
+                advert = advert,
+                address = ADDRESS,
+                history = learntSamples,
+                driveHistory = emptyList(),
+                statusHistory = emptyList(),
+                onBack = {},
+                onPair = {},
+                onRefresh = {},
+                onOpenSettings = {},
+                onToggleTracking = {},
+                nowMillis = NOW,
+            )
+        }
+    }
+
     /**
      * One screen, two images: the full screen in NORMAL mode on a tall
      * S24-Ultra-like phone (Pixel 7 Pro preset: 1440x3120, 19.5:9
@@ -638,6 +662,25 @@ class CardSnapshots {
                 log = listOf(LogEntry(vehicleId = BLE_NAME, message = "$BLE_NAME · Connected · 62%")),
             )
 
+        // The live reading agrees with the learnt 270-mile scale: 62.4% is
+        // 168.5 rated miles, which the fit shows as 62.4% against the int 62.
+        private val learntState =
+            screenState.copy(
+                connections =
+                    mapOf(
+                        ADDRESS to
+                            liveConnection(
+                                readAt = NOW - FRESH_MINUTES * MINUTE,
+                                charge =
+                                    ChargeState(
+                                        battery_level = LIVE_PERCENT,
+                                        battery_range = 168.5f,
+                                        charge_limit_soc = CHARGE_LIMIT,
+                                    ),
+                            ),
+                    ),
+            )
+
         // Drained to 68%, then one backbone charge (68 → 78%, a 10% swing
         // with energy and rated-miles growth) so the health card renders
         // populated — usable capacity + full range from the session's rated
@@ -655,6 +698,35 @@ class CardSnapshots {
                 chargeSample(15L, 78, null, null, ChargingStateKind.Complete),
                 historySample(0L, 77),
             )
+
+        // A rated-range climb on a 270-mile scale (0.25% steps, the level
+        // rounds the true SOC) with three charges of 10% each: enough steps
+        // for the scale to pin and enough sessions to leave Learning.
+        private val learntSamples =
+            (0..120)
+                .map { step ->
+                    val soc = 40.1f + step * 0.25f
+                    BatterySample(
+                        timestampMillis = NOW - (200L - step) * MINUTE,
+                        batteryLevel = Math.round(soc),
+                        chargingState = null,
+                        chargeLimit = null,
+                        vehicleId = BLE_NAME,
+                        ratedRangeMiles = 2.7f * soc,
+                        readAtMillis = NOW - (200L - step) * MINUTE,
+                    )
+                }.plus(
+                    (0..2)
+                        .flatMap { n ->
+                            val base = 60L * (n + 2) * 24 // one charge each of the days before
+                            listOf(
+                                chargeSample(base + 30, 50, 0f, 0f, ChargingStateKind.Charging),
+                                chargeSample(base + 15, 55, 3.0f, 13.5f, ChargingStateKind.Charging),
+                                chargeSample(base, 60, 6.0f, 27f, ChargingStateKind.Charging),
+                                chargeSample(base - 5, 60, null, null, ChargingStateKind.Complete),
+                            )
+                        },
+                ).sortedBy { it.timestampMillis }
 
         // A charge five days before the newest reading, with nothing recorded
         // in between: the stats must name the charge (47%, five days ago) and
