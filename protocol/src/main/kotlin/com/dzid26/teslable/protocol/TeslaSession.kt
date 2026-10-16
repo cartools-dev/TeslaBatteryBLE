@@ -40,7 +40,7 @@ class TeslaSession private constructor(
                     Tag.TAG_SIGNATURE_TYPE.value,
                     byteArrayOf(SignatureType.SIGNATURE_TYPE_AES_GCM_PERSONALIZED.value.toByte()),
                 ).add(Tag.TAG_DOMAIN.value, byteArrayOf(domain.value.toByte()))
-                .add(Tag.TAG_PERSONALIZATION.value, vin.toByteArray(Charsets.US_ASCII))
+                .add(Tag.TAG_PERSONALIZATION.value, vin.encodeToByteArray())
                 .add(Tag.TAG_EPOCH.value, epoch)
                 .addUint32(Tag.TAG_EXPIRES_AT.value, expiresAt)
                 .addUint32(Tag.TAG_COUNTER.value, counter)
@@ -132,7 +132,7 @@ class TeslaSession private constructor(
                     Tag.TAG_SIGNATURE_TYPE.value,
                     byteArrayOf(SignatureType.SIGNATURE_TYPE_AES_GCM_RESPONSE.value.toByte()),
                 ).add(Tag.TAG_DOMAIN.value, byteArrayOf(domain.value.toByte()))
-                .add(Tag.TAG_PERSONALIZATION.value, vin.toByteArray(Charsets.US_ASCII))
+                .add(Tag.TAG_PERSONALIZATION.value, vin.encodeToByteArray())
                 .addUint32(Tag.TAG_COUNTER.value, gcmData.counter)
                 .addUint32(Tag.TAG_FLAGS.value, message.flags)
                 .add(Tag.TAG_REQUEST_HASH.value, requestId)
@@ -165,7 +165,7 @@ class TeslaSession private constructor(
             Metadata
                 .hmacSha256(TeslaCrypto.subkey(sessionKey, LABEL_SESSION_INFO))
                 .add(Tag.TAG_SIGNATURE_TYPE.value, byteArrayOf(SignatureType.SIGNATURE_TYPE_HMAC.value.toByte()))
-                .add(Tag.TAG_PERSONALIZATION.value, vin.toByteArray(Charsets.US_ASCII))
+                .add(Tag.TAG_PERSONALIZATION.value, vin.encodeToByteArray())
                 .add(Tag.TAG_CHALLENGE.value, challenge)
                 .checksum(encodedInfo)
 
