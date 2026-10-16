@@ -25,6 +25,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
@@ -44,6 +45,8 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import com.dzid26.teslable.BuildConfig
 import com.dzid26.teslable.EnergyPriceStore
+import com.dzid26.teslable.UnitPreference
+import com.dzid26.teslable.UnitStore
 import com.dzid26.teslable.ble.PairingKeyStore
 import com.dzid26.teslable.ble.Vehicle
 import kotlinx.coroutines.Dispatchers
@@ -68,6 +71,7 @@ fun SettingsScreen(
 
     val context = LocalContext.current
     val priceStore = remember { EnergyPriceStore(context) }
+    val unitStore = remember { UnitStore(context) }
 
     var backupEnabled by remember { mutableStateOf(keyStore.isBackupEnabled()) }
     // Android 11 and below always leave pairing_key.xml out of backups
@@ -132,6 +136,8 @@ fun SettingsScreen(
                     }
                 },
             )
+            Spacer(Modifier.height(16.dp))
+            UnitsCard(unitStore = unitStore)
             Spacer(Modifier.height(16.dp))
             EnergyPriceCard(priceStore = priceStore)
             Spacer(Modifier.height(16.dp))
@@ -241,6 +247,37 @@ private fun VehicleKeysCard(
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
+            }
+        }
+    }
+}
+
+/** Metric or imperial distances on the car view; display only, readings stay in miles underneath. */
+@Composable
+private fun UnitsCard(unitStore: UnitStore) {
+    var selected by remember { mutableStateOf(unitStore.preference()) }
+    Card(modifier = Modifier.fillMaxWidth()) {
+        Column(Modifier.padding(16.dp)) {
+            Text(
+                text = "Units",
+                style = MaterialTheme.typography.titleMedium,
+            )
+            Spacer(Modifier.height(8.dp))
+            UnitPreference.entries.forEach { option ->
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier =
+                        Modifier
+                            .fillMaxWidth()
+                            .clickable {
+                                selected = option
+                                unitStore.setPreference(option)
+                            },
+                ) {
+                    RadioButton(selected = selected == option, onClick = null)
+                    Spacer(Modifier.width(12.dp))
+                    Text(text = option.label, style = MaterialTheme.typography.bodyLarge)
+                }
             }
         }
     }
