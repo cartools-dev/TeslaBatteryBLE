@@ -56,6 +56,20 @@ class TeslaCryptoTest {
     }
 
     @Test
+    fun `generated keys are uncompressed points and agree on a session key`() {
+        repeat(50) {
+            val a = TeslaKeys.generate()
+            val b = TeslaKeys.generate()
+            assertEquals(65, a.publicKeyRaw.size)
+            assertEquals(0x04.toByte(), a.publicKeyRaw[0])
+            assertArrayEquals(
+                TeslaCrypto.sessionKey(a.privateKeyPkcs8, b.publicKeyRaw),
+                TeslaCrypto.sessionKey(b.privateKeyPkcs8, a.publicKeyRaw),
+            )
+        }
+    }
+
+    @Test
     fun `raw to public key rejects malformed points`() {
         val keyPair = TeslaKeys.generate()
         assertNotNull(TeslaCrypto.rawToPublicKey(keyPair.publicKeyRaw))

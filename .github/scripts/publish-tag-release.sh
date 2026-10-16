@@ -1,8 +1,9 @@
 #!/usr/bin/env bash
 # SPDX-License-Identifier: AGPL-3.0-only
 # Publish a tagged release: the changes since the previous tag plus the
-# screenshots captured by CI. Run from a checkout with the debug APK
-# built and the emulator screenshots captured into `screenshots/`.
+# screenshots captured by CI. Run from a checkout with the release APK
+# built and the Paparazzi screenshots named into `screenshots/`
+# (release-screenshots.sh).
 set -euo pipefail
 
 TAG="${RELEASE_TAG:-${GITHUB_REF_NAME:?GITHUB_REF_NAME or RELEASE_TAG is required}}"

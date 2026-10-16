@@ -13,7 +13,22 @@ data class ChargeProjection(
     val targetPercent: Int,
     /** Projected wall-clock time the limit is reached. */
     val completionMillis: Long,
-)
+    /**
+     * The earliest the limit could be reached if the whole remainder ran at
+     * the highest charge power seen this run; null until the supply varied.
+     */
+    val earliestMillis: Long? = null,
+    /** The latest, at the lowest charge power seen this run; null like [earliestMillis]. */
+    val latestMillis: Long? = null,
+) {
+    /** The earliest and latest completion together; null when there is no beam. */
+    val beam: Pair<Long, Long>?
+        get() {
+            val earliest = earliestMillis ?: return null
+            val latest = latestMillis ?: return null
+            return earliest to latest
+        }
+}
 
 /**
  * Projects when the charge limit is reached while charging.
@@ -31,6 +46,15 @@ fun chargeProjection(
     samples: List<BatterySample>,
     chargeRateMph: Float? = null,
     fullRangeMiles: Float? = null,
+): ChargeProjection? {
+    val projection = baseChargeProjection(samples, chargeRateMph, fullRangeMiles) ?: return null
+    return withPowerBeam(projection, samples)
+}
+
+private fun baseChargeProjection(
+    samples: List<BatterySample>,
+    chargeRateMph: Float?,
+    fullRangeMiles: Float?,
 ): ChargeProjection? {
     val last = samples.lastOrNull() ?: return null
     if (!last.isCharging) return null
@@ -75,6 +99,34 @@ fun chargeProjection(
         from = last,
         targetPercent = target,
         completionMillis = last.timestampMillis + remaining * elapsed / gained,
+    )
+}
+
+/**
+ * Adds the beam: the AC voltage moves around during a session, and at a
+ * fixed current the charge power follows it, so the remaining time at the
+ * run's mean voltage stretches to the time at its highest and lowest
+ * voltage. Needs at least two charging readings with a voltage, and a spread
+ * between them.
+ */
+private fun withPowerBeam(
+    projection: ChargeProjection,
+    samples: List<BatterySample>,
+): ChargeProjection {
+    val runStart = samples.indexOfLast { !it.isCharging } + 1
+    val volts =
+        samples
+            .subList(runStart, samples.size)
+            .mapNotNull { it.chargerVoltage?.takeIf { volts -> volts > 0 }?.toDouble() }
+    if (volts.size < 2) return projection
+    val mean = volts.average()
+    val min = volts.min()
+    val max = volts.max()
+    if (max <= min) return projection
+    val remaining = (projection.completionMillis - projection.from.timestampMillis).toDouble()
+    return projection.copy(
+        earliestMillis = projection.from.timestampMillis + (remaining * mean / max).toLong(),
+        latestMillis = projection.from.timestampMillis + (remaining * mean / min).toLong(),
     )
 }
 

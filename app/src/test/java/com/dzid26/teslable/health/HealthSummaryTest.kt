@@ -48,63 +48,63 @@ class HealthSummaryTest {
         assertEquals(HealthConfidence.LOW, healthSummary(threeSessions).confidence)
     }
 
+    /** A parked climb through 40-70% on a 300-mile scale (miles = 3 x SOC), read every 0.25%. */
+    private fun ladder(startMinute: Long = 1000): List<BatterySample> =
+        (0..120).map { step ->
+            val soc = 40.1f + step * 0.25f
+            sample(
+                startMinute + step,
+                Math.round(soc),
+                ratedRangeMiles = 3f * soc,
+            )
+        }
+
     @Test
     fun `capacity comes from the last charge session`() {
         val samples =
-            listOf(
-                sample(0, 20),
-                sample(10, 20, ChargingStateKind.Charging, energyAddedKwh = 0f),
-                sample(20, 40, ChargingStateKind.Charging, energyAddedKwh = 13.125f, milesAddedRated = 60f),
-                sample(30, 60, ChargingStateKind.Charging, energyAddedKwh = 26.25f, milesAddedRated = 120f),
-                sample(40, 60),
-            )
+            ladder() +
+                listOf(
+                    sample(2000, 20),
+                    sample(2010, 20, ChargingStateKind.Charging, energyAddedKwh = 0f),
+                    sample(2020, 40, ChargingStateKind.Charging, energyAddedKwh = 13.125f, milesAddedRated = 60f),
+                    sample(2030, 60, ChargingStateKind.Charging, energyAddedKwh = 26.25f, milesAddedRated = 120f),
+                    sample(2040, 60),
+                )
         val summary = healthSummary(samples)
         assertNotNull(summary.capacityKwh)
-        assertEquals(65.625f, summary.capacityKwh!!, 0.01f)
         assertEquals(40f, summary.capacitySwingPercent!!, 0.01f)
         // The backbone constant: 26.25 kWh over 120 rated miles.
         assertEquals(0.21875f, summary.ratedKwhPerMile!!, 0.0001f)
-        // Session scale: 120 miles over a 40% swing -> 300 miles full range.
-        assertEquals(300f, summary.fullRangeMiles!!, 0.01f)
+        // The fitted scale, not the session's swing, gives the full range.
+        assertEquals(300f, summary.fullRangeMiles!!, 2f)
+        assertEquals(0.21875f * summary.fullRangeMiles!!, summary.capacityKwh!!, 0.01f)
     }
 
     @Test
-    fun `the session scale wins over a single rated reading`() {
-        val samples =
-            listOf(
-                sample(0, 20),
-                sample(10, 20, ChargingStateKind.Charging, energyAddedKwh = 0f),
-                sample(20, 60, ChargingStateKind.Charging, energyAddedKwh = 26.25f, milesAddedRated = 120f),
-                sample(30, 60, ratedRangeMiles = 174f),
-            )
-        // The single reading extrapolates to 290 mi; the session's scale wins.
-        assertEquals(300f, healthSummary(samples).fullRangeMiles!!, 0.01f)
-    }
-
-    @Test
-    fun `full range extrapolates the rated range`() {
-        val summary = healthSummary(listOf(sample(0, 80, ratedRangeMiles = 216f)))
-        assertEquals(270f, summary.fullRangeMiles!!, 0.01f)
-        assertEquals(80f, summary.rangeSocPercent!!, 0.01f)
+    fun `full range comes from the fitted level steps`() {
+        val summary = healthSummary(ladder())
+        assertEquals(300f, summary.fullRangeMiles!!, 2f)
+        assertTrue(summary.fullRangeSteps > 20)
+        // A single reading is not a scale.
+        assertNull(healthSummary(listOf(sample(0, 80, ratedRangeMiles = 216f))).fullRangeMiles)
     }
 
     @Test
     fun `soh needs the factory baseline`() {
         val samples =
-            listOf(
-                sample(0, 20),
-                sample(10, 20, ChargingStateKind.Charging, energyAddedKwh = 0f),
-                sample(20, 60, ChargingStateKind.Charging, energyAddedKwh = 26.25f, milesAddedRated = 120f),
-                sample(30, 60),
-                sample(40, 80, ratedRangeMiles = 216f),
-            )
+            ladder() +
+                listOf(
+                    sample(2000, 20),
+                    sample(2010, 20, ChargingStateKind.Charging, energyAddedKwh = 0f),
+                    sample(2020, 60, ChargingStateKind.Charging, energyAddedKwh = 26.25f, milesAddedRated = 120f),
+                    sample(2030, 60),
+                )
         assertNull(healthSummary(samples).sohPercent)
 
-        val withBaselines = healthSummary(samples, epaRatedRangeMiles = 300f, newCapacityKwh = 75f)
+        val withBaselines = healthSummary(samples, epaRatedRangeMiles = 330f, newCapacityKwh = 75f)
         assertNotNull(withBaselines.sohPercent)
-        // Rated range: 216/0.8 = 270 -> 90%; energy delta: 65.625/75 = 87.5%.
-        assertEquals(88.75f, withBaselines.sohPercent!!, 0.01f)
-        assertEquals(2.5f, withBaselines.sohSpreadPoints!!, 0.01f)
+        // Fitted range: ~300/330 = ~90.9%; energy delta: 65.625/75 = 87.5%.
+        assertEquals(89.2f, withBaselines.sohPercent!!, 1.2f)
         assertTrue(!withBaselines.sohMismatch)
     }
 
@@ -118,8 +118,5 @@ class HealthSummaryTest {
                 ),
             )
         assertNotNull(smallSwing.qualityNote)
-
-        val lowSoc = healthSummary(listOf(sample(0, 20, ratedRangeMiles = 60f)))
-        assertNotNull(lowSoc.qualityNote)
     }
 }

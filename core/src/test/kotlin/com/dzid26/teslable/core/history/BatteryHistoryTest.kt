@@ -121,10 +121,4 @@ class BatteryHistoryTest {
         assertEquals(75f, stats.currentPercent)
         assertEquals(5f, stats.usedPercent)
     }
-
-    @Test
-    fun percentDerivesFromTheDisplayedLevel() {
-        assertEquals(78, sample(0, 78).percent)
-        assertEquals(77, sample(0, 78).copy(batteryLevel = 77).percent)
-    }
 }

@@ -62,7 +62,7 @@ A trustworthy shell around the existing protocol work. No user-facing features.
 - [x] CI gates: Android lint, app unit tests, concurrency cancel, least-privilege permissions, Dependabot.
 - [x] CI hardening: pinned action SHAs (#16); ktlint + detekt gates (#19).
 - [ ] Required checks on `main` (branch protection deliberately deferred while agents push directly).
-- [x] Release engineering: owner keystore + `SIGNING_*` CI secrets; tag releases ship `TeslaBatteryBLE-<tag>.apk`; every release captures screenshots from the simulated car in CI and attaches them as light and dark rows; release checklist documented; a draft "Next release" tracks un-released changes and is published by the tag release.
+- [x] Release engineering: owner keystore + `SIGNING_*` CI secrets; tag releases ship `TeslaBatteryBLE-<tag>.apk`; every release attaches the Paparazzi full-screen snapshots (cars list, car view, Settings; light and dark rows) and requires a green emulator smoke test for the tagged commit; release checklist documented; a draft "Next release" tracks un-released changes and is published by the tag release.
 - [x] Docs skeleton: `docs/adr/` (ADR-0001 moved), `docs/protocol/` (transport, session/pairing, domains).
 - [x] `AGENTS.md` for future sessions.
 
@@ -76,10 +76,11 @@ A trustworthy shell around the existing protocol work. No user-facing features.
 - [x] Fake BLE transport + simulated car (`FakeCarProtocol`, round-trip tests, CI demo run).
 - [ ] Controller state-machine tests.
 - [ ] Store tests.
-- [x] Compose UI smoke tests + screenshot tests in CI (2026-10-10): Paparazzi JVM snapshots of the cars-list and car-view cards (light + dark, 24 states) diffed before/after the pushed commit and posted on PRs (light by default, dark on demand); no committed goldens. The emulator stays for the release end-to-end capture and the demo smoke canary, plus a manual full-screen fallback on demand.
+- [x] Compose UI smoke tests + screenshot tests in CI (2026-10-10): Paparazzi JVM snapshots of the cars-list and car-view cards (light + dark, 24 states) diffed before/after the pushed commit and posted on PRs (light by default, dark on demand); no committed goldens. The emulator stays for the release smoke test only; release screenshots come from the Paparazzi full-screen snapshots.
 - [ ] Protocol vectors: nonce/metadata/counter/clock-skew edge cases (negative tests partly done in #41).
-- [x] Static analysis zero baseline: Android lint + ktlint + detekt in CI.
-- [x] R8 + resource shrinking and LeakCanary (debug only) added in #38, not yet exercised on a release build (#115). [ ] Baseline Profile.
+- [x] Static analysis: Android lint + ktlint + type-resolved detekt 2.x at default thresholds in CI; existing findings tracked in `detekt-baseline-*.xml` (#127).
+- [x] R8 + resource shrinking and LeakCanary (debug only) added in #38; the release build is smoke-tested on an emulator in CI (#115).
+- [ ] Baseline Profile.
 - [x] Screenshots in `website/images/` (captured in CI, shared by the README and the landing page).
 - [x] Social preview image rendered (`website/images/social-preview.png`); upload in GitHub repo settings pending (owner action).
 - [x] Website v1 on GitHub Pages (plain, install-focused landing: https://dzid26.github.io/TeslaBatteryBLE/).

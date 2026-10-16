@@ -168,4 +168,40 @@ class BatteryChartTest {
         assertEquals(85, projection.targetPercent)
         assertEquals((30 * 60_000L + 24 * 3_600_000L).toDouble(), projection.completionMillis.toDouble(), 30 * 60_000.0)
     }
+
+    private fun powered(
+        minutes: Long,
+        percent: Int,
+        volts: Int,
+    ) = sample(minutes, percent, ChargingStateKind.Charging, limit = 80)
+        .copy(chargerVoltage = volts)
+
+    @Test
+    fun beamSpansTheSupplyVoltageSeenThisRun() {
+        // 10% per 30 min; the supply sagged from 250 V to 230 V.
+        val samples =
+            listOf(
+                powered(0, 50, 250),
+                powered(15, 55, 240),
+                powered(30, 60, 230),
+            )
+        val projection = chargeProjection(samples)!!
+        // 20% left at 1% per 3 min = 60 min.
+        assertEquals(90 * 60_000L, projection.completionMillis)
+        // Mean 240 V against a 250 V peak and a 230 V floor: earlier and later than the line.
+        assertEquals(true, projection.earliestMillis!! < projection.completionMillis)
+        assertEquals(true, projection.latestMillis!! > projection.completionMillis)
+    }
+
+    @Test
+    fun noBeamWithoutAVaryingSupply() {
+        val samples =
+            listOf(
+                powered(0, 50, 240),
+                powered(30, 60, 240),
+            )
+        val projection = chargeProjection(samples)!!
+        assertNull(projection.earliestMillis)
+        assertNull(projection.latestMillis)
+    }
 }

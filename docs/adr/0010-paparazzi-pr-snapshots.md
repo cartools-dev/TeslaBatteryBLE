@@ -72,3 +72,31 @@ Date: 2026-10-10
 - Snapshots wrap the cards in a fixed `lightColorScheme` / `darkColorScheme`,
   never the dynamic color: Paparazzi has no real context for it, so dynamic
   color would render nondeterministically.
+
+## Update (2026-10-16): release screenshots from Paparazzi
+
+The release job no longer boots an emulator for screenshots. It records the
+Paparazzi full-screen snapshots (`release-screenshots.sh` names the cars
+list, car view and Settings, light and dark, like the release page, README
+and landing page expect) and publishes those. The end-to-end check that the
+shrunk release build reaches the simulated car stays on the emulator in the
+`Release smoke test` job on main; the release job only requires that check to
+have passed for the tagged commit (`require-smoke.sh`), so no release waits for
+a second emulator run.
+
+## Update (2026-10-16): manual emulator fallback removed
+
+`pr-screenshots.yml` and `pr-screenshots-comment.yml` are deleted: the
+Paparazzi full-screen snapshots cover the same screens on every UI pull
+request, the release smoke test and the demo canary cover the real app on an
+emulator, and the PR comment no longer points at the manual run. The shared
+`capture-screenshots.sh` stays for those two.
+
+## Update (2026-10-16): demo smoke canary removed
+
+`demo-smoke.yml` is deleted. It ran the same capture as the `Release smoke
+test` job on a daily schedule, but the smoke job already drives the simulated
+car on every app change on main, against the minified release build, so the
+canary only added a second emulator block and a stale comment about the
+windowed emulator default. `capture-screenshots.sh` stays for the smoke job and
+`tools/demo-emulator.sh`.

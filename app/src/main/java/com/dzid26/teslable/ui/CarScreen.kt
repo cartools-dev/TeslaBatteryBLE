@@ -57,6 +57,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import com.dzid26.teslable.EnergyPriceStore
 import com.dzid26.teslable.ble.BatteryPercent
 import com.dzid26.teslable.ble.BleUiState
 import com.dzid26.teslable.ble.ConnectionDisplay
@@ -73,6 +74,7 @@ import com.dzid26.teslable.core.history.BatterySample
 import com.dzid26.teslable.core.history.ChargeProjection
 import com.dzid26.teslable.core.history.DischargeProjection
 import com.dzid26.teslable.core.history.DriveSample
+import com.dzid26.teslable.core.history.FullRangeScale
 import com.dzid26.teslable.core.history.FullRangeScaleEstimator
 import com.dzid26.teslable.core.history.HistoryRange
 import com.dzid26.teslable.core.history.StatusSample
@@ -80,6 +82,7 @@ import com.dzid26.teslable.core.history.chargeProjection
 import com.dzid26.teslable.core.history.chargeStats
 import com.dzid26.teslable.core.history.compactDuration
 import com.dzid26.teslable.core.history.dischargeProjection
+import com.dzid26.teslable.core.history.soc
 import com.dzid26.teslable.core.history.statusDurations
 import com.dzid26.teslable.core.history.within
 import com.dzid26.teslable.core.protocol.ChargingStateKind
@@ -216,7 +219,10 @@ internal fun CarScreen(
                         .padding(16.dp),
                 verticalArrangement = Arrangement.spacedBy(16.dp),
             ) {
+                val context = LocalContext.current
+                val pricePerKwh = remember { EnergyPriceStore(context).pricePerKwh() }
                 HeroCard(
+                    pricePerKwh = pricePerKwh,
                     connection = connection,
                     advert = advert,
                     vehicle = vehicle,
@@ -249,6 +255,8 @@ internal fun HeroCard(
     nowMillis: Long = rememberNowMillis(connection?.chargeAtMillis),
     // Injectable for the Paparazzi snapshots; null keeps the timed spinner.
     spinnerOverride: Boolean? = null,
+    // The owner's price per kWh, for the session cost; null shows none.
+    pricePerKwh: Float? = null,
 ) {
     val context = LocalContext.current
     val display = connectionDisplay(connection, advert, vehicle = vehicle)
@@ -257,6 +265,9 @@ internal fun HeroCard(
     // is the car?" at a glance; the caption makes its age explicit.
     val lastKnown = history.lastOrNull()
     val reading = batteryPercent(connection, lastKnown, nowMillis)
+    // Rated miles are the internal unit; SOC is derived at the edge from the
+    // fitted scale (null until it pins, then the int level shows).
+    val scale = remember(history) { FullRangeScaleEstimator.estimate(history) }
     val durations = remember(statusHistory, nowMillis) { statusDurations(statusHistory, vehicle?.bleName.orEmpty(), nowMillis) }
     val keySlot = connection?.keySlot ?: vehicle?.keySlot
     val pairing = connection?.pairing ?: PairingPhase.IDLE
@@ -320,12 +331,13 @@ internal fun HeroCard(
                     reading = reading,
                     live = charge?.battery_level != null,
                     rangeMiles = charge?.battery_range ?: lastKnown?.ratedRangeMiles,
+                    scale = scale,
                     stateText = display.stateText,
                     connection = connection,
                     nowMillis = nowMillis,
                 )
                 Spacer(Modifier.height(8.dp))
-                ChargeDetails(charge)
+                ChargeDetails(charge, pricePerKwh)
             }
             // The card's top-right corner, clear of the title and the pill: a spinner while a
             // read is in flight.
@@ -355,13 +367,17 @@ private fun heroStatusText(
 
 /** Charge limit · AC voltage and current · charging state, as one quiet line under the hero. */
 @Composable
-private fun ChargeDetails(charge: ChargeState?) {
+private fun ChargeDetails(
+    charge: ChargeState?,
+    pricePerKwh: Float?,
+) {
     if (charge == null) return
     val details =
         buildList {
             charge.charge_limit_soc?.let { add("Charge limit\u00A0$it%") }
             chargerElectricalText(charge)?.let { add(it) }
             charge.chargingStateKind?.let { add(chargingStateText(it)) }
+            sessionCostText(charge, pricePerKwh)?.let { add(it) }
         }
     if (details.isNotEmpty()) {
         Text(
@@ -402,6 +418,7 @@ private fun SocBlock(
     reading: BatteryPercent?,
     live: Boolean,
     rangeMiles: Float?,
+    scale: FullRangeScale?,
     stateText: String,
     connection: TeslaConnection?,
     nowMillis: Long,
@@ -414,7 +431,7 @@ private fun SocBlock(
     // The number, the "%", and the reading's age share one text baseline.
     Row(verticalAlignment = Alignment.Bottom) {
         Text(
-            text = "${reading.value}",
+            text = scale?.socPercent(rangeMiles)?.let { "%.1f".format(it) } ?: "${reading.value}",
             style = MaterialTheme.typography.displayLarge,
             fontWeight = FontWeight.SemiBold,
             color = color,
@@ -634,11 +651,8 @@ internal fun BatteryHistoryCard(
                     range.durationMillis
                         ?: (visible.last().timestampMillis - visible.first().timestampMillis)
                             .coerceAtLeast(1L)
-                val charge =
-                    chargeProjection(
-                        samples,
-                        fullRangeMiles = FullRangeScaleEstimator.estimate(samples)?.fullRangeMiles,
-                    )
+                val scale = FullRangeScaleEstimator.estimate(samples)
+                val charge = chargeProjection(samples, fullRangeMiles = scale?.fullRangeMiles)
                 // Parked drain: the drive samples' odometer marks the
                 // stretches the car moved. Shown next to the charge
                 // projection too: where the battery heads if unplugged now.
@@ -654,6 +668,7 @@ internal fun BatteryHistoryCard(
                     samples = visible,
                     charge = charge,
                     discharge = discharge,
+                    scale = scale,
                     windowStart =
                         range.durationMillis?.let { now - it }
                             ?: visible.first().timestampMillis,
@@ -669,7 +684,11 @@ internal fun BatteryHistoryCard(
                     Text(
                         text =
                             "Charging · projected ${it.targetPercent}% around " +
-                                formatTime(it.completionMillis, showDate = true),
+                                formatTime(it.completionMillis, showDate = true) +
+                                it.beam
+                                    ?.let { (earliest, latest) ->
+                                        " (${formatTime(earliest, showDate = false)}–${formatTime(latest, showDate = false)})"
+                                    }.orEmpty(),
                         style = MaterialTheme.typography.bodySmall,
                         color = chargingChartColor,
                     )
@@ -711,6 +730,7 @@ private fun BatteryChart(
     samples: List<BatterySample>,
     charge: ChargeProjection?,
     discharge: DischargeProjection?,
+    scale: FullRangeScale?,
     windowStart: Long,
     windowEnd: Long,
     showDate: Boolean,
@@ -734,10 +754,10 @@ private fun BatteryChart(
         val height = size.height - top - bottom
         if (width <= 0f || height <= 0f) return@Canvas
 
-        val minPercent = minOf(samples.minOf { it.percent }, discharge?.projectedPercent ?: 100)
-        val maxPercent = maxOf(samples.maxOf { it.percent }, charge?.targetPercent ?: 0)
-        var yMin = ((minPercent - 2).coerceAtLeast(0) / 5) * 5
-        var yMax = (((maxPercent + 2).coerceAtMost(100) + 4) / 5) * 5
+        val minPercent = minOf(samples.minOf { it.soc(scale) }, (discharge?.projectedPercent ?: 100).toFloat())
+        val maxPercent = maxOf(samples.maxOf { it.soc(scale) }, (charge?.targetPercent ?: 0).toFloat())
+        var yMin = ((minPercent - 2).toInt().coerceAtLeast(0) / 5) * 5
+        var yMax = (((maxPercent + 2).toInt().coerceAtMost(100) + 4) / 5) * 5
         if (yMax <= yMin) {
             yMin = (yMin - 5).coerceAtLeast(0)
             yMax = (yMin + 5).coerceAtMost(100)
@@ -746,7 +766,9 @@ private fun BatteryChart(
 
         fun x(timestampMillis: Long): Float = left + ((timestampMillis - windowStart).toFloat() / span).coerceIn(0f, 1f) * width
 
-        fun y(percent: Int): Float = top + height - ((percent - yMin).toFloat() / (yMax - yMin)) * height
+        fun y(percent: Float): Float = top + height - ((percent - yMin) / (yMax - yMin)) * height
+
+        fun y(percent: Int): Float = y(percent.toFloat())
 
         listOf(yMin, (yMin + yMax) / 2, yMax).forEach { value ->
             val gridY = y(value)
@@ -773,8 +795,8 @@ private fun BatteryChart(
             val current = samples[index]
             drawLine(
                 color = if (current.isCharging) chargingColor else lineColor,
-                start = Offset(x(previous.timestampMillis), y(previous.percent)),
-                end = Offset(x(current.timestampMillis), y(current.percent)),
+                start = Offset(x(previous.timestampMillis), y(previous.soc(scale))),
+                end = Offset(x(current.timestampMillis), y(current.soc(scale))),
                 strokeWidth = 1.5.dp.toPx(),
                 cap = StrokeCap.Round,
             )
@@ -786,22 +808,17 @@ private fun BatteryChart(
             drawCircle(
                 color = if (sample.isCharging) chargingColor else lineColor,
                 radius = 2.dp.toPx(),
-                center = Offset(x(sample.timestampMillis), y(sample.percent)),
+                center = Offset(x(sample.timestampMillis), y(sample.soc(scale))),
             )
         }
 
         charge?.let { target ->
-            val end =
-                Offset(
-                    x(target.completionMillis),
-                    y(target.targetPercent),
-                )
+            // The beam: where the limit lands if the supply voltage stayed at the
+            // best or worst it showed this run.
+            val (line, beam) = chargeProjectionPaths(target, windowEnd, ::x) { percent -> y(percent) }
+            beam?.let { drawPath(path = it, color = chargingColor.copy(alpha = 0.25f)) }
             drawPath(
-                path =
-                    Path().apply {
-                        moveTo(x(target.from.timestampMillis), y(target.from.percent))
-                        lineTo(end.x, end.y)
-                    },
+                path = line,
                 color = chargingColor.copy(alpha = 0.65f),
                 style =
                     Stroke(
@@ -820,7 +837,7 @@ private fun BatteryChart(
             drawPath(
                 path =
                     Path().apply {
-                        moveTo(x(target.from.timestampMillis), y(target.from.percent))
+                        moveTo(x(target.from.timestampMillis), y(target.from.soc(scale)))
                         lineTo(end.x, end.y)
                     },
                 color = lineColor.copy(alpha = if (charge != null) 0.35f else 0.65f),
@@ -843,6 +860,49 @@ private fun BatteryChart(
             topLeft = Offset(left + width - endLabel.size.width, size.height - endLabel.size.height),
         )
     }
+}
+
+/**
+ * The projected line from the latest sample to the limit, and the beam's wedge
+ * to the earliest and latest completion (null without a beam). A completion
+ * past the chart's right edge is cut where its line crosses the edge, so the
+ * line and the wedge keep their slope instead of flattening onto the edge.
+ */
+private fun chargeProjectionPaths(
+    projection: ChargeProjection,
+    windowEnd: Long,
+    x: (Long) -> Float,
+    y: (Float) -> Float,
+): Pair<Path, Path?> {
+    val fromMillis = projection.from.timestampMillis
+    val fromPercent = projection.from.percent
+
+    // A completion past the chart's right edge would flatten the wedge onto the
+    // edge, so cut each side where it crosses the edge instead.
+    fun end(completionMillis: Long): Pair<Float, Float> {
+        if (completionMillis <= windowEnd) return x(completionMillis) to y(projection.targetPercent.toFloat())
+        val share = (windowEnd - fromMillis).toFloat() / (completionMillis - fromMillis)
+        // Not rounded: far from the limit the two sides differ by well under a point.
+        val percentAtEdge = fromPercent + (projection.targetPercent - fromPercent) * share
+        return x(windowEnd) to y(percentAtEdge)
+    }
+    val (lineX, lineY) = end(projection.completionMillis)
+    val line =
+        Path().apply {
+            moveTo(x(fromMillis), y(fromPercent.toFloat()))
+            lineTo(lineX, lineY)
+        }
+    val (earliest, latest) = projection.beam ?: return line to null
+    val (earlyX, earlyY) = end(earliest)
+    val (lateX, lateY) = end(latest)
+    val beam =
+        Path().apply {
+            moveTo(x(fromMillis), y(fromPercent.toFloat()))
+            lineTo(earlyX, earlyY)
+            lineTo(lateX, lateY)
+            close()
+        }
+    return line to beam
 }
 
 private fun HistoryRange.label(): String =

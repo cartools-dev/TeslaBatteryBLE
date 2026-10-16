@@ -194,6 +194,31 @@ class CardSnapshots {
     }
 
     @Test
+    fun heroCardChargeCost() {
+        val charging =
+            liveCharge.copy(
+                charging_state = ChargeState.ChargingState(Charging = Void()),
+                charger_voltage = 240,
+                charger_actual_current = 16,
+                charge_current_request = 32,
+                charge_energy_added = 12.5f,
+            )
+        // The cost is formatted in the default locale; pin it so the render does not depend on the machine.
+        java.util.Locale.setDefault(java.util.Locale.US)
+        snapCard("hero-card_charge-cost") {
+            HeroCard(
+                connection = liveConnection(readAt = NOW - FRESH_MINUTES * MINUTE, charge = charging),
+                advert = advert,
+                vehicle = vehicle,
+                history = emptyList(),
+                statusHistory = emptyList(),
+                nowMillis = NOW,
+                pricePerKwh = 0.30f,
+            )
+        }
+    }
+
+    @Test
     fun heroCardStale() {
         snapCard("hero-card_stale") {
             HeroCard(
@@ -321,6 +346,20 @@ class CardSnapshots {
     }
 
     @Test
+    fun historyCardChargingSixHours() {
+        // The short range puts the chart's right edge only 3 h ahead, so the beam is
+        // cut near the line's start: it must stay a visible sliver, not round away.
+        snapCard("history-card_charging-6h") {
+            BatteryHistoryCard(
+                samples = chargingSamples,
+                drives = parkedSamples.map { parkedDrive(it) },
+                nowMillis = NOW,
+                initialRange = HistoryRange.SIX_HOURS,
+            )
+        }
+    }
+
+    @Test
     fun historyCardChargingStalledLevel() {
         // The whole-number level has not ticked for a while but the rated range
         // climbs: the charge line still draws, from the miles.
@@ -419,6 +458,30 @@ class CardSnapshots {
         )
         paparazzi.snapshot(name + "_jelly_light") {
             CardFrame(darkTheme = false, content = content)
+        }
+    }
+
+    @Test
+    fun screenCarDetailLearnt() {
+        // Three charge sessions and a climb through 40-70% read in quarter
+        // steps: the health card is past Learning and shows the fitted full
+        // range, capacity and the rated constant.
+        snapScreen("screen-car-detail-learnt") {
+            CarScreen(
+                state = learntState,
+                vehicle = vehicle,
+                advert = advert,
+                address = ADDRESS,
+                history = learntSamples,
+                driveHistory = emptyList(),
+                statusHistory = emptyList(),
+                onBack = {},
+                onPair = {},
+                onRefresh = {},
+                onOpenSettings = {},
+                onToggleTracking = {},
+                nowMillis = NOW,
+            )
         }
     }
 
@@ -546,20 +609,21 @@ class CardSnapshots {
                 projectionSample(0L, 55, charging = false, ratedMiles = 165f),
             )
 
+        // The AC supply sagging and recovering around 240 V: the beam around the green line.
         private val chargingSamples =
             parkedSamples.dropLast(1) +
                 listOf(
-                    projectionSample(60L, 55, charging = true, ratedMiles = 165f),
-                    projectionSample(30L, 58, charging = true, ratedMiles = 174f),
-                    projectionSample(0L, 61, charging = true, ratedMiles = 183f),
+                    projectionSample(60L, 55, charging = true, ratedMiles = 165f).copy(chargerVoltage = 245),
+                    projectionSample(30L, 58, charging = true, ratedMiles = 174f).copy(chargerVoltage = 215),
+                    projectionSample(0L, 61, charging = true, ratedMiles = 183f).copy(chargerVoltage = 232),
                 )
 
         private val stalledSamples =
             parkedSamples.dropLast(1) +
                 listOf(
-                    projectionSample(30L, 55, charging = true, ratedMiles = 165f),
-                    projectionSample(15L, 55, charging = true, ratedMiles = 166.5f),
-                    projectionSample(0L, 55, charging = true, ratedMiles = 168f),
+                    projectionSample(30L, 55, charging = true, ratedMiles = 165f).copy(chargerVoltage = 215),
+                    projectionSample(15L, 55, charging = true, ratedMiles = 166.5f).copy(chargerVoltage = 245),
+                    projectionSample(0L, 55, charging = true, ratedMiles = 168f).copy(chargerVoltage = 232),
                 )
 
         private fun chargeSample(
@@ -598,6 +662,8 @@ class CardSnapshots {
                 address = ADDRESS,
                 gattName = "Model 3",
                 displayName = "Model 3",
+                // Enrolled, so the app-key card stays out of the car screen.
+                keySlot = 3,
             )
         private val advert = TeslaAdvert(name = BLE_NAME, address = ADDRESS, rssi = -70)
 
@@ -623,6 +689,25 @@ class CardSnapshots {
                 log = listOf(LogEntry(vehicleId = BLE_NAME, message = "$BLE_NAME · Connected · 62%")),
             )
 
+        // The live reading agrees with the learnt 270-mile scale: 62.4% is
+        // 168.5 rated miles, which the fit shows as 62.4% against the int 62.
+        private val learntState =
+            screenState.copy(
+                connections =
+                    mapOf(
+                        ADDRESS to
+                            liveConnection(
+                                readAt = NOW - FRESH_MINUTES * MINUTE,
+                                charge =
+                                    ChargeState(
+                                        battery_level = LIVE_PERCENT,
+                                        battery_range = 168.5f,
+                                        charge_limit_soc = CHARGE_LIMIT,
+                                    ),
+                            ),
+                    ),
+            )
+
         // Drained to 68%, then one backbone charge (68 → 78%, a 10% swing
         // with energy and rated-miles growth) so the health card renders
         // populated — usable capacity + full range from the session's rated
@@ -640,6 +725,35 @@ class CardSnapshots {
                 chargeSample(15L, 78, null, null, ChargingStateKind.Complete),
                 historySample(0L, 77),
             )
+
+        // A rated-range climb on a 270-mile scale (0.25% steps, the level
+        // rounds the true SOC) with three charges of 10% each: enough steps
+        // for the scale to pin and enough sessions to leave Learning.
+        private val learntSamples =
+            (0..120)
+                .map { step ->
+                    val soc = 40.1f + step * 0.25f
+                    BatterySample(
+                        timestampMillis = NOW - (200L - step) * MINUTE,
+                        batteryLevel = Math.round(soc),
+                        chargingState = null,
+                        chargeLimit = null,
+                        vehicleId = BLE_NAME,
+                        ratedRangeMiles = 2.7f * soc,
+                        readAtMillis = NOW - (200L - step) * MINUTE,
+                    )
+                }.plus(
+                    (0..2)
+                        .flatMap { n ->
+                            val base = 60L * (n + 2) * 24 // one charge each of the days before
+                            listOf(
+                                chargeSample(base + 30, 50, 0f, 0f, ChargingStateKind.Charging),
+                                chargeSample(base + 15, 55, 3.0f, 13.5f, ChargingStateKind.Charging),
+                                chargeSample(base, 60, 6.0f, 27f, ChargingStateKind.Charging),
+                                chargeSample(base - 5, 60, null, null, ChargingStateKind.Complete),
+                            )
+                        },
+                ).sortedBy { it.timestampMillis }
 
         // A charge five days before the newest reading, with nothing recorded
         // in between: the stats must name the charge (47%, five days ago) and

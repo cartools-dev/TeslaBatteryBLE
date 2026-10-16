@@ -1,0 +1,93 @@
+<?xml version="1.0" ?>
+<SmellBaseline>
+  <ManuallySuppressedIssues/>
+  <CurrentIssues>
+    <ID>CyclomaticComplexMethod:CarScreen.kt:@Composable private fun BatteryChart</ID>
+    <ID>CyclomaticComplexMethod:CarScreen.kt:@OptIn(ExperimentalMaterial3Api::class) @Composable internal fun CarScreen</ID>
+    <ID>CyclomaticComplexMethod:HealthSummary.kt:fun healthSummary: HealthSummary</ID>
+    <ID>CyclomaticComplexMethod:MainScreen.kt:@Composable fun MainScreen</ID>
+    <ID>CyclomaticComplexMethod:TeslaBleController.kt:TeslaBleController$fun ensureConnected</ID>
+    <ID>CyclomaticComplexMethod:TeslaBleController.kt:TeslaBleController$private fun onDevicesFound</ID>
+    <ID>CyclomaticComplexMethod:TeslaBleController.kt:TeslaBleController.VehicleLink$private fun handleEncryptedResponse: Boolean</ID>
+    <ID>ImplicitDefaultLocale:CarScreen.kt:"%.1f".format(it)</ID>
+    <ID>ImplicitDefaultLocale:CarScreen.kt:"%.1f".format(it.percentPerHour * 24)</ID>
+    <ID>InjectDispatcher:HistoryStore.kt:HistoryStore$IO</ID>
+    <ID>InjectDispatcher:SettingsScreen.kt:IO</ID>
+    <ID>LongMethod:BatteryHealthCard.kt:@Composable internal fun BatteryHealthCard</ID>
+    <ID>LongMethod:CarScreen.kt:@Composable internal fun BatteryHistoryCard</ID>
+    <ID>LongMethod:CarScreen.kt:@Composable internal fun HeroCard</ID>
+    <ID>LongMethod:CarScreen.kt:@Composable private fun BatteryChart</ID>
+    <ID>LongMethod:CarScreen.kt:@OptIn(ExperimentalMaterial3Api::class) @Composable internal fun CarScreen</ID>
+    <ID>LongMethod:MainActivity.kt:MainActivity$override fun onCreate</ID>
+    <ID>LongMethod:MainScreen.kt:@Composable fun MainScreen</ID>
+    <ID>LongMethod:MainScreen.kt:@Composable internal fun VehicleCard</ID>
+    <ID>LongMethod:MainScreen.kt:@OptIn(ExperimentalMaterial3Api::class) @Composable internal fun ConnectionsScreen</ID>
+    <ID>LongMethod:PermissionWizard.kt:@Composable fun PermissionWizardPage</ID>
+    <ID>LongMethod:PermissionWizardHost.kt:@Composable internal fun PermissionWizardHost</ID>
+    <ID>LongMethod:SettingsScreen.kt:@Composable private fun VehicleKeysCard</ID>
+    <ID>LongMethod:SettingsScreen.kt:@OptIn(ExperimentalMaterial3Api::class) @Composable fun SettingsScreen</ID>
+    <ID>LongParameterList:CarScreen.kt:@Composable internal fun HeroCard</ID>
+    <ID>LongParameterList:CarScreen.kt:@Composable private fun BatteryChart</ID>
+    <ID>LongParameterList:CarScreen.kt:@Composable private fun SocBlock</ID>
+    <ID>LongParameterList:CarScreen.kt:@OptIn(ExperimentalMaterial3Api::class) @Composable internal fun CarScreen</ID>
+    <ID>LongParameterList:MainScreen.kt:@Composable fun MainScreen</ID>
+    <ID>LongParameterList:MainScreen.kt:@Composable internal fun VehicleCard</ID>
+    <ID>LongParameterList:MainScreen.kt:@Composable private fun VehicleList</ID>
+    <ID>LongParameterList:MainScreen.kt:@OptIn(ExperimentalMaterial3Api::class) @Composable internal fun ConnectionsScreen</ID>
+    <ID>LongParameterList:PermissionWizard.kt:@Composable fun PermissionWizardPage</ID>
+    <ID>LongParameterList:SettingsScreen.kt:@OptIn(ExperimentalMaterial3Api::class) @Composable fun SettingsScreen</ID>
+    <ID>LoopWithTooManyJumpStatements:TeslaBleController.kt:TeslaBleController$for</ID>
+    <ID>LoopWithTooManyJumpStatements:VehicleStore.kt:VehicleStore$for</ID>
+    <ID>MagicNumber:BatteryHealthCard.kt:100</ID>
+    <ID>MagicNumber:BatteryHealthCard.kt:100f</ID>
+    <ID>MagicNumber:BatteryHealthCard.kt:50</ID>
+    <ID>MagicNumber:BleModels.kt:24</ID>
+    <ID>MagicNumber:BleModels.kt:60</ID>
+    <ID>MagicNumber:BleTrackingService.kt:BleTrackingService$0xFFFF</ID>
+    <ID>MagicNumber:CarScreen.kt:100</ID>
+    <ID>MagicNumber:CarScreen.kt:24</ID>
+    <ID>MagicNumber:CarScreen.kt:5</ID>
+    <ID>MagicNumber:CarScreen.kt:60</ID>
+    <ID>MagicNumber:MainScreen.kt:100</ID>
+    <ID>MagicNumber:MainScreen.kt:50</ID>
+    <ID>MagicNumber:PairingKeyStore.kt:PairingKeyStore$4</ID>
+    <ID>MagicNumber:RefreshPill.kt:50</ID>
+    <ID>MagicNumber:SettingsScreen.kt:0xFF</ID>
+    <ID>MagicNumber:SettingsScreen.kt:16</ID>
+    <ID>MagicNumber:SettingsScreen.kt:8</ID>
+    <ID>MagicNumber:TeslaBleController.kt:TeslaBleController$0xFF</ID>
+    <ID>MagicNumber:TeslaBleController.kt:TeslaBleController$16</ID>
+    <ID>ObjectLiteralToLambda:TeslaBleController.kt:TeslaBleController.VehicleLink$object : Runnable { override fun run() { if (!_state.value.trackingEnabled) return if (phase == ConnectionPhase.READY || phase == ConnectionPhase.CONNECTING) return log("${name()}: reconnecting (attempt ${reconnectAttempts + 1})") connect() } }</ID>
+    <ID>ReturnCount:BleLogs.kt:VehicleLogs$private fun vehicleIdOf: String?</ID>
+    <ID>ReturnCount:BleTrackingService.kt:BleTrackingService$private fun notificationText: CharSequence</ID>
+    <ID>ReturnCount:BleTrackingService.kt:BleTrackingService$private fun shouldPost: Boolean</ID>
+    <ID>ReturnCount:PairingKeyStore.kt:PairingKeyStore$private fun loadInternal: TeslaKeyPair?</ID>
+    <ID>ReturnCount:ReadInFlight.kt:ReadInFlight$fun expire: Boolean</ID>
+    <ID>ReturnCount:TeslaBleController.kt:TeslaBleController$fun ensureConnected</ID>
+    <ID>ReturnCount:TeslaBleController.kt:TeslaBleController$private fun startDiscovery</ID>
+    <ID>ReturnCount:TeslaBleController.kt:TeslaBleController.VehicleLink$fun connect</ID>
+    <ID>ReturnCount:TeslaBleController.kt:TeslaBleController.VehicleLink$fun onMessage</ID>
+    <ID>ReturnCount:TeslaBleController.kt:TeslaBleController.VehicleLink$private fun handleEncryptedResponse: Boolean</ID>
+    <ID>ReturnCount:TeslaBleController.kt:TeslaBleController.VehicleLink$private fun sendAuthenticated: Boolean</ID>
+    <ID>ReturnCount:TeslaGattClient.kt:TeslaGattClient$@SuppressLint("MissingPermission") private fun processWriteQueue</ID>
+    <ID>ReturnCount:TeslaGattClient.kt:TeslaGattClient$@SuppressLint("MissingPermission") private fun subscribe</ID>
+    <ID>ReturnCount:TeslaGattClient.kt:TeslaGattClient$override fun send: Boolean</ID>
+    <ID>ReturnCount:TeslaScanner.kt:TeslaScanner$@SuppressLint("MissingPermission") fun start</ID>
+    <ID>ReturnCount:VehicleStore.kt:VehicleStore$fun load: List&lt;Vehicle&gt;</ID>
+    <ID>TooManyFunctions:BleModels.kt:com.dzid26.teslable.ble.BleModels.kt</ID>
+    <ID>TooManyFunctions:BleTrackingService.kt:BleTrackingService : Service</ID>
+    <ID>TooManyFunctions:CarScreen.kt:com.dzid26.teslable.ui.CarScreen.kt</ID>
+    <ID>TooManyFunctions:HistoryStore.kt:HistoryStore</ID>
+    <ID>TooManyFunctions:MainScreen.kt:com.dzid26.teslable.ui.MainScreen.kt</ID>
+    <ID>TooManyFunctions:PairingKeyStore.kt:PairingKeyStore</ID>
+    <ID>TooManyFunctions:TeslaBleController.kt:TeslaBleController</ID>
+    <ID>TooManyFunctions:TeslaBleController.kt:TeslaBleController$VehicleLink</ID>
+    <ID>UnnecessarySafeCall:MainScreen.kt:row.connection?.sessions</ID>
+    <ID>UnsafeCallOnNullableType:HealthSummary.kt:session.energyAddedKwh!!</ID>
+    <ID>UnusedVariable:TeslaBleController.kt:TeslaBleController$val vehicle = vehicles[name]</ID>
+    <ID>UseOrEmpty:InfotainmentStateReplies.kt:InfotainmentStateReplies$runCatching { TeslaCommands.parseActionStatus(plaintext) }.getOrNull()?.let { " ($it)" } ?: ""</ID>
+    <ID>UseOrEmpty:MainScreen.kt:vehicle.vin ?: ""</ID>
+    <ID>UseOrEmpty:TeslaBleController.kt:TeslaBleController.&lt;no name provided&gt;$demoCar()?.adverts() ?: emptyList()</ID>
+    <ID>UseOrEmpty:TeslaBleController.kt:TeslaBleController.VehicleLink$status?.let { " ($it)" } ?: ""</ID>
+  </CurrentIssues>
+</SmellBaseline>

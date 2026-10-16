@@ -264,9 +264,15 @@ class PairingFlow(
     }
 
     private fun handlePairingResponse(message: ByteArray): Boolean {
+        // Any VCSEC reply can carry a command status (an error to a status request, say);
+        // it is an add-key result only while an enrollment waits for one.
         val pairing =
-            runCatching { TeslaPairing.parseAddKeyResponse(message) }.getOrNull()
-                ?: return false
+            if (phase in AWAITING_ADD_KEY_RESULT) {
+                runCatching { TeslaPairing.parseAddKeyResponse(message) }.getOrNull()
+            } else {
+                null
+            }
+        if (pairing == null) return false
         host.cancel(PairingTimer.RESPONSE_TIMEOUT)
         val newPhase =
             when (pairing) {
@@ -389,6 +395,9 @@ class PairingFlow(
         const val WHITELIST_MAX_ATTEMPTS = 30
     }
 }
+
+private val AWAITING_ADD_KEY_RESULT =
+    setOf(PairingPhase.CHECKING, PairingPhase.SENDING, PairingPhase.WAITING_FOR_CARD)
 
 private fun occupiedSlots(slotMask: Int): List<Int> = (0 until Int.SIZE_BITS).filter { (slotMask ushr it) and 1 == 1 }
 

@@ -127,6 +127,13 @@ android {
 
     sourceSets {
         if (ciDebugBuild) getByName("debug").res.srcDir("src/pr/res")
+        // The smoke build carries the simulated car from the debug source set,
+        // so the emulator can drive the shrunk protocol and UI code end to end.
+        maybeCreate("smoke").apply {
+            // Kotlin sources: AGP built-in Kotlin compiles kotlin dirs, not extra java dirs.
+            kotlin.srcDir("src/debug/java")
+            manifest.srcFile("src/debug/AndroidManifest.xml")
+        }
     }
 
     buildTypes {
@@ -147,6 +154,17 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro",
             )
+        }
+        // The release build (R8, resource shrinking, not debuggable) plus the
+        // simulated car, for the emulator smoke test in CI:
+        // `assembleSmoke -PdemoCar=true`. Its own application ID and the debug
+        // key keep it apart from the real app; it is never published.
+        create("smoke") {
+            initWith(getByName("release"))
+            applicationIdSuffix = ".smoke"
+            manifestPlaceholders["appLabel"] = "TeslaBatteryBLE smoke"
+            signingConfig = signingConfigs.getByName("debug")
+            matchingFallbacks += "release"
         }
     }
 
@@ -195,4 +213,5 @@ tasks.withType<org.jlleitschuh.gradle.ktlint.tasks.BaseKtLintCheckTask>().config
 detekt {
     buildUponDefaultConfig = true
     config.setFrom(rootProject.file("config/detekt/detekt.yml"))
+    baseline = file("detekt-baseline.xml")
 }
