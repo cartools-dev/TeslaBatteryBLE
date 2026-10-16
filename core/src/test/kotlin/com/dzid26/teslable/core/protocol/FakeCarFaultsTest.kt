@@ -4,6 +4,7 @@ package com.dzid26.teslable.core.protocol
 import com.tesla.generated.signatures.HMAC_Signature_Data
 import com.tesla.generated.signatures.SessionInfo
 import com.tesla.generated.signatures.SignatureData
+import com.tesla.generated.universalmessage.Destination
 import com.tesla.generated.universalmessage.Domain
 import com.tesla.generated.universalmessage.MessageFault_E
 import com.tesla.generated.universalmessage.MessageStatus
@@ -22,6 +23,10 @@ import com.tesla.generated.universalmessage.OperationStatus_E as MessageOperatio
  * the link's recovery: resync the session in place, pair again, or leave the session alone.
  */
 class FakeCarFaultsTest {
+    private companion object {
+        const val BASE_COUNTER = 40
+    }
+
     private val vin = "5YJ3E1EA7KF000001"
     private val phone = TeslaKeys.generate()
     private val car = FakeCar()
@@ -42,6 +47,18 @@ class FakeCarFaultsTest {
             assertEquals(FaultRecovery.RESYNC_SESSION, reply.status().recovery, fault.name)
             assertTrue(resync(reply), fault.name)
         }
+    }
+
+    @Test
+    fun `resyncing twice never moves the session counter back`() {
+        val high = car.reject(MessageFault_E.MESSAGEFAULT_ERROR_INVALID_TOKEN_OR_COUNTER, sessionInfo = true, counter = 90)
+        val low = car.reject(MessageFault_E.MESSAGEFAULT_ERROR_INCORRECT_EPOCH, sessionInfo = true, counter = 45)
+
+        assertTrue(resync(high))
+        assertTrue(resync(low))
+
+        // The counter the next request carries is one past the highest the car reported.
+        assertEquals(91, nextCounter())
     }
 
     @Test
@@ -118,6 +135,19 @@ class FakeCarFaultsTest {
             handshake.resync(Domain.DOMAIN_VEHICLE_SECURITY, message.request_uuid.toByteArray(), info, tag)
     }
 
+    private fun nextCounter(): Int {
+        val request =
+            RoutableMessage(
+                to_destination = Destination(domain = Domain.DOMAIN_VEHICLE_SECURITY),
+                protobuf_message_as_bytes = "x".toByteArray().toByteString(),
+            )
+        return handshake[Domain.DOMAIN_VEHICLE_SECURITY]!!
+            .encrypt(request, 5)!!
+            .signature_data!!
+            .AES_GCM_Personalized_data!!
+            .counter
+    }
+
     private fun establish() {
         handshake.start()
         handshake.onMessage(car.sessionAnswer(requests.single()))
@@ -164,11 +194,10 @@ class FakeCarFaultsTest {
     private inner class FakeCar {
         private val keys = TeslaKeys.generate()
         private val sessionKey = TeslaCrypto.sessionKey(phone.privateKeyPkcs8, keys.publicKeyRaw)
-        private val challenge = ByteArray(16) { 7 }
 
-        private fun info(): ByteArray =
+        private fun info(counter: Int = BASE_COUNTER): ByteArray =
             SessionInfo(
-                counter = 40,
+                counter = counter,
                 publicKey = keys.publicKeyRaw.toByteString(),
                 epoch = ByteArray(16) { it.toByte() }.toByteString(),
                 clock_time = 500,
@@ -185,17 +214,22 @@ class FakeCarFaultsTest {
             ).encode()
         }
 
-        /** A rejection of a command whose uuid is [challenge], with or without fresh session info. */
+        /**
+         * A rejection with [fault], with or without fresh session info. The rejected command's uuid and the
+         * counter in the info differ per fault, unless [counter] is given.
+         */
         fun reject(
             fault: MessageFault_E,
             sessionInfo: Boolean,
             tagVin: String = vin,
+            counter: Int = BASE_COUNTER + fault.value,
         ): ByteArray {
+            val challenge = ByteArray(16) { (fault.value + 1).toByte() }
             val status = MessageStatus(MessageOperationStatus.OPERATIONSTATUS_ERROR, fault)
             if (!sessionInfo) {
                 return RoutableMessage(request_uuid = challenge.toByteString(), signedMessageStatus = status).encode()
             }
-            val encoded = info()
+            val encoded = info(counter)
             val tag = TeslaSession.sessionInfoHmac(sessionKey, tagVin, challenge, encoded)
             return RoutableMessage(
                 request_uuid = challenge.toByteString(),

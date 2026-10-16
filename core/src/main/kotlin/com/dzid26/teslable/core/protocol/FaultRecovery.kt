@@ -11,7 +11,7 @@ enum class FaultRecovery {
     /** The car does not know this phone's key: no session recovers, the car must be paired again. */
     PAIR_AGAIN,
 
-    /** Anything else (busy, timeout, refused for privileges, ...): the session is fine; the next poll asks again. */
+    /** No session recovery applies: the session is intact, or the message was not rejected. Whether to ask again is up to the caller (the next poll does). */
     NONE,
 }
 
