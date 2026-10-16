@@ -250,9 +250,7 @@ class TeslaBleController(
         val link = links[bleName]
         when (link?.phase) {
             ConnectionPhase.READY -> {
-                link.requestStatus()
-                link.pairing.requestKeySlot()
-                link.startSession()
+                link.beginStartup()
                 stopScan()
                 link.startRssiPoll()
                 link.postPoll()
@@ -748,6 +746,31 @@ class TeslaBleController(
                 log = { log("${name()}: $it") },
             )
 
+        /** The status reply has not come yet, so the key slot lookup and the session request still wait. */
+        private var startupPending = false
+
+        private val startupFollowUps = Runnable { runStartupFollowUps() }
+
+        /**
+         * Asks for the status first and sends the key slot lookup and the session request only after
+         * its reply, so one VCSEC request is in flight at a time (docs/research/tesla-ble-capabilities.md,
+         * Constraints → Polling). A timer sends them anyway if the reply never comes.
+         */
+        fun beginStartup() {
+            startupPending = true
+            requestStatus()
+            handler.removeCallbacks(startupFollowUps)
+            handler.postDelayed(startupFollowUps, STARTUP_FOLLOW_UP_MS)
+        }
+
+        private fun runStartupFollowUps() {
+            if (!startupPending) return
+            startupPending = false
+            handler.removeCallbacks(startupFollowUps)
+            pairing.requestKeySlot()
+            startSession()
+        }
+
         val poll =
             object : Runnable {
                 override fun run() {
@@ -1034,6 +1057,8 @@ class TeslaBleController(
             handler.removeCallbacks(rssiPoll)
             handler.removeCallbacks(reconnect)
             handler.removeCallbacks(wakeRefresh)
+            handler.removeCallbacks(startupFollowUps)
+            startupPending = false
             handshake.cancelTimer()
             pairing.cancelTimers()
         }
@@ -1211,6 +1236,20 @@ class TeslaBleController(
             return sent
         }
 
+        /** Applies the session info piggybacked on a rejected command; false when there is none or it does not verify. */
+        private fun resyncSession(
+            domain: Domain,
+            message: RoutableMessage,
+        ): Boolean {
+            val info = message.session_info?.toByteArray()
+            val tag =
+                message.signature_data
+                    ?.session_info_tag
+                    ?.tag
+                    ?.toByteArray()
+            return info != null && tag != null && handshake.resync(domain, message.request_uuid.toByteArray(), info, tag)
+        }
+
         /** Forgets requests the car never answered, so they do not pile up for the life of the link. */
         private fun expirePendingCommands(now: Long) {
             val cutoff = now - PENDING_COMMAND_TTL_MS
@@ -1249,8 +1288,12 @@ class TeslaBleController(
             if (pending.kind.isRead) readInFlight.onReply()
             if (!encrypted) {
                 log("${name()}: ${pending.kind.name.lowercase()} rejected (${fault?.signed_message_fault?.name})")
-                // Retrying on the old session fails forever; only a new handshake recovers.
-                if (fault?.isStaleSession == true) rehandshake(pending.domain, "stale session")
+                // Retrying on the old session fails forever. The car usually attaches fresh session
+                // info to such a rejection; when it verifies, the session resyncs in place, and
+                // only otherwise does a new handshake recover.
+                if (fault?.isStaleSession == true && !resyncSession(pending.domain, message)) {
+                    rehandshake(pending.domain, "stale session")
+                }
                 // The owner removed this phone's key: no session recovers from that.
                 if (fault?.isUnknownKey == true) pairing.forgetEnrollment("the car does not know this phone's key")
                 return true
@@ -1353,6 +1396,8 @@ class TeslaBleController(
                     handshake.dropPendingInfotainment()
                 }
                 if (infotainmentPolicy.onStatus(status, canRead, System.currentTimeMillis())) requestChargeState()
+                // The status is in, so the car's awake state is known to the session request.
+                runStartupFollowUps()
             } else {
                 log("${name()}: RX ${message.size} bytes ${message.toHex()}")
             }
@@ -1403,9 +1448,7 @@ class TeslaBleController(
                         // car connecting is the one signal that means "found it".
                         if (_state.value.explicitScan && selectedBleName == bleName) stopScan()
                         if (selectedBleName == bleName) startRssiPoll()
-                        requestStatus()
-                        pairing.requestKeySlot()
-                        startSession()
+                        beginStartup()
                         postPoll()
                         maybeStopDiscovery()
                     }
@@ -1443,6 +1486,9 @@ class TeslaBleController(
         const val LOG_MAX_LINES = 200
         const val COMMAND_EXPIRES_SECONDS = 5
         const val POLL_MS = 10_000L
+
+        /** How long the startup key slot lookup and session request wait for the status reply. */
+        const val STARTUP_FOLLOW_UP_MS = 3_000L
 
         /** A request the car has not answered within twice its validity window never will be. */
         const val PENDING_COMMAND_TTL_MS = 2 * COMMAND_EXPIRES_SECONDS * 1000L
