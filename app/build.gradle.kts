@@ -197,6 +197,7 @@ dependencies {
     debugImplementation(libs.androidx.compose.ui.tooling)
     debugImplementation(libs.leakcanary.android)
     testImplementation(libs.junit)
+    testImplementation(libs.material.kolor)
     testImplementation(libs.paparazzi)
 }
 

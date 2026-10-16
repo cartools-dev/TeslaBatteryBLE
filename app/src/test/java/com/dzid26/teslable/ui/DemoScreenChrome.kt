@@ -13,17 +13,29 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.ColorScheme
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.darkColorScheme
-import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.materialkolor.dynamicColorScheme
+
+/**
+ * The Material You scheme the app renders when dynamic color is on and the
+ * wallpaper is the default blue one (the old emulator screenshots), built from
+ * a seed like Android does. Paparazzi has no wallpaper, so the seed is fixed;
+ * it is the light primary sampled from `website/images/02-scanning.png`.
+ */
+internal fun demoColorScheme(darkTheme: Boolean): ColorScheme =
+    dynamicColorScheme(seedColor = Color(DEMO_SEED), isDark = darkTheme, isAmoled = false)
+
+private const val DEMO_SEED = 0xFF445E91
 
 private const val STATUS_BAR_DP = 40
 private const val NAV_BAR_DP = 24
@@ -40,7 +52,7 @@ internal fun DemoSystemBars(
     darkTheme: Boolean,
     content: @Composable () -> Unit,
 ) {
-    MaterialTheme(colorScheme = if (darkTheme) darkColorScheme() else lightColorScheme()) {
+    MaterialTheme(colorScheme = demoColorScheme(darkTheme)) {
         Surface(modifier = Modifier.fillMaxSize()) {
             Column(modifier = Modifier.fillMaxSize()) {
                 Row(
