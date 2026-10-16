@@ -6,6 +6,7 @@ import android.icu.util.LocaleData
 import android.icu.util.ULocale
 import android.os.Build
 import com.dzid26.teslable.core.units.DistanceUnit
+import com.dzid26.teslable.core.units.countryUsesMiles
 import java.util.Locale
 
 /** Which distance unit the owner wants: follow the phone's region, or force one. */
@@ -31,10 +32,8 @@ private fun localeUsesMiles(): Boolean =
     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
         LocaleData.getMeasurementSystem(ULocale.getDefault()) != LocaleData.MeasurementSystem.SI
     } else {
-        Locale.getDefault().country in MILE_COUNTRIES
+        countryUsesMiles(Locale.getDefault().country)
     }
-
-private val MILE_COUNTRIES = setOf("US", "GB", "LR", "MM")
 
 /** The owner's unit preference. Display only: stored and computed values stay in miles. */
 class UnitStore(
