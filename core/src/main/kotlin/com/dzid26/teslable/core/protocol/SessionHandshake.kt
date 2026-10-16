@@ -214,6 +214,23 @@ class SessionHandshake(
         return true
     }
 
+    /**
+     * Applies the session info a car attached to a rejected command (counter, epoch or clock out
+     * of step) to the existing [domain] session, as the Go dispatcher's `checkForSessionUpdate`
+     * does. False when there is no session or the info did not verify; the caller then drops the
+     * session and handshakes again.
+     */
+    fun resync(
+        domain: Domain,
+        challenge: ByteArray,
+        encodedInfo: ByteArray,
+        tag: ByteArray,
+    ): Boolean {
+        val resynced = sessions[domain]?.updateSignedSessionInfo(challenge, encodedInfo, tag) == true
+        if (resynced) host.log("session resynced (${domain.name})")
+        return resynced
+    }
+
     companion object {
         const val RETRY_MS = 3000L
         const val MAX_ATTEMPTS = 20

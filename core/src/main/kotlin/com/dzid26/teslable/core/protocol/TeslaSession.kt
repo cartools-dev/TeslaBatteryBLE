@@ -14,8 +14,10 @@ class TeslaSession private constructor(
     private val sessionKey: ByteArray,
     private val vin: String,
     private val localPublicRaw: ByteArray,
+    private val remotePublicRaw: ByteArray,
     private var counter: Int,
-    private val epoch: ByteArray,
+    private var epoch: ByteArray,
+    private var clockTime: Int,
     private var timeZeroMs: Long,
     private val clock: () -> Long,
     private val nonceGenerator: () -> ByteArray,
@@ -72,6 +74,32 @@ class TeslaSession private constructor(
         )
     }
 
+    /**
+     * Resyncs this session with session info the car attached to a rejected command, following the
+     * Go signer's `UpdateSignedSessionInfo`: the info must be authenticated against the rejected
+     * request's uuid ([challenge]) and name the same car key; the epoch and clock are adopted only
+     * when the epoch changed or the clock did not go backwards, and the counter never moves
+     * backwards. False when the info did not verify or is for another key.
+     */
+    fun updateSignedSessionInfo(
+        challenge: ByteArray,
+        encodedInfo: ByteArray,
+        tag: ByteArray,
+    ): Boolean {
+        val authentic = sessionInfoHmac(sessionKey, vin, challenge, encodedInfo).contentEquals(tag)
+        val info = if (authentic) runCatching { SessionInfo.ADAPTER.decode(encodedInfo) }.getOrNull() else null
+        if (info == null || !info.publicKey.toByteArray().contentEquals(remotePublicRaw)) return false
+        val newEpoch = info.epoch.toByteArray()
+        // Counters and clocks are unsigned on the wire, as in the Go signer.
+        if (!epoch.contentEquals(newEpoch) || Integer.compareUnsigned(clockTime, info.clock_time) <= 0) {
+            if (Integer.compareUnsigned(counter, info.counter) < 0) counter = info.counter
+            epoch = newEpoch
+            clockTime = info.clock_time
+            timeZeroMs = clock() - info.clock_time * MILLIS_PER_SECOND
+        }
+        return true
+    }
+
     fun requestId(encrypted: RoutableMessage): ByteArray? {
         val tag =
             encrypted.signature_data
@@ -125,6 +153,7 @@ class TeslaSession private constructor(
 
     companion object {
         const val LABEL_SESSION_INFO = "session info"
+        private const val MILLIS_PER_SECOND = 1000L
         private const val COUNTER_MAX = -1
 
         fun sessionInfoHmac(
@@ -164,9 +193,11 @@ class TeslaSession private constructor(
                 sessionKey = sessionKey,
                 vin = vin,
                 localPublicRaw = publicKeyRaw,
+                remotePublicRaw = remotePublic,
                 counter = info.counter,
                 epoch = info.epoch.toByteArray(),
-                timeZeroMs = clock() - info.clock_time * 1000L,
+                clockTime = info.clock_time,
+                timeZeroMs = clock() - info.clock_time * MILLIS_PER_SECOND,
                 clock = clock,
                 nonceGenerator = nonceGenerator,
             )

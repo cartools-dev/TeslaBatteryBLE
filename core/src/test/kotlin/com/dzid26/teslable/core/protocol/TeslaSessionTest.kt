@@ -14,6 +14,7 @@ import org.junit.Assert.assertArrayEquals
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class TeslaSessionTest {
@@ -114,6 +115,108 @@ class TeslaSessionTest {
         assertArrayEquals("world".toByteArray(), plaintext)
 
         assertEquals(null, session.decrypt(response, requestId, window))
+    }
+
+    @Test
+    fun `session info from a rejected command moves the counter forward`() {
+        val session = createSession()!!
+
+        assertTrue(resync(session, counter = 20))
+
+        assertEquals(21, nextCounter(session))
+    }
+
+    @Test
+    fun `session info with a lower counter never moves the counter back`() {
+        val session = createSession()!!
+        nextCounter(session)
+
+        assertTrue(resync(session, counter = 3))
+
+        assertEquals(9, nextCounter(session))
+    }
+
+    @Test
+    fun `session info for another car key is refused`() {
+        val session = createSession()!!
+        val other = TeslaKeys.generate()
+        val info =
+            SessionInfo(
+                counter = 50,
+                publicKey = other.publicKeyRaw.toByteString(),
+                epoch = ByteArray(16) { it.toByte() }.toByteString(),
+                clock_time = 100,
+            ).encode()
+        val tag = TeslaSession.sessionInfoHmac(sessionKey, vin, challenge, info)
+
+        assertFalse(session.updateSignedSessionInfo(challenge, info, tag))
+
+        assertEquals(8, nextCounter(session))
+    }
+
+    @Test
+    fun `session info with an older clock in the same epoch is ignored`() {
+        val session = createSession()!!
+
+        assertTrue(resync(session, counter = 99, clockTime = 50))
+
+        assertEquals(8, nextCounter(session))
+    }
+
+    @Test
+    fun `session info for a new epoch is adopted even with an older clock`() {
+        val session = createSession()!!
+
+        assertTrue(resync(session, counter = 50, clockTime = 10, epochByte = 9))
+
+        val encrypted = session.encrypt(infotainmentMessage(), 5)!!
+        val gcm = encrypted.signature_data!!.AES_GCM_Personalized_data!!
+        assertEquals(51, gcm.counter)
+        assertArrayEquals(ByteArray(16) { 9 }, gcm.epoch.toByteArray())
+    }
+
+    @Test
+    fun `session info with a wrong tag leaves the session alone`() {
+        val session = createSession()!!
+        val info = sessionInfo(counter = 50)
+        val tag = TeslaSession.sessionInfoHmac(sessionKey, vin, ByteArray(16) { 5 }, info)
+
+        assertFalse(session.updateSignedSessionInfo(challenge, info, tag))
+
+        assertEquals(8, nextCounter(session))
+    }
+
+    private fun infotainmentMessage() =
+        RoutableMessage(
+            to_destination = Destination(domain = Domain.DOMAIN_INFOTAINMENT),
+            from_destination = Destination(routing_address = ByteArray(16).toByteString()),
+            protobuf_message_as_bytes = "hello".toByteArray().toByteString(),
+        )
+
+    /** The counter the session's next request carries. */
+    private fun nextCounter(session: TeslaSession): Int =
+        session
+            .encrypt(infotainmentMessage(), 5)!!
+            .signature_data!!
+            .AES_GCM_Personalized_data!!
+            .counter
+
+    private fun resync(
+        session: TeslaSession,
+        counter: Int,
+        clockTime: Int = 100,
+        epochByte: Int = 0,
+    ): Boolean {
+        val epoch = if (epochByte == 0) ByteArray(16) { it.toByte() } else ByteArray(16) { epochByte.toByte() }
+        val info =
+            SessionInfo(
+                counter = counter,
+                publicKey = vehicle.publicKeyRaw.toByteString(),
+                epoch = epoch.toByteString(),
+                clock_time = clockTime,
+            ).encode()
+        val tag = TeslaSession.sessionInfoHmac(sessionKey, vin, challenge, info)
+        return session.updateSignedSessionInfo(challenge, info, tag)
     }
 
     @Test
