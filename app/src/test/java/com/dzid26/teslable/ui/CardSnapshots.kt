@@ -998,8 +998,9 @@ private fun CardFrame(
 }
 
 /**
- * The full-screen frame: the same fixed scheme as the cards between fake
- * system bars, so the render reads like the phone screenshots.
+ * The full-screen frame: the seeded blue Material You scheme (see
+ * [demoColorScheme]) between fake system bars, so the render reads like the
+ * phone screenshots.
  */
 @Composable
 private fun ScreenFrame(
