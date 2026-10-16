@@ -190,7 +190,7 @@ jobs:
               fi
             else
               if [ "$BEFORE_SHA" = "none" ]; then
-                printf 'Changed snapshots at %s (no before snapshots: the parent predates Paparazzi).\n\n' "$SHORT_SHA"
+                printf 'Changed snapshots at %s (no before snapshots: the merge base predates Paparazzi).\n\n' "$SHORT_SHA"
               else
                 printf 'Changed snapshots at %s (vs %s).\n\n' "$SHORT_SHA" "$BEFORE_SHA"
               fi
