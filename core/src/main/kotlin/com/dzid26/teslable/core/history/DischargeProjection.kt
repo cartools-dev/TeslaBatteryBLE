@@ -159,7 +159,9 @@ private fun parkedDrain(
         squared += residual * residual
     }
     // The pairs telescope: their drops sum to first minus last, so rounding
-    // enters as two readings however many pairs there are.
+    // enters as two readings however many pairs there are. The residuals above
+    // already carry some rounding noise, so adding it here counts it twice in part;
+    // erring wide is the intended side.
     val rounding = TWO_READINGS_VARIANCE * readingResolution(scale) * readingResolution(scale)
     return ParkedDrain(drop, millis, drops.size, squared, rounding)
 }
