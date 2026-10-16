@@ -19,6 +19,13 @@ class BatteryHistoryTest {
         chargeLimit = null,
     )
 
+    private fun rated(
+        minutes: Long,
+        percent: Int,
+        miles: Float,
+        state: ChargingStateKind? = ChargingStateKind.Disconnected,
+    ) = sample(minutes, percent, state).copy(ratedRangeMiles = miles)
+
     @Test
     fun withinFiltersByRange() {
         val samples =
@@ -61,11 +68,45 @@ class BatteryHistoryTest {
         // The reference is the charge's own end (the 85 at minute 60), not the
         // first sample after it.
         assertEquals(60 * 60_000L, stats.sinceMillis)
-        assertEquals(85f, stats.chargePercent)
-        assertEquals(78f, stats.currentPercent)
-        assertEquals(78f, stats.minPercent)
-        assertEquals(84f, stats.maxPercent)
-        assertEquals(7f, stats.usedPercent)
+        assertEquals(85f, stats.chargePercent(null))
+        assertEquals(78f, stats.currentPercent(null))
+        assertEquals(78f, stats.minPercent(null))
+        assertEquals(84f, stats.maxPercent(null))
+        assertEquals(7f, stats.usedPercent(null))
+    }
+
+    @Test
+    fun chargeStatsExpressTheDrainInRangeAndConvertAtTheEnd() {
+        // A scale of 2.7 mi per percent: 3.0 rated miles drained is 1.11 points,
+        // which the whole levels (80 -> 79) would round to 1 or 2.
+        val scale =
+            FullRangeScale(fullRangeMiles = 270f, offsetMiles = 0f, standardErrorMiles = 0.1f, samples = 10, pinned = true)
+        val samples =
+            listOf(
+                rated(0, 80, 216.0f, ChargingStateKind.Charging),
+                rated(60, 79, 213.0f),
+            )
+
+        val stats = chargeStats(samples)!!
+
+        assertEquals(3.0f, stats.usedMiles!!, 0.001f)
+        assertEquals(1.11f, stats.usedPercent(scale), 0.01f)
+        assertEquals(80f, stats.chargePercent(scale), 0.01f)
+        assertEquals(78.89f, stats.currentPercent(scale), 0.01f)
+        // Without a pinned scale the whole levels are the fallback.
+        assertEquals(1f, stats.usedPercent(null), 0.001f)
+        assertEquals(1f, stats.usedPercent(scale.copy(pinned = false)), 0.001f)
+    }
+
+    @Test
+    fun chargeStatsFallBackToLevelsWithoutRatedRange() {
+        val scale =
+            FullRangeScale(fullRangeMiles = 270f, offsetMiles = 0f, standardErrorMiles = 0.1f, samples = 10, pinned = true)
+        val stats = chargeStats(listOf(sample(0, 80, ChargingStateKind.Charging), sample(60, 77)))!!
+
+        assertEquals(null, stats.usedMiles)
+        assertEquals(3f, stats.usedPercent(scale), 0.001f)
+        assertEquals(80f, stats.chargePercent(scale), 0.001f)
     }
 
     @Test
@@ -80,8 +121,8 @@ class BatteryHistoryTest {
 
         val stats = chargeStats(samples)!!
         assertEquals(60 * 60_000L, stats.sinceMillis)
-        assertEquals(80f, stats.chargePercent)
-        assertEquals(5f, stats.usedPercent)
+        assertEquals(80f, stats.chargePercent(null))
+        assertEquals(5f, stats.usedPercent(null))
     }
 
     @Test
@@ -99,9 +140,9 @@ class BatteryHistoryTest {
 
         val stats = chargeStats(samples)!!
         assertEquals(60 * 60_000L, stats.sinceMillis)
-        assertEquals(47f, stats.chargePercent)
-        assertEquals(28f, stats.currentPercent)
-        assertEquals(19f, stats.usedPercent)
+        assertEquals(47f, stats.chargePercent(null))
+        assertEquals(28f, stats.currentPercent(null))
+        assertEquals(19f, stats.usedPercent(null))
     }
 
     @Test
@@ -117,8 +158,8 @@ class BatteryHistoryTest {
 
         val stats = chargeStats(samples)!!
         assertEquals(60 * 60_000L, stats.sinceMillis)
-        assertEquals(80f, stats.chargePercent)
-        assertEquals(75f, stats.currentPercent)
-        assertEquals(5f, stats.usedPercent)
+        assertEquals(80f, stats.chargePercent(null))
+        assertEquals(75f, stats.currentPercent(null))
+        assertEquals(5f, stats.usedPercent(null))
     }
 }
