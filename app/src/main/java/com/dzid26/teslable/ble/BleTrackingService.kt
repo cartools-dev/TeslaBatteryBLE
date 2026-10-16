@@ -215,16 +215,23 @@ class BleTrackingService : Service() {
     private fun publish(models: List<NotificationModel>) {
         val summary = summaryModel(models)
         if (!foregroundStarted) {
-            ServiceCompat.startForeground(
-                this,
-                NOTIFICATION_ID,
-                buildNotification(summary, groupSummary = models.size > 1),
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                    ServiceInfo.FOREGROUND_SERVICE_TYPE_CONNECTED_DEVICE
-                } else {
-                    0
-                },
-            )
+            // A sticky restart after Bluetooth permission was revoked: Android 14+ refuses the
+            // connected-device type without it, and a crash loop would be worse than no service.
+            try {
+                ServiceCompat.startForeground(
+                    this,
+                    NOTIFICATION_ID,
+                    buildNotification(summary, groupSummary = models.size > 1),
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                        ServiceInfo.FOREGROUND_SERVICE_TYPE_CONNECTED_DEVICE
+                    } else {
+                        0
+                    },
+                )
+            } catch (ignored: SecurityException) {
+                stopSelf()
+                return
+            }
             foregroundStarted = true
             lastSummary = summary
         } else if (shouldPost(lastSummary, summary)) {

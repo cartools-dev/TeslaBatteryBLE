@@ -4,6 +4,7 @@ package com.dzid26.teslable.ble
 import android.annotation.SuppressLint
 import android.bluetooth.BluetoothManager
 import android.bluetooth.le.ScanCallback
+import android.bluetooth.le.ScanFilter
 import android.bluetooth.le.ScanResult
 import android.bluetooth.le.ScanSettings
 import android.content.Context
@@ -43,8 +44,17 @@ class TeslaScanner(
             }
         }
 
+    /**
+     * Starts scanning. With [deviceNames] only those advertised names are reported, which the OS
+     * keeps scanning with the screen off and can match in hardware; an unfiltered scan is stopped
+     * while the screen is off. [lowPower] trades latency for battery: background discovery, not a
+     * scan the user is watching.
+     */
     @SuppressLint("MissingPermission")
-    fun start() {
+    fun start(
+        deviceNames: Collection<String> = emptyList(),
+        lowPower: Boolean = false,
+    ) {
         if (!hasBlePermissions(appContext)) {
             onLog("Bluetooth permissions are missing; grant them to scan")
             return
@@ -64,10 +74,20 @@ class TeslaScanner(
         val settings =
             ScanSettings
                 .Builder()
-                .setScanMode(ScanSettings.SCAN_MODE_LOW_LATENCY)
+                .setScanMode(if (lowPower) ScanSettings.SCAN_MODE_LOW_POWER else ScanSettings.SCAN_MODE_LOW_LATENCY)
                 .build()
-        scanner.startScan(null, settings, callback)
-        onLog("Scanning for Tesla advertisements (name pattern S<hex>C)")
+        val filters =
+            deviceNames
+                .map { ScanFilter.Builder().setDeviceName(it).build() }
+                .ifEmpty { null }
+        scanner.startScan(filters, settings, callback)
+        onLog(
+            if (filters == null) {
+                "Scanning for Tesla advertisements (name pattern S<hex>C)"
+            } else {
+                "Scanning for ${filters.size} known car(s) in the background"
+            },
+        )
     }
 
     @SuppressLint("MissingPermission")
