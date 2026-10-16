@@ -122,7 +122,7 @@ fun dischargeProjection(
             } else {
                 null
             },
-        highSoc = if (hasBeam) maxOf(statHigh, sleepSoc ?: statHigh).coerceIn(0f, minOf(fromSoc.toFloat(), FULL_PERCENT)) else null,
+        highSoc = if (hasBeam) maxOf(statHigh, sleepSoc ?: statHigh).coerceIn(0f, minOf(fromSoc, FULL_PERCENT)) else null,
         sleepPercentPerHour = sleepRate?.let { it * HOUR },
     )
 }

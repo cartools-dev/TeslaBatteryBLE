@@ -44,9 +44,8 @@ class DischargeProjectionTest {
         drives: List<DriveSample> = stationary(samples),
         rangeMillis: Long = 6 * HOUR,
         nowMillis: Long = samples.last().timestampMillis + MINUTE,
-        scale: FullRangeScale? = null,
-        statuses: List<StatusSample> = emptyList(),
-    ) = dischargeProjection(samples, drives, rangeMillis, nowMillis, ProjectionContext(scale, statuses))
+        context: ProjectionContext = ProjectionContext(),
+    ) = dischargeProjection(samples, drives, rangeMillis, nowMillis, context)
 
     @Test
     fun `carries the parked rate half the range forward`() {
@@ -201,7 +200,7 @@ class DischargeProjectionTest {
                 ranged(240, 80, 239.7f),
                 ranged(360, 80, 238.8f),
             )
-        val projection = assertNotNull(project(samples, scale = scale, rangeMillis = 24 * HOUR))
+        val projection = assertNotNull(project(samples, context = ProjectionContext(scale = scale), rangeMillis = 24 * HOUR))
         // 0.9 points over 6 h = 0.15 %/h = 3.6 %/day; 12 h ahead is 1.8 points down from 79.6.
         assertEquals(0.15, projection.percentPerHour, 1e-6)
         assertEquals(77.8f, projection.projectedSoc, 0.01f)
@@ -226,10 +225,10 @@ class DischargeProjectionTest {
                 ranged(360, 80, 238.8f),
             )
         val twoPairs = steady.take(3)
-        assertNull(assertNotNull(project(twoPairs, scale = scale, rangeMillis = 24 * HOUR)).lowSoc)
+        assertNull(assertNotNull(project(twoPairs, context = ProjectionContext(scale = scale), rangeMillis = 24 * HOUR)).lowSoc)
 
-        val tidy = assertNotNull(project(steady, scale = scale, rangeMillis = 24 * HOUR))
-        val loose = assertNotNull(project(noisy, scale = scale, rangeMillis = 24 * HOUR))
+        val tidy = assertNotNull(project(steady, context = ProjectionContext(scale = scale), rangeMillis = 24 * HOUR))
+        val loose = assertNotNull(project(noisy, context = ProjectionContext(scale = scale), rangeMillis = 24 * HOUR))
         val tidyWidth = tidy.highSoc!! - tidy.lowSoc!!
         val looseWidth = loose.highSoc!! - loose.lowSoc!!
         assertEquals(true, tidyWidth > 0f)
@@ -252,7 +251,7 @@ class DischargeProjectionTest {
         // Two slept-through gaps lose a point each; the last, awake gap loses 3.
         val samples = listOf(sample(0, 80), sample(120, 79), sample(240, 78), sample(360, 75))
         val statuses = listOf(status(60, asleep = true), status(180, asleep = true), status(300, asleep = false))
-        val projection = assertNotNull(project(samples, statuses = statuses, rangeMillis = 24 * HOUR))
+        val projection = assertNotNull(project(samples, context = ProjectionContext(statuses = statuses), rangeMillis = 24 * HOUR))
         // Mixed: 5 points over 6 h; asleep: 2 points over 4 h = 0.5 %/h.
         assertEquals(5.0 / 6.0, projection.percentPerHour, 1e-9)
         assertEquals(0.5, projection.sleepPercentPerHour!!, 1e-9)
@@ -261,16 +260,24 @@ class DischargeProjectionTest {
         // A single slept-through pair is not enough to call a rate.
         val one = listOf(sample(0, 80), sample(120, 79), sample(240, 76))
         val oneAsleep = listOf(status(60, asleep = true), status(180, asleep = false))
-        assertNull(assertNotNull(project(one, statuses = oneAsleep, rangeMillis = 24 * HOUR)).sleepPercentPerHour)
+        assertNull(
+            assertNotNull(project(one, context = ProjectionContext(statuses = oneAsleep), rangeMillis = 24 * HOUR)).sleepPercentPerHour,
+        )
     }
 
     @Test
     fun `no sleep evidence means no asleep rate`() {
         val samples = listOf(sample(0, 80), sample(120, 79), sample(240, 76))
-        assertNull(assertNotNull(project(samples, statuses = emptyList(), rangeMillis = 24 * HOUR)).sleepPercentPerHour)
+        assertNull(
+            assertNotNull(
+                project(samples, context = ProjectionContext(statuses = emptyList()), rangeMillis = 24 * HOUR),
+            ).sleepPercentPerHour,
+        )
         // A status inside the gap that says awake rules it out.
         val awake = listOf(status(60, asleep = true), status(90, asleep = false))
-        assertNull(assertNotNull(project(samples, statuses = awake, rangeMillis = 24 * HOUR)).sleepPercentPerHour)
+        assertNull(
+            assertNotNull(project(samples, context = ProjectionContext(statuses = awake), rangeMillis = 24 * HOUR)).sleepPercentPerHour,
+        )
     }
 
     private companion object {
