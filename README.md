@@ -54,8 +54,11 @@ Light and dark themes, side by side.
   the app stopped until you open it again.
 - **History graph** (6 h / 24 h / 7 d / all) with since-last-charge stats;
   every measurement is a dot (dense samples form a thick band), and dashed
-  lines project the charge completion or, while parked, the parked drain half
-  the range ahead (stretches where the odometer moved are left out)
+  lines project the charge completion and the parked drain half the range ahead
+  (stretches where the odometer moved, or the car was in gear, are left out). Both
+  are fitted on the rated range once the scale is learned, so they read in
+  fractions of a percent, and each carries a faint beam for how far the fit could
+  be off (for a charge also the supply-voltage swings seen in the session)
 - **Local activity log** — the commands the app sends to the car (and why) and whether the screen was on and the
   app in the foreground are kept on the phone only, so a wake or a read in the car's own history can be told
   apart from yours

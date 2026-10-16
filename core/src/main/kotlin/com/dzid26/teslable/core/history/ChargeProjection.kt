@@ -2,6 +2,8 @@
 
 package com.dzid26.teslable.core.history
 
+import kotlin.math.sqrt
+
 // Chart-only analysis kept in `core` so the drawing code stays free of the
 // rules and the rules stay unit-testable.
 
@@ -46,20 +48,25 @@ fun chargeProjection(
     samples: List<BatterySample>,
     chargeRateMph: Float? = null,
     fullRangeMiles: Float? = null,
+    scale: FullRangeScale? = null,
 ): ChargeProjection? {
-    val projection = baseChargeProjection(samples, chargeRateMph, fullRangeMiles) ?: return null
-    return withPowerBeam(projection, samples)
+    val projection = baseChargeProjection(samples, chargeRateMph, fullRangeMiles, scale) ?: return null
+    return withBeam(projection, samples, scale)
 }
 
 private fun baseChargeProjection(
     samples: List<BatterySample>,
     chargeRateMph: Float?,
     fullRangeMiles: Float?,
+    scale: FullRangeScale?,
 ): ChargeProjection? {
     val last = samples.lastOrNull() ?: return null
     if (!last.isCharging) return null
     val target = last.chargeLimit ?: return null
-    if (target <= last.percent) return null
+    // Read on the rated range through the fitted scale when it is pinned, so
+    // the level the run has gained is a fraction of a percent, not a step.
+    val lastSoc = last.soc(scale)
+    if (target <= lastSoc) return null
 
     val runStart = samples.indexOfLast { !it.isCharging } + 1
     val run = samples.subList(runStart, samples.size)
@@ -67,7 +74,7 @@ private fun baseChargeProjection(
     val first = run.first()
     val elapsed = last.timestampMillis - first.timestampMillis
     if (elapsed < MIN_RATE_SPAN_MILLIS) return null
-    val remaining = target - last.percent
+    val remaining = target - lastSoc
 
     val milesPerPercent = milesPerPercent(first, last, fullRangeMiles)
     val rate = chargeRateMph?.takeIf { it.isFinite() && it > 0f }
@@ -79,8 +86,8 @@ private fun baseChargeProjection(
         )
     }
 
-    val gained = last.percent - first.percent
-    if (gained <= 0) {
+    val gained = lastSoc - first.soc(scale)
+    if (gained <= 0f) {
         // The level has not ticked yet: the run's own rated-range slope keeps
         // moving on a slow charger.
         val milesRate = ratedMilesPerHour(first, last, elapsed)
@@ -98,36 +105,110 @@ private fun baseChargeProjection(
     return ChargeProjection(
         from = last,
         targetPercent = target,
-        completionMillis = last.timestampMillis + remaining * elapsed / gained,
+        completionMillis = last.timestampMillis + (remaining.toDouble() / levelSlope(run, scale, elapsed, gained)).toLong(),
     )
 }
 
 /**
- * Adds the beam: the AC voltage moves around during a session, and at a
- * fixed current the charge power follows it, so the remaining time at the
- * run's mean voltage stretches to the time at its highest and lowest
- * voltage. Needs at least two charging readings with a voltage, and a spread
- * between them.
+ * The rate the centre follows, percent per millisecond: the fitted slope of
+ * the run's levels once it has enough readings (the same line the beam's error
+ * comes from, so the beam is centred on it), else the endpoints' average.
  */
-private fun withPowerBeam(
+private fun levelSlope(
+    run: List<BatterySample>,
+    scale: FullRangeScale?,
+    elapsed: Long,
+    gained: Float,
+): Double = levelFit(run, scale)?.slope ?: (gained.toDouble() / elapsed)
+
+/**
+ * Adds the beam: the remaining time, stretched by how far the rate could be
+ * off. Two sources, each a pair of factors on the remaining time, and the
+ * beam spans the widest of them:
+ *
+ * - The AC voltage moves during a session, and at a fixed current the charge
+ *   power follows it, so the time at the run's mean voltage stretches to the
+ *   time at its highest and lowest voltage.
+ * - The rate is fitted from the run's levels over time; two standard errors
+ *   of that slope (floored at the readings' resolution) bound it.
+ */
+private fun withBeam(
     projection: ChargeProjection,
     samples: List<BatterySample>,
+    scale: FullRangeScale?,
 ): ChargeProjection {
     val runStart = samples.indexOfLast { !it.isCharging } + 1
-    val volts =
-        samples
-            .subList(runStart, samples.size)
-            .mapNotNull { it.chargerVoltage?.takeIf { volts -> volts > 0 }?.toDouble() }
-    if (volts.size < 2) return projection
-    val mean = volts.average()
-    val min = volts.min()
-    val max = volts.max()
-    if (max <= min) return projection
+    val run = samples.subList(runStart, samples.size)
+    val factors = mutableListOf<Double>()
+    voltageFactors(run)?.let { (fast, slow) -> factors += listOf(fast, slow) }
+    rateFactors(run, scale)?.let { (fast, slow) -> factors += listOf(fast, slow) }
+    if (factors.isEmpty()) return projection
     val remaining = (projection.completionMillis - projection.from.timestampMillis).toDouble()
     return projection.copy(
-        earliestMillis = projection.from.timestampMillis + (remaining * mean / max).toLong(),
-        latestMillis = projection.from.timestampMillis + (remaining * mean / min).toLong(),
+        earliestMillis = projection.from.timestampMillis + (remaining * factors.min()).toLong(),
+        latestMillis = projection.from.timestampMillis + (remaining * factors.max()).toLong(),
     )
+}
+
+/** The remaining-time factors at the run's highest and lowest voltage; null without a spread. */
+private fun voltageFactors(run: List<BatterySample>): Pair<Double, Double>? {
+    val volts = run.mapNotNull { it.chargerVoltage?.takeIf { volts -> volts > 0 }?.toDouble() }
+    val bounds = volts.minOrNull()?.let { min -> volts.maxOrNull()?.let { max -> min to max } }
+    if (volts.size < 2 || bounds == null || bounds.second <= bounds.first) return null
+    val mean = volts.average()
+    return mean / bounds.second to mean / bounds.first
+}
+
+/**
+ * The remaining-time factors if the rate were two standard errors faster or
+ * slower: the slope of level against time over the run, with its error
+ * taken from the scatter around the line and never below the resolution of
+ * one reading. Needs [MIN_RATE_FIT_SAMPLES] readings and a rising line.
+ */
+private fun rateFactors(
+    run: List<BatterySample>,
+    scale: FullRangeScale?,
+): Pair<Double, Double>? {
+    val relativeError = relativeRateError(run, scale) ?: return null
+    val spread = (REACH_SIGMAS * relativeError).coerceAtMost(MAX_RATE_SPREAD)
+    return 1.0 / (1.0 + spread) to 1.0 / (1.0 - spread)
+}
+
+/** The least-squares line of level against time over a run. */
+private class LevelFit(
+    /** Percent per millisecond. */
+    val slope: Double,
+    /** Sum of squared time deviations, ms squared. */
+    val sxx: Double,
+    /** Standard deviation of the readings around the line, percent, never below one reading's resolution. */
+    val scatter: Double,
+)
+
+/** One standard error of the fitted level-over-time slope, as a share of the slope; null without a rising fit. */
+private fun relativeRateError(
+    run: List<BatterySample>,
+    scale: FullRangeScale?,
+): Double? = levelFit(run, scale)?.let { it.scatter / sqrt(it.sxx) / it.slope }
+
+/** Fits the run's levels over time; null with too few readings or a line that does not rise. */
+private fun levelFit(
+    run: List<BatterySample>,
+    scale: FullRangeScale?,
+): LevelFit? {
+    val t0 = run.first().timestampMillis
+    val xs = run.map { (it.timestampMillis - t0).toDouble() }
+    val ys = run.map { it.soc(scale).toDouble() }
+    val mx = xs.average()
+    val my = ys.average()
+    val sxx = xs.sumOf { (it - mx) * (it - mx) }
+    val slope = if (sxx > 0.0) xs.indices.sumOf { (xs[it] - mx) * (ys[it] - my) } / sxx else 0.0
+    if (run.size < MIN_RATE_FIT_SAMPLES || slope <= 0.0) return null
+    val squared =
+        xs.indices.sumOf { index ->
+            val residual = ys[index] - (my + slope * (xs[index] - mx))
+            residual * residual
+        }
+    return LevelFit(slope, sxx, maxOf(sqrt(squared / (run.size - 2)), readingResolution(scale)))
 }
 
 /** Rated miles gained per hour over the run; null without both readings or a positive gain. */
@@ -168,3 +249,11 @@ private fun milesPerPercent(
 private const val MIN_RATE_SPAN_MILLIS = 2 * 60_000L
 
 private const val MILLIS_PER_HOUR = 3_600_000f
+
+private const val MIN_RATE_FIT_SAMPLES = 4
+
+/** How many standard errors the beam reaches. */
+private const val REACH_SIGMAS = 2.0
+
+/** The beam never claims the rate could be off by more than this share. */
+private const val MAX_RATE_SPREAD = 0.9

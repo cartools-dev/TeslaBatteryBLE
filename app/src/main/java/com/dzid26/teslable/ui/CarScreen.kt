@@ -660,11 +660,11 @@ internal fun BatteryHistoryCard(
                         ?: (visible.last().timestampMillis - visible.first().timestampMillis)
                             .coerceAtLeast(1L)
                 val scale = FullRangeScaleEstimator.estimate(samples)
-                val charge = chargeProjection(samples, fullRangeMiles = scale?.fullRangeMiles)
+                val charge = chargeProjection(samples, fullRangeMiles = scale?.fullRangeMiles, scale = scale)
                 // Parked drain: the drive samples' odometer marks the
                 // stretches the car moved. Shown next to the charge
                 // projection too: where the battery heads if unplugged now.
-                val discharge = dischargeProjection(samples, drives, baseMillis, now)
+                val discharge = dischargeProjection(samples, drives, baseMillis, now, scale)
                 // The projection gets room on the x-axis: half the range ahead.
                 val windowEnd =
                     if (charge != null || discharge != null) {
@@ -705,7 +705,12 @@ internal fun BatteryHistoryCard(
                     Spacer(Modifier.height(6.dp))
                     Text(
                         text =
-                            "Parked · projected ${it.projectedPercent}% by " +
+                            "Parked · projected ${it.projectedPercent}%" +
+                                it.beam
+                                    ?.takeIf { (low, high) -> low.roundToInt() != high.roundToInt() }
+                                    ?.let { (low, high) -> " (${low.roundToInt()}–${high.roundToInt()}%)" }
+                                    .orEmpty() +
+                                " by " +
                                 formatTime(it.projectedAtMillis, showDate = true) +
                                 " · ${"%.1f".format(it.percentPerHour * 24)}%/day",
                         style = MaterialTheme.typography.bodySmall,
@@ -762,7 +767,7 @@ private fun BatteryChart(
         val height = size.height - top - bottom
         if (width <= 0f || height <= 0f) return@Canvas
 
-        val minPercent = minOf(samples.minOf { it.soc(scale) }, (discharge?.projectedPercent ?: 100).toFloat())
+        val minPercent = minOf(samples.minOf { it.soc(scale) }, discharge?.let { it.lowSoc ?: it.projectedSoc } ?: 100f)
         val maxPercent = maxOf(samples.maxOf { it.soc(scale) }, (charge?.targetPercent ?: 0).toFloat())
         var yMin = ((minPercent - 2).toInt().coerceAtLeast(0) / 5) * 5
         var yMax = (((maxPercent + 2).toInt().coerceAtMost(100) + 4) / 5) * 5
@@ -840,12 +845,28 @@ private fun BatteryChart(
             val end =
                 Offset(
                     x(target.projectedAtMillis),
-                    y(target.projectedPercent),
+                    y(target.projectedSoc),
                 )
+            val start = Offset(x(target.from.timestampMillis), y(target.fromSoc))
+            // The beam: two standard errors of the parked rate at the horizon.
+            val low = target.lowSoc
+            val high = target.highSoc
+            if (low != null && high != null) {
+                drawPath(
+                    path =
+                        Path().apply {
+                            moveTo(start.x, start.y)
+                            lineTo(end.x, y(low))
+                            lineTo(end.x, y(high))
+                            close()
+                        },
+                    color = lineColor.copy(alpha = if (charge != null) 0.1f else 0.2f),
+                )
+            }
             drawPath(
                 path =
                     Path().apply {
-                        moveTo(x(target.from.timestampMillis), y(target.from.soc(scale)))
+                        moveTo(start.x, start.y)
                         lineTo(end.x, end.y)
                     },
                 color = lineColor.copy(alpha = if (charge != null) 0.35f else 0.65f),

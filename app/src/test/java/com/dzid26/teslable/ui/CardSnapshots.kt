@@ -390,6 +390,32 @@ class CardSnapshots {
     }
 
     @Test
+    fun historyCardParkedDrainRange() {
+        // A slow parked drain (about 1.6 %/day) read on the rated range: a fitted scale turns
+        // the level steps into sub-percent readings, so the line is smooth and the beam is thin.
+        snapCard("history-card_parked-drain-range") {
+            BatteryHistoryCard(
+                samples = rangeParkedSamples,
+                drives = rangeParkedSamples.map { parkedDrive(it) },
+                nowMillis = NOW,
+            )
+        }
+    }
+
+    @Test
+    fun historyCardChargingRange() {
+        // The same car plugged in: the charge fit reads sub-percent too, and the beam
+        // comes from the slope's own scatter plus the supply voltage.
+        snapCard("history-card_charging-range") {
+            BatteryHistoryCard(
+                samples = rangeChargingSamples,
+                drives = rangeParkedSamples.map { parkedDrive(it) },
+                nowMillis = NOW,
+            )
+        }
+    }
+
+    @Test
     fun historyCardChargingSixHours() {
         // The short range puts the chart's right edge only 3 h ahead, so the beam is
         // cut near the line's start: it must stay a visible sliver, not round away.
@@ -642,6 +668,46 @@ class CardSnapshots {
         )
 
         private const val ODOMETER = 1_234_500
+
+        /** A reading on a 300 mi car (3 mi per point): the level rounds, the range does not. */
+        private fun rangeSample(
+            minutesAgo: Long,
+            soc: Double,
+            charging: Boolean = false,
+            volts: Int? = null,
+        ) = BatterySample(
+            timestampMillis = NOW - minutesAgo * MINUTE,
+            batteryLevel = Math.round(soc).toInt(),
+            chargingState = if (charging) ChargingStateKind.Charging else null,
+            chargeLimit = if (charging) CHARGE_LIMIT else null,
+            vehicleId = BLE_NAME,
+            ratedRangeMiles = (soc * 3.0).toFloat(),
+            chargerVoltage = volts,
+            readAtMillis = NOW - minutesAgo * MINUTE,
+        )
+
+        // Two days of driving down from 85 to 68 %, hourly, before the day shown: it gives
+        // the scale fit its level steps, as a real history does.
+        private val rangeDrivenSamples =
+            (0..47).map { step ->
+                rangeSample(1500L + (47 - step) * 60L, 68.0 + (85.0 - 68.0) * (47 - step) / 47.0)
+            }
+
+        // 21 h parked, 68 -> 66.6 % (about 1.6 %/day), a read every 20 min.
+        private val rangeParkedSamples =
+            rangeDrivenSamples +
+                (0..63).map { step ->
+                    rangeSample((63 - step) * 20L, 66.6 + (68.0 - 66.6) * (63 - step) / 63.0)
+                }
+
+        // Then a charge from 67 -> ~73 % over the last 4 h, a read every 10 min, supply 218-243 V.
+        private val rangeChargingSamples =
+            rangeParkedSamples.dropLast(12) +
+                (0..23).map { step ->
+                    val minutesAgo = (23 - step) * 10L
+                    val volts = listOf(243, 238, 226, 218, 231, 240)[step % 6]
+                    rangeSample(minutesAgo, 66.95 + step * 0.25, charging = true, volts = volts)
+                }
 
         private val parkedSamples =
             listOf(
