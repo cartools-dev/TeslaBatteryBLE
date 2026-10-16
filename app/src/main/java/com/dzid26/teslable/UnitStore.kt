@@ -4,7 +4,9 @@ package com.dzid26.teslable
 import android.content.Context
 import android.icu.util.LocaleData
 import android.icu.util.ULocale
+import android.os.Build
 import com.dzid26.teslable.core.units.DistanceUnit
+import java.util.Locale
 
 /** Which distance unit the owner wants: follow the phone's region, or force one. */
 enum class UnitPreference(
@@ -20,14 +22,19 @@ enum class UnitPreference(
         when (this) {
             METRIC -> DistanceUnit.KILOMETERS
             IMPERIAL -> DistanceUnit.MILES
-            SYSTEM ->
-                if (LocaleData.getMeasurementSystem(ULocale.getDefault()) == LocaleData.MeasurementSystem.SI) {
-                    DistanceUnit.KILOMETERS
-                } else {
-                    DistanceUnit.MILES
-                }
+            SYSTEM -> if (localeUsesMiles()) DistanceUnit.MILES else DistanceUnit.KILOMETERS
         }
 }
+
+/** ICU knows the measurement system from API 28; older phones fall back to the countries that drive in miles. */
+private fun localeUsesMiles(): Boolean =
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+        LocaleData.getMeasurementSystem(ULocale.getDefault()) != LocaleData.MeasurementSystem.SI
+    } else {
+        Locale.getDefault().country in MILE_COUNTRIES
+    }
+
+private val MILE_COUNTRIES = setOf("US", "GB", "LR", "MM")
 
 /** The owner's unit preference. Display only: stored and computed values stay in miles. */
 class UnitStore(
