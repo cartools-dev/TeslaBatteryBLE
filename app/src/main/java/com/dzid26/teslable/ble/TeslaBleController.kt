@@ -1105,11 +1105,7 @@ class TeslaBleController(
                 // stopped advertising or came back at a new address.
                 startDiscovery()
             }
-            // Doubling each time up to the ceiling: a car that is out of range for hours costs a
-            // handful of attempts an hour, not one a minute.
-            val delay =
-                (RECONNECT_DELAY_MS shl (reconnectAttempts - 1).coerceIn(0, MAX_BACKOFF_DOUBLINGS))
-                    .coerceAtMost(RECONNECT_MAX_DELAY_MS)
+            val delay = ReconnectBackoff.delayMs(reconnectAttempts)
             nextRetryAtMs = System.currentTimeMillis() + delay
             handler.removeCallbacks(reconnect)
             handler.postDelayed(reconnect, delay)
@@ -1119,9 +1115,9 @@ class TeslaBleController(
         fun resetBackoff() {
             if (reconnectAttempts == 0 || phase == ConnectionPhase.READY) return
             reconnectAttempts = 0
-            nextRetryAtMs = System.currentTimeMillis() + RECONNECT_DELAY_MS
+            nextRetryAtMs = System.currentTimeMillis() + ReconnectBackoff.FIRST_DELAY_MS
             handler.removeCallbacks(reconnect)
-            handler.postDelayed(reconnect, RECONNECT_DELAY_MS)
+            handler.postDelayed(reconnect, ReconnectBackoff.FIRST_DELAY_MS)
         }
 
         private fun ensureConnectionEntry() {
@@ -1553,11 +1549,7 @@ class TeslaBleController(
         const val RSSI_POLL_MS = 500L
         const val DEMO_SCAN_MS = 2_000L
         const val REHANDSHAKE_COOLDOWN_MS = 60_000L
-        const val RECONNECT_DELAY_MS = 5000L
-        const val RECONNECT_MAX_DELAY_MS = 300_000L
 
-        /** 5 s doubled this often reaches the ceiling: 5, 10, 20, 40, 80, 160, 300. */
-        const val MAX_BACKOFF_DOUBLINGS = 6
         const val DISCOVERY_AFTER_ATTEMPTS = 3
         const val DISCOVERY_TIMEOUT_MS = 30_000L
 
