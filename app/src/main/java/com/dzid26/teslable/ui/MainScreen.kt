@@ -51,6 +51,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
@@ -58,6 +59,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.repeatOnLifecycle
+import com.dzid26.teslable.R
 import com.dzid26.teslable.ble.BleUiState
 import com.dzid26.teslable.ble.ConnectionLabel
 import com.dzid26.teslable.ble.ConnectionPhase
@@ -286,7 +288,7 @@ internal fun ConnectionsScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Cars") },
+                title = { Text(stringResource(R.string.main_title)) },
                 actions = {
                     TrackingToggle(
                         checked = state.trackingEnabled,
@@ -295,7 +297,7 @@ internal fun ConnectionsScreen(
                     IconButton(onClick = onOpenSettings) {
                         Icon(
                             imageVector = Icons.Filled.Settings,
-                            contentDescription = "Settings",
+                            contentDescription = stringResource(R.string.settings_title),
                         )
                     }
                 },
@@ -326,7 +328,7 @@ internal fun ConnectionsScreen(
                     RefreshPill(
                         state = pullState,
                         isRefreshing = state.scanning,
-                        pullLabel = "Scan for cars",
+                        pullLabel = stringResource(R.string.main_pull_scan),
                         refreshingLabel = null,
                     )
                 }
@@ -344,19 +346,16 @@ internal fun ConnectionsScreen(
                 Column(modifier = Modifier.fillMaxSize()) {
                     if (!permissionsGranted) {
                         PermissionCard(
-                            title = "Allow Bluetooth access",
-                            body =
-                                "TeslaBatteryBLE finds and talks to your Tesla over Bluetooth. " +
-                                    "Android also requires location permission for BLE scans; the app " +
-                                    "never reads your location and nothing leaves the phone.",
-                            button = "Grant permissions",
+                            title = stringResource(R.string.main_permission_title),
+                            body = stringResource(R.string.main_permission_body),
+                            button = stringResource(R.string.main_permission_button),
                             onClick = onRequestPermissions,
                         )
                         Spacer(Modifier.height(8.dp))
                     }
                     if (!locationServicesEnabled) {
                         Text(
-                            text = "Location services are off. BLE scans return no results until it is enabled.",
+                            text = stringResource(R.string.main_location_off),
                             color = MaterialTheme.colorScheme.error,
                             style = MaterialTheme.typography.bodySmall,
                         )
@@ -368,9 +367,9 @@ internal fun ConnectionsScreen(
                         Text(
                             text =
                                 if (rows.isNotEmpty()) {
-                                    "${rows.size} car(s), $connectedCount connected"
+                                    stringResource(R.string.main_car_summary, rows.size, connectedCount)
                                 } else {
-                                    "No scan yet"
+                                    stringResource(R.string.main_no_scan)
                                 },
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -423,17 +422,12 @@ private fun VehicleList(
         ) {
             Spacer(Modifier.height(48.dp))
             Text(
-                text = if (scanning) "Looking for your cars…" else "No cars yet",
+                text = stringResource(if (scanning) R.string.main_looking else R.string.main_no_cars),
                 style = MaterialTheme.typography.titleMedium,
             )
             Spacer(Modifier.height(4.dp))
             Text(
-                text =
-                    if (scanning) {
-                        "Keep the app open and stay near the car."
-                    } else {
-                        "Pull down to scan."
-                    },
+                text = stringResource(if (scanning) R.string.main_keep_open else R.string.main_pull_down),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -566,7 +560,7 @@ internal fun VehicleCard(
             }
             DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
                 DropdownMenuItem(
-                    text = { Text("Wake") },
+                    text = { Text(stringResource(R.string.tracking_wake)) },
                     enabled = canWake,
                     onClick = {
                         menuOpen = false
@@ -574,7 +568,7 @@ internal fun VehicleCard(
                     },
                 )
                 DropdownMenuItem(
-                    text = { Text(if (vin == null) "Add VIN" else "Edit VIN") },
+                    text = { Text(stringResource(if (vin == null) R.string.vin_add else R.string.vin_edit)) },
                     onClick = {
                         menuOpen = false
                         onEditVin()
@@ -593,11 +587,11 @@ private fun LogCard(
 ) {
     Card(modifier = Modifier.fillMaxWidth()) {
         Column(Modifier.padding(12.dp)) {
-            Text("Log", style = MaterialTheme.typography.titleSmall)
+            Text(stringResource(R.string.log_title), style = MaterialTheme.typography.titleSmall)
             Spacer(Modifier.height(4.dp))
             if (log.isEmpty()) {
                 Text(
-                    text = "No activity yet.",
+                    text = stringResource(R.string.log_empty),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -636,7 +630,7 @@ internal fun TrackingToggle(
         verticalAlignment = Alignment.CenterVertically,
         modifier = Modifier.padding(start = 8.dp, end = 4.dp),
     ) {
-        Text("Enable", style = MaterialTheme.typography.labelLarge)
+        Text(stringResource(R.string.enable_toggle), style = MaterialTheme.typography.labelLarge)
         Spacer(Modifier.width(6.dp))
         Switch(checked = checked, onCheckedChange = onCheckedChange)
     }

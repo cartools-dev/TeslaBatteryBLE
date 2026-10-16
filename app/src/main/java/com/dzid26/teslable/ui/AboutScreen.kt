@@ -1,9 +1,11 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 package com.dzid26.teslable.ui
 
+import android.content.ActivityNotFoundException
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
+import android.widget.Toast
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -33,8 +35,10 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.dzid26.teslable.BuildConfig
+import com.dzid26.teslable.R
 
 /**
  * Everything about the app that is not a setting: version, description, links,
@@ -52,11 +56,11 @@ fun AboutScreen(onBack: () -> Unit) {
                     IconButton(onClick = onBack) {
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = "Back",
+                            contentDescription = stringResource(R.string.action_back),
                         )
                     }
                 },
-                title = { Text("About") },
+                title = { Text(stringResource(R.string.about_title)) },
             )
         },
     ) { innerPadding ->
@@ -74,7 +78,7 @@ fun AboutScreen(onBack: () -> Unit) {
             SupportCard()
             LicensesCard()
             Text(
-                text = "Not affiliated with, endorsed by, or sponsored by Tesla, Inc.",
+                text = stringResource(R.string.about_disclaimer),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -86,19 +90,16 @@ fun AboutScreen(onBack: () -> Unit) {
 private fun AppCard() {
     Card(modifier = Modifier.fillMaxWidth()) {
         Column(Modifier.padding(16.dp)) {
-            Text("TeslaBatteryBLE", style = MaterialTheme.typography.titleLarge)
+            Text(stringResource(R.string.app_name), style = MaterialTheme.typography.titleLarge)
             Spacer(Modifier.height(4.dp))
             Text(
-                text = "Version ${BuildConfig.VERSION_NAME}",
+                text = stringResource(R.string.about_version, BuildConfig.VERSION_NAME),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
             Spacer(Modifier.height(12.dp))
             Text(
-                text =
-                    "A local-first Tesla BLE battery tracker. It reads battery data over " +
-                        "Bluetooth and keeps the history on the phone: no account, no cloud, " +
-                        "nothing leaves the phone.",
+                text = stringResource(R.string.about_description),
                 style = MaterialTheme.typography.bodyMedium,
             )
         }
@@ -107,42 +108,38 @@ private fun AppCard() {
 
 @Composable
 private fun LinksCard() {
-    SectionCard(title = "Links") {
-        LinkRow("Source code", SOURCE_URL)
-        LinkRow("Releases", RELEASES_URL)
-        LinkRow("Privacy statement", PRIVACY_URL)
+    SectionCard(title = stringResource(R.string.about_links)) {
+        LinkRow(stringResource(R.string.about_source_code), SOURCE_URL)
+        LinkRow(stringResource(R.string.about_releases), RELEASES_URL)
+        LinkRow(stringResource(R.string.about_privacy), PRIVACY_URL)
     }
 }
 
 @Composable
 private fun SupportCard() {
-    SectionCard(title = "Support") {
+    SectionCard(title = stringResource(R.string.about_support)) {
         Text(
-            text =
-                "TeslaBatteryBLE is free software, built in spare time. If it is useful " +
-                    "to you, you can support development through GitHub Sponsors.",
+            text = stringResource(R.string.about_support_body),
             style = MaterialTheme.typography.bodyMedium,
             modifier = Modifier.padding(horizontal = 16.dp),
         )
         Spacer(Modifier.height(4.dp))
-        LinkRow("Sponsor on GitHub", SPONSORS_URL)
+        LinkRow(stringResource(R.string.about_sponsor), SPONSORS_URL)
     }
 }
 
 /** Flat and always visible: version, license summary, and the full texts. */
 @Composable
 private fun LicensesCard() {
-    SectionCard(title = "Licenses") {
+    SectionCard(title = stringResource(R.string.about_licenses)) {
         Text(
-            text =
-                "TeslaBatteryBLE is AGPL-3.0-only. Bundled libraries (Wire, AndroidX, " +
-                    "Kotlin) are Apache-2.0.",
+            text = stringResource(R.string.about_licenses_body),
             style = MaterialTheme.typography.bodyMedium,
             modifier = Modifier.padding(horizontal = 16.dp),
         )
         Spacer(Modifier.height(4.dp))
-        LinkRow("License text", LICENSE_URL)
-        LinkRow("Third-party notices", NOTICES_URL)
+        LinkRow(stringResource(R.string.about_license_text), LICENSE_URL)
+        LinkRow(stringResource(R.string.about_notices), NOTICES_URL)
     }
 }
 
@@ -196,7 +193,12 @@ private fun openUrl(
     context: Context,
     url: String,
 ) {
-    context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)))
+    // Devices without a browser have nothing to handle the link; ignore the tap.
+    try {
+        context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)))
+    } catch (_: ActivityNotFoundException) {
+        Toast.makeText(context, R.string.about_no_browser, Toast.LENGTH_SHORT).show()
+    }
 }
 
 private const val SOURCE_URL = "https://github.com/dzid26/TeslaBatteryBLE"

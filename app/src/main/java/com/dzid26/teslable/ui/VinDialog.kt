@@ -12,6 +12,8 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
+import com.dzid26.teslable.R
 import com.dzid26.teslable.ble.Vehicle
 import com.dzid26.teslable.core.TeslaNames
 
@@ -39,21 +41,21 @@ internal fun VinDialog(
     val valid = normalized.length == Vehicle.VIN_LENGTH && expected == bleName
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("VIN") },
+        title = { Text(stringResource(R.string.vin_title)) },
         text = {
             OutlinedTextField(
                 value = input,
                 onValueChange = { input = it },
                 singleLine = true,
-                label = { Text("17-character VIN") },
+                label = { Text(stringResource(R.string.vin_label)) },
                 isError = mismatch,
                 supportingText = {
                     Text(
                         text =
                             when {
-                                mismatch -> "Doesn't match this car's advertised name"
-                                valid -> "Saved for this car; never logged."
-                                else -> "Printed on the windshield or the driver's door jamb."
+                                mismatch -> stringResource(R.string.vin_mismatch)
+                                valid -> stringResource(R.string.vin_saved)
+                                else -> stringResource(R.string.vin_hint)
                             },
                     )
                 },
@@ -65,11 +67,11 @@ internal fun VinDialog(
                 onClick = { onSave(normalized) },
                 enabled = valid,
             ) {
-                Text("Save")
+                Text(stringResource(R.string.action_save))
             }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) { Text("Cancel") }
+            TextButton(onClick = onDismiss) { Text(stringResource(R.string.action_cancel)) }
         },
     )
 }
