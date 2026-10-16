@@ -10,7 +10,7 @@ fun chargeSessionCost(
     energyAddedKwh: Float?,
     pricePerKwh: Float?,
 ): Float? {
-    val energy = energyAddedKwh?.takeIf { it.isFinite() && it > 0f } ?: return null
-    val price = pricePerKwh?.takeIf { it.isFinite() && it > 0f } ?: return null
-    return energy * price
+    val energy = energyAddedKwh?.takeIf { it.isFinite() && it > 0f }
+    val price = pricePerKwh?.takeIf { it.isFinite() && it > 0f }
+    return if (energy != null && price != null) energy * price else null
 }
