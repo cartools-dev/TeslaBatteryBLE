@@ -795,8 +795,9 @@ class TeslaBleController(
                     transport?.readRssi()
                     requestStatus()
                     commands.logUnanswered()
-                    // A session request nobody answered must not hold the key slot lookup back for good.
-                    runStartupSlotLookup()
+                    // Once the VCSEC session exists the lookup is no longer waiting on anything; until then it stays
+                    // behind the session request (a handshake that gives up releases it).
+                    if (handshake.has(Domain.DOMAIN_VEHICLE_SECURITY)) runStartupSlotLookup()
                     expirePendingCommands(System.currentTimeMillis())
                     readInFlight.expire(System.currentTimeMillis())
                     handler.postDelayed(this, POLL_MS)
@@ -936,6 +937,8 @@ class TeslaBleController(
 
                 override fun onEstablished(domain: Domain) {
                     rememberVehicle(address)
+                    // A fresh session starts with a clean count of resyncs.
+                    resyncsWithoutReply = 0
                     if (domain == Domain.DOMAIN_VEHICLE_SECURITY) runStartupSlotLookup()
                     if (domain == Domain.DOMAIN_INFOTAINMENT && infotainmentGate.onSessionEstablished()) {
                         requestChargeState(waitingReadReason)
@@ -948,6 +951,7 @@ class TeslaBleController(
 
                 override fun onGaveUp() {
                     infotainmentGate.onGaveUp()
+                    runStartupSlotLookup()
                 }
 
                 override fun onKeyUnusable() {
