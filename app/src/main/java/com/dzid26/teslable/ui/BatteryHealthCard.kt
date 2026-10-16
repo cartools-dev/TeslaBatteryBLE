@@ -60,7 +60,7 @@ internal fun BatteryHealthCard(summary: HealthSummary) {
                     value = "~${(kwh * 10).roundToInt() / 10f} kWh",
                     detail =
                         summary.ratedKwhPerMile?.let { constant ->
-                            "rated constant ${(unit.energyPerUnit(constant) * 1000).roundToInt()} Wh/${unit.symbol}"
+                            "rated constant ${(unit.energyPerUnit(constant) * WH_PER_KWH).roundToInt()} Wh/${unit.symbol}"
                         } ?: "energy added over the last charge",
                 )
             }
@@ -186,3 +186,5 @@ private fun confidenceLine(summary: HealthSummary): String =
 
         HealthConfidence.HIGH -> "${summary.sessions} charge sessions recorded."
     }
+
+private const val WH_PER_KWH = 1000f
