@@ -58,3 +58,31 @@ fun BleRecord.toDriveSample(vehicleId: String): DriveSample? {
         odometerInHundredthsOfAMile = drive.odometer_in_hundredths_of_a_mile,
     )
 }
+
+/**
+ * The navigation route of a logged DriveState reply, or null unless the record
+ * holds a drive state with the car's own timestamp and at least one route field
+ * (a car that is not navigating sends none). Like [toDriveSample] it sits on the
+ * car's timestamp, never `device_timestamp`.
+ */
+fun BleRecord.toRouteSample(vehicleId: String): RouteSample? {
+    val drive = drive_state
+    val time = drive?.timestamp?.toEpochMilli()
+    if (drive == null || time == null) return null
+    val sample =
+        RouteSample(
+            timestampMillis = time,
+            vehicleId = vehicleId,
+            destination = drive.active_route_destination?.takeIf { it.isNotEmpty() },
+            milesToArrival = drive.active_route_miles_to_arrival,
+            minutesToArrival = drive.active_route_minutes_to_arrival,
+            trafficDelayMinutes = drive.active_route_traffic_minutes_delay,
+            energyAtArrivalPercent = drive.active_route_energy_at_arrival,
+        )
+    val hasRoute =
+        sample.destination != null ||
+            sample.milesToArrival != null ||
+            sample.minutesToArrival != null ||
+            sample.energyAtArrivalPercent != null
+    return sample.takeIf { hasRoute }
+}

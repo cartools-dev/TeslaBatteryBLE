@@ -395,6 +395,30 @@ class BleRecordMappingTest {
     }
 
     @Test
+    fun `a drive record with an active route maps onto a route sample`() {
+        assertEquals(
+            RouteSample(
+                timestampMillis = 2_000_000L,
+                vehicleId = VEHICLE,
+                destination = "Test destination",
+                milesToArrival = 6.25f,
+                minutesToArrival = 12.5f,
+                trafficDelayMinutes = 1.5f,
+                energyAtArrivalPercent = 61.5f,
+            ),
+            BleRecord(drive_state = driving).toRouteSample(VEHICLE),
+        )
+    }
+
+    @Test
+    fun `a drive record without a route yields no route sample`() {
+        val parked = DriveState(shift_state = ShiftState(P = Void()), timestamp = ofEpochSecond(5, 0))
+        assertNull(BleRecord(drive_state = parked).toRouteSample(VEHICLE))
+        assertNull(BleRecord(drive_state = driving.copy(timestamp = null)).toRouteSample(VEHICLE))
+        assertNull(BleRecord().toRouteSample(VEHICLE))
+    }
+
+    @Test
     fun `a drive record without a car timestamp yields no drive sample`() {
         // device_timestamp is never a stand-in for the car's own time (ADR-0006).
         val record = BleRecord(device_timestamp = ofEpochSecond(2_090, 0), drive_state = driving.copy(timestamp = null))
