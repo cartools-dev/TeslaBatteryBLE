@@ -136,15 +136,16 @@ internal object DemoScreenFixtures {
         val driving: Boolean = false,
     )
 
+    /** Points from `minutes.first` to `minutes.second` minutes ago, the level moving from `levels.first` to `.second`. */
     private fun segment(
-        fromAgo: Long,
-        toAgo: Long,
-        fromPercent: Int,
-        toPercent: Int,
+        minutes: Pair<Long, Long>,
+        levels: Pair<Int, Int>,
         stepMin: Long,
         state: ChargingStateKind,
         driving: Boolean = false,
     ): List<Point> {
+        val (fromAgo, toAgo) = minutes
+        val (fromPercent, toPercent) = levels
         val span = (fromAgo - toAgo).coerceAtLeast(1L)
         val charge = if (state == ChargingStateKind.Charging) fromPercent else null
         val points = mutableListOf<Point>()
@@ -163,19 +164,19 @@ internal object DemoScreenFixtures {
         buildList {
             val parked = ChargingStateKind.Disconnected
             val charge = ChargingStateKind.Charging
-            addAll(segment(2880, 2700, 64, 63, 60, parked))
-            addAll(segment(2700, 2580, 63, 55, 15, parked, driving = true))
-            addAll(segment(2580, 2460, 55, 54, 60, parked))
-            addAll(segment(2460, 2400, 54, 60, 10, charge))
-            addAll(segment(2400, 2280, 60, 52, 15, parked, driving = true))
-            addAll(segment(2280, 2160, 52, 51, 60, parked))
-            addAll(segment(2160, 2040, 51, 63, 10, charge))
-            addAll(segment(2040, 1920, 63, 54, 15, parked, driving = true))
-            addAll(segment(1920, 1560, 54, 52, 60, parked))
-            addAll(segment(1560, 1260, 52, 85, 10, charge))
+            addAll(segment(2880L to 2700L, 64 to 63, 60, parked))
+            addAll(segment(2700L to 2580L, 63 to 55, 15, parked, driving = true))
+            addAll(segment(2580L to 2460L, 55 to 54, 60, parked))
+            addAll(segment(2460L to 2400L, 54 to 60, 10, charge))
+            addAll(segment(2400L to 2280L, 60 to 52, 15, parked, driving = true))
+            addAll(segment(2280L to 2160L, 52 to 51, 60, parked))
+            addAll(segment(2160L to 2040L, 51 to 63, 10, charge))
+            addAll(segment(2040L to 1920L, 63 to 54, 15, parked, driving = true))
+            addAll(segment(1920L to 1560L, 54 to 52, 60, parked))
+            addAll(segment(1560L to 1260L, 52 to 85, 10, charge))
             add(Point(1260, 85, ChargingStateKind.Complete))
-            addAll(segment(1200, 90, 84, 75, 60, parked))
-            addAll(segment(90, 10, 75, 78, 10, charge))
+            addAll(segment(1200L to 90L, 84 to 75, 60, parked))
+            addAll(segment(90L to 10L, 75 to 78, 10, charge))
         }.reversed().distinctBy { it.minutesAgo }.reversed()
 
     /** Two days of charge readings ending at [nowMillis]: three sessions plus the live top-up. */
