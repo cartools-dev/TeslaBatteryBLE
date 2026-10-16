@@ -113,7 +113,15 @@ fun dischargeProjection(
         percentPerHour = ratePerMilli * HOUR,
         fromSoc = fromSoc,
         projectedSoc = projectedSoc,
-        lowSoc = if (hasBeam) (projectedSoc - reach).toFloat().coerceIn(0f, FULL_PERCENT) else null,
+        // With too few pairs for a statistical edge, only the sleep edge draws.
+        lowSoc =
+            if (hasBeam) {
+                (if (parked.pairs >= MIN_BEAM_PAIRS) projectedSoc - reach else projectedSoc.toDouble())
+                    .toFloat()
+                    .coerceIn(0f, FULL_PERCENT)
+            } else {
+                null
+            },
         highSoc = if (hasBeam) maxOf(statHigh, sleepSoc ?: statHigh).coerceIn(0f, minOf(fromSoc.toFloat(), FULL_PERCENT)) else null,
         sleepPercentPerHour = sleepRate?.let { it * HOUR },
     )
@@ -133,6 +141,7 @@ data class ProjectionContext(
 private class SleepSpan(
     val drop: Double,
     val millis: Long,
+    val pairs: Int,
 )
 
 /** The summed signed drop (percent) and duration of the parked pairs, with their spread. */
@@ -145,10 +154,17 @@ private class ParkedDrain(
     /** The rounding variance of the summed drop: first minus last reading, so two readings' worth however many pairs. */
     val roundingVariance: Double = 0.0,
     /** The drop and duration of the pairs the car slept through. */
-    val sleep: SleepSpan = SleepSpan(0.0, 0L),
+    val sleep: SleepSpan = SleepSpan(0.0, 0L, 0),
 ) {
     /** The drain rate of the slept-through pairs, percent per millisecond; null with too little sleep. */
-    val sleepRatePerMilli: Double? get() = if (sleep.millis >= MIN_RATE_SPAN_MILLIS) sleep.drop / sleep.millis else null
+    val sleepRatePerMilli: Double? get() =
+        if (sleep.pairs >= MIN_SLEEP_PAIRS &&
+            sleep.millis >= MIN_RATE_SPAN_MILLIS
+        ) {
+            sleep.drop / sleep.millis
+        } else {
+            null
+        }
 
     /**
      * One standard error of the rate, percent per millisecond: the pairs' scatter
@@ -202,7 +218,7 @@ private fun parkedDrain(
     // already carry some rounding noise, so adding it here counts it twice in part;
     // erring wide is the intended side.
     val rounding = TWO_READINGS_VARIANCE * readingResolution(scale) * readingResolution(scale)
-    return ParkedDrain(drop, millis, drops.size, squared, rounding, SleepSpan(sleepDrop, sleepMillis))
+    return ParkedDrain(drop, millis, drops.size, squared, rounding, SleepSpan(sleepDrop, sleepMillis, slept.count { it }))
 }
 
 /**
@@ -218,8 +234,21 @@ private fun sleptThrough(
 ): Boolean {
     val from = a.readAtMillis ?: a.timestampMillis
     val to = b.readAtMillis ?: b.timestampMillis
-    val inside = statuses.filter { it.timestampMillis > from && it.timestampMillis < to }
-    return inside.any { it.asleep } && inside.none { !it.asleep }
+    // The statuses are oldest first: find the first one inside the gap, then walk it.
+    var low = 0
+    var high = statuses.size
+    while (low < high) {
+        val middle = (low + high) / 2
+        if (statuses[middle].timestampMillis > from) high = middle else low = middle + 1
+    }
+    var sawAsleep = false
+    var index = low
+    while (index < statuses.size && statuses[index].timestampMillis < to) {
+        if (!statuses[index].asleep) return false
+        sawAsleep = true
+        index++
+    }
+    return sawAsleep
 }
 
 /** In R, N or D: the car is being driven even if the odometer has not ticked yet. */
@@ -247,6 +276,9 @@ private fun driveReadingsAt(
 
 /** A full battery, percent. */
 private const val FULL_PERCENT = 100f
+
+/** An asleep rate needs this many slept-through pairs: one pair's rounding can fake a rate or a zero. */
+private const val MIN_SLEEP_PAIRS = 2
 
 /** A beam needs this many parked pairs behind the rate. */
 private const val MIN_BEAM_PAIRS = 3

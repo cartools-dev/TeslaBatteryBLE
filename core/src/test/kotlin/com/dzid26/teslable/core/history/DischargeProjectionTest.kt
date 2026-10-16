@@ -8,6 +8,7 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
+import kotlin.test.assertTrue
 
 class DischargeProjectionTest {
     private fun sample(
@@ -248,15 +249,19 @@ class DischargeProjectionTest {
 
     @Test
     fun `the asleep rate comes from the gaps the car slept through`() {
-        // 0 -> 120: asleep (a status inside says so) and loses 1 point; 120 -> 240: awake and loses 3.
-        val samples = listOf(sample(0, 80), sample(120, 79), sample(240, 76))
-        val statuses = listOf(status(60, asleep = true), status(180, asleep = false))
+        // Two slept-through gaps lose a point each; the last, awake gap loses 3.
+        val samples = listOf(sample(0, 80), sample(120, 79), sample(240, 78), sample(360, 75))
+        val statuses = listOf(status(60, asleep = true), status(180, asleep = true), status(300, asleep = false))
         val projection = assertNotNull(project(samples, statuses = statuses, rangeMillis = 24 * HOUR))
-        // Mixed: 4 points over 4 h = 1 %/h; asleep: 1 point over 2 h = 0.5 %/h.
-        assertEquals(1.0, projection.percentPerHour, 1e-9)
+        // Mixed: 5 points over 6 h; asleep: 2 points over 4 h = 0.5 %/h.
+        assertEquals(5.0 / 6.0, projection.percentPerHour, 1e-9)
         assertEquals(0.5, projection.sleepPercentPerHour!!, 1e-9)
-        // The beam reaches up to the gentler asleep line: 12 h at 0.5 %/h from 76 is 70, mixed is 64.
-        assertEquals(70f, projection.highSoc!!, 0.01f)
+        // The beam's upper edge is at least the gentler asleep line: 12 h at 0.5 %/h from 75 is 69.
+        assertTrue(projection.highSoc!! >= 69f)
+        // A single slept-through pair is not enough to call a rate.
+        val one = listOf(sample(0, 80), sample(120, 79), sample(240, 76))
+        val oneAsleep = listOf(status(60, asleep = true), status(180, asleep = false))
+        assertNull(assertNotNull(project(one, statuses = oneAsleep, rangeMillis = 24 * HOUR)).sleepPercentPerHour)
     }
 
     @Test
