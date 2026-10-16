@@ -6,13 +6,13 @@
 #
 # Usage: verify.sh [tests|static|all]   (default: all)
 #   tests   protocol and app unit tests
-#   static  Android lint (debug and release), ktlint and detekt
+#   static  Android lint (debug and release), ktlint and type-resolved detekt
 # CI runs the two groups as parallel jobs; the release job runs everything.
 set -euo pipefail
 
 case "${1:-all}" in
   tests) ./gradlew :core:test :app:testDebugUnitTest ;;
-  static) ./gradlew :app:lintDebug :app:lintRelease ktlintCheck detekt ;;
-  all) ./gradlew :core:test :app:testDebugUnitTest :app:lintDebug :app:lintRelease ktlintCheck detekt ;;
+  static) ./gradlew :app:lintDebug :app:lintRelease ktlintCheck detektMain detektTest ;;
+  all) ./gradlew :core:test :app:testDebugUnitTest :app:lintDebug :app:lintRelease ktlintCheck detektMain detektTest ;;
   *) echo "usage: verify.sh [tests|static|all]" >&2; exit 2 ;;
 esac
