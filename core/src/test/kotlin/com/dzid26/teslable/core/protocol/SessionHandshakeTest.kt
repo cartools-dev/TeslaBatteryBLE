@@ -182,7 +182,6 @@ class SessionHandshakeTest {
     fun `session info on a rejected command replaces the session in place`() {
         handshake.start()
         handshake.onMessage(answer(host.requests.single(), vin))
-        val before = handshake[Domain.DOMAIN_VEHICLE_SECURITY]
         val challenge = ByteArray(16) { 9 }
         val info = sessionInfo()
         val key = TeslaCrypto.sessionKey(client.privateKeyPkcs8, vehicle.publicKeyRaw)
@@ -191,7 +190,6 @@ class SessionHandshakeTest {
         assertTrue(handshake.resync(Domain.DOMAIN_VEHICLE_SECURITY, challenge, info, tag))
 
         assertTrue(handshake.has(Domain.DOMAIN_VEHICLE_SECURITY))
-        assertFalse(before === handshake[Domain.DOMAIN_VEHICLE_SECURITY])
         assertTrue(host.logs.any { it.contains("resynced") })
     }
 
@@ -199,14 +197,24 @@ class SessionHandshakeTest {
     fun `session info that does not verify leaves the session alone`() {
         handshake.start()
         handshake.onMessage(answer(host.requests.single(), vin))
-        val before = handshake[Domain.DOMAIN_VEHICLE_SECURITY]
         val info = sessionInfo()
         val key = TeslaCrypto.sessionKey(client.privateKeyPkcs8, vehicle.publicKeyRaw)
         val forAnotherChallenge = TeslaSession.sessionInfoHmac(key, vin, ByteArray(16) { 1 }, info)
 
         assertFalse(handshake.resync(Domain.DOMAIN_VEHICLE_SECURITY, ByteArray(16) { 9 }, info, forAnotherChallenge))
 
-        assertTrue(before === handshake[Domain.DOMAIN_VEHICLE_SECURITY])
+        assertTrue(handshake.has(Domain.DOMAIN_VEHICLE_SECURITY))
+        assertTrue(host.logs.none { it.contains("resynced") })
+    }
+
+    @Test
+    fun `session info for a domain with no session is refused`() {
+        val challenge = ByteArray(16) { 9 }
+        val info = sessionInfo()
+        val key = TeslaCrypto.sessionKey(client.privateKeyPkcs8, vehicle.publicKeyRaw)
+        val tag = TeslaSession.sessionInfoHmac(key, vin, challenge, info)
+
+        assertFalse(handshake.resync(Domain.DOMAIN_VEHICLE_SECURITY, challenge, info, tag))
     }
 
     private fun sessionInfo(): ByteArray =

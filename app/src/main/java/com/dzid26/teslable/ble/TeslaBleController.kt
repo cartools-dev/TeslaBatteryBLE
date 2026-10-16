@@ -716,6 +716,9 @@ class TeslaBleController(
         var reconnectAttempts = 0
         private var wakeRefreshAttempts = 0
         private var decryptFailures = 0
+
+        /** Resyncs since the car last accepted one of our commands; a streak ends in a new handshake. */
+        private var resyncsWithoutReply = 0
         private var lastRehandshakeMs = 0L
 
         /** The next VCSEC status is the first since the link became ready; the status log always keeps it. */
@@ -767,8 +770,22 @@ class TeslaBleController(
             if (!startupPending) return
             startupPending = false
             handler.removeCallbacks(startupFollowUps)
+            // The session request goes first; the key slot lookup waits for it to be answered so no
+            // two VCSEC requests are in flight together (see onEstablished and the poll).
+            if (startSession()) {
+                startupSlotLookupPending = true
+            } else {
+                pairing.requestKeySlot()
+            }
+        }
+
+        /** The key slot lookup still waiting for the VCSEC session request to be answered. */
+        private var startupSlotLookupPending = false
+
+        private fun runStartupSlotLookup() {
+            if (!startupSlotLookupPending) return
+            startupSlotLookupPending = false
             pairing.requestKeySlot()
-            startSession()
         }
 
         val poll =
@@ -778,6 +795,8 @@ class TeslaBleController(
                     transport?.readRssi()
                     requestStatus()
                     commands.logUnanswered()
+                    // A session request nobody answered must not hold the key slot lookup back for good.
+                    runStartupSlotLookup()
                     expirePendingCommands(System.currentTimeMillis())
                     readInFlight.expire(System.currentTimeMillis())
                     handler.postDelayed(this, POLL_MS)
@@ -917,6 +936,7 @@ class TeslaBleController(
 
                 override fun onEstablished(domain: Domain) {
                     rememberVehicle(address)
+                    if (domain == Domain.DOMAIN_VEHICLE_SECURITY) runStartupSlotLookup()
                     if (domain == Domain.DOMAIN_INFOTAINMENT && infotainmentGate.onSessionEstablished()) {
                         requestChargeState(waitingReadReason)
                     }
@@ -1059,6 +1079,7 @@ class TeslaBleController(
             handler.removeCallbacks(wakeRefresh)
             handler.removeCallbacks(startupFollowUps)
             startupPending = false
+            startupSlotLookupPending = false
             handshake.cancelTimer()
             pairing.cancelTimers()
         }
@@ -1241,13 +1262,18 @@ class TeslaBleController(
             domain: Domain,
             message: RoutableMessage,
         ): Boolean {
+            // A streak of resyncs with no accepted reply between them means the car's info never
+            // settles; a full handshake recovers from that.
+            if (resyncsWithoutReply >= MAX_RESYNCS_WITHOUT_REPLY) return false
             val info = message.session_info?.toByteArray()
             val tag =
                 message.signature_data
                     ?.session_info_tag
                     ?.tag
                     ?.toByteArray()
-            return info != null && tag != null && handshake.resync(domain, message.request_uuid.toByteArray(), info, tag)
+            val resynced = info != null && tag != null && handshake.resync(domain, message.request_uuid.toByteArray(), info, tag)
+            if (resynced) resyncsWithoutReply++
+            return resynced
         }
 
         /** Forgets requests the car never answered, so they do not pile up for the life of the link. */
@@ -1308,6 +1334,7 @@ class TeslaBleController(
                 return true
             }
             decryptFailures = 0
+            resyncsWithoutReply = 0
             CommandRecords.refusalIn(pending.reason, pending.domain, plaintext)?.let { commands.result(it, deviceTimestamp) }
             when (pending.kind) {
                 CommandKind.WAKE -> {
@@ -1486,6 +1513,9 @@ class TeslaBleController(
         const val LOG_MAX_LINES = 200
         const val COMMAND_EXPIRES_SECONDS = 5
         const val POLL_MS = 10_000L
+
+        /** Resyncs in a row, with no accepted reply between them, before a full handshake replaces them. */
+        const val MAX_RESYNCS_WITHOUT_REPLY = 2
 
         /** How long the startup key slot lookup and session request wait for the status reply. */
         const val STARTUP_FOLLOW_UP_MS = 3_000L

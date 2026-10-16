@@ -184,11 +184,25 @@ class SessionHandshake(
             host.log("session info missing tag")
             return true
         }
-        val session = importSession(challenge, encodedInfo, tag)
+        val keyPair = keys.load()
+        val vin = host.vin
+        val session =
+            if (keyPair != null && vin != null) {
+                TeslaSession.import(
+                    privateKeyPkcs8 = keyPair.privateKeyPkcs8,
+                    publicKeyRaw = keyPair.publicKeyRaw,
+                    vin = vin,
+                    challenge = challenge,
+                    encodedInfo = encodedInfo,
+                    tag = tag,
+                )
+            } else {
+                null
+            }
         if (session == null) {
             // The store dropped a key this phone can never decrypt (for example a
             // device-only key restored from another phone).
-            if (keys.load() == null && !keys.hasKey()) host.onKeyUnusable()
+            if (keyPair == null && !keys.hasKey()) host.onKeyUnusable()
             host.log("session verification failed (${domain.name})")
             return true
         }
@@ -201,11 +215,10 @@ class SessionHandshake(
     }
 
     /**
-     * Takes the session info a car attached to a rejected command (counter, epoch or clock out of
-     * step), as the Go dispatcher's `checkForSessionUpdate` does: the info is authenticated against
-     * the rejected request's uuid ([challenge]) and, when it verifies, replaces the [domain]
-     * session in place. False when it did not verify; the caller then drops the session and
-     * handshakes again.
+     * Applies the session info a car attached to a rejected command (counter, epoch or clock out
+     * of step) to the existing [domain] session, as the Go dispatcher's `checkForSessionUpdate`
+     * does. False when there is no session or the info did not verify; the caller then drops the
+     * session and handshakes again.
      */
     fun resync(
         domain: Domain,
@@ -213,29 +226,9 @@ class SessionHandshake(
         encodedInfo: ByteArray,
         tag: ByteArray,
     ): Boolean {
-        val session = importSession(challenge, encodedInfo, tag) ?: return false
-        sessions[domain] = session
-        publish()
-        host.log("session resynced (${domain.name})")
-        return true
-    }
-
-    private fun importSession(
-        challenge: ByteArray,
-        encodedInfo: ByteArray,
-        tag: ByteArray,
-    ): TeslaSession? {
-        val keyPair = keys.load()
-        val vin = host.vin
-        if (keyPair == null || vin == null) return null
-        return TeslaSession.import(
-            privateKeyPkcs8 = keyPair.privateKeyPkcs8,
-            publicKeyRaw = keyPair.publicKeyRaw,
-            vin = vin,
-            challenge = challenge,
-            encodedInfo = encodedInfo,
-            tag = tag,
-        )
+        val resynced = sessions[domain]?.updateSignedSessionInfo(challenge, encodedInfo, tag) == true
+        if (resynced) host.log("session resynced (${domain.name})")
+        return resynced
     }
 
     companion object {
