@@ -27,6 +27,7 @@ import com.dzid26.teslable.ble.Vehicle
 import com.dzid26.teslable.core.history.BatterySample
 import com.dzid26.teslable.core.history.DriveSample
 import com.dzid26.teslable.core.history.HistoryRange
+import com.dzid26.teslable.core.history.StatusSample
 import com.dzid26.teslable.core.protocol.ChargingStateKind
 import com.dzid26.teslable.core.protocol.ShiftStateKind
 import com.dzid26.teslable.core.units.DistanceUnit
@@ -402,6 +403,21 @@ class CardSnapshots {
     }
 
     @Test
+    fun historyCardParkedSleep() {
+        // Three short awake bursts (a read every 20 min, about 1 %/h) with the car asleep
+        // between them (a status inside each gap): the line follows the mixed rate, the text
+        // adds the gentler asleep rate, and the beam's upper edge reaches the asleep line.
+        snapCard("history-card_parked-sleep") {
+            BatteryHistoryCard(
+                samples = sleepParkedSamples,
+                drives = sleepParkedSamples.map { parkedDrive(it) },
+                nowMillis = NOW,
+                statuses = sleepStatuses,
+            )
+        }
+    }
+
+    @Test
     fun historyCardChargingRange() {
         // The same car plugged in: the charge fit reads sub-percent too, and the beam
         // comes from the slope's own scatter plus the supply voltage.
@@ -691,6 +707,37 @@ class CardSnapshots {
         private val rangeDrivenSamples =
             (0..47).map { step ->
                 rangeSample(1500L + (47 - step) * 60L, 68.0 + (85.0 - 68.0) * (47 - step) / 47.0)
+            }
+
+        // Awake bursts at these minutes ago (three reads each), asleep in between.
+        private val sleepBursts = listOf(1260L, 800L, 300L, 0L)
+
+        // The level after each read, walking forward in time: an awake pair (20 min) loses
+        // 0.3 points, a pair across a sleeping gap loses 0.1 whatever its length.
+        private val sleepParkedSamples: List<BatterySample> =
+            run {
+                var soc = 68.0
+                val reads =
+                    sleepBursts.flatMapIndexed { burst, start ->
+                        if (burst == sleepBursts.lastIndex) listOf(start) else listOf(start, start - 20, start - 40)
+                    }
+                // The earlier driving gives the scale fit its level steps.
+                rangeDrivenSamples +
+                    reads.mapIndexed { index, minutesAgo ->
+                        if (index > 0) soc -= if (reads[index - 1] - minutesAgo == 20L) 0.3 else 0.1
+                        rangeSample(minutesAgo, soc)
+                    }
+            }
+
+        private val sleepStatuses =
+            sleepBursts.dropLast(1).zip(sleepBursts.drop(1)).map { (from, to) ->
+                StatusSample(
+                    timestampMillis = NOW - ((from - 40 + to) / 2) * MINUTE,
+                    vehicleId = BLE_NAME,
+                    asleep = true,
+                    userPresent = false,
+                    locked = true,
+                )
             }
 
         // 21 h parked, 68 -> 66.6 % (about 1.6 %/day), a read every 20 min.
