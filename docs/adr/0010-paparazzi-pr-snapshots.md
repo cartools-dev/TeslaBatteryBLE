@@ -100,3 +100,26 @@ car on every app change on main, against the minified release build, so the
 canary only added a second emulator block and a stale comment about the
 windowed emulator default. `capture-screenshots.sh` stays for the smoke job and
 `tools/demo-emulator.sh`.
+
+## Update (2026-10-16): demo-look screens, and the resolution limit
+
+The three full screens render like the old emulator shots: a 1080x2400 @ 420 dpi
+frame (411x914 dp) with fake status and nav bars, and demo fixtures (Demo
+Tesla charging, a second car, two days of seeded history, version `0.5.0`).
+
+- **Colors.** They use the same fixed `lightColorScheme()` / `darkColorScheme()`
+  as the cards (purple), not the blue wallpaper-based scheme of the old
+  emulator shots: a spelled-out copy of that scheme was a long list of
+  constants for a color nobody needs to match.
+- **Resolution.** Paparazzi scales every snapshot to 1000 px on its long side
+  (`ImageUtils.THUMBNAIL_SIZE`) before a custom `SnapshotHandler` sees it, so the
+  PNGs are 450x1000 (the emulator frame's aspect, a third of its pixels). A
+  handler that writes unscaled images was tried and receives the already
+  scaled bitmap, so it cannot help. The emulator capture
+  (`capture-screenshots.sh`, used by the release smoke test and
+  `tools/demo-emulator.sh`) stays the hi-res path. Options if 1080x2400 is wanted from the
+  release: render in tiles (e.g. a scrolled top and bottom half at the cap, then
+  stitch), or move the full screens to Roborazzi, which renders at device size.
+- **Version string.** `DemoScreenFixtures.VERSION_NAME` is a constant, not
+  `BuildConfig.VERSION_NAME`, which names the commit (`git describe`) and would
+  make Settings differ on every commit; bump it by hand at release.
