@@ -31,6 +31,7 @@ import kotlin.math.roundToInt
  * limit), so the chart, projections and battery-health card come out the same.
  */
 internal object DemoScreenFixtures {
+    // Constant on purpose: BuildConfig.VERSION_NAME names the commit and would change every run. Bump at release.
     const val VERSION_NAME = "0.5.0"
     const val DEMO_ADDRESS = DemoMode.DEMO_ADDRESS
     const val OTHER_ADDRESS = DemoMode.OTHER_ADDRESS
