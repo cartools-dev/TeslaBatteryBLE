@@ -637,6 +637,7 @@ class CardSnapshots {
                 address = ADDRESS,
                 gattName = "Model 3",
                 displayName = "Model 3",
+                keySlot = 2,
             )
         private val advert = TeslaAdvert(name = BLE_NAME, address = ADDRESS, rssi = -70)
 
