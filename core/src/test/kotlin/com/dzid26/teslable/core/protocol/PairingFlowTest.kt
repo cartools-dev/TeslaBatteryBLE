@@ -201,6 +201,27 @@ class PairingFlowTest {
     }
 
     @Test
+    fun `a command status with no enrollment under way is not a pairing result`() {
+        assertFalse(flow.onMessage(addKeyResponse(OperationStatus_E.OPERATIONSTATUS_ERROR)))
+
+        assertEquals(PairingPhase.IDLE, flow.phase)
+        assertTrue(host.vcsecRequests.isEmpty())
+    }
+
+    @Test
+    fun `a late command status after pairing finished is ignored`() {
+        flow.pairKey()
+        keys.stored = keyPair
+        flow.onMessage(addKeyResponse(OperationStatus_E.OPERATIONSTATUS_OK))
+        val requests = host.vcsecRequests.size
+
+        assertFalse(flow.onMessage(addKeyResponse(OperationStatus_E.OPERATIONSTATUS_ERROR)))
+
+        assertEquals(PairingPhase.OK, flow.phase)
+        assertEquals(requests, host.vcsecRequests.size)
+    }
+
+    @Test
     fun `messages that are not pairing replies are left to the caller`() {
         assertFalse(flow.onMessage(byteArrayOf(1, 2, 3)))
     }
