@@ -411,6 +411,13 @@ class BleRecordMappingTest {
     }
 
     @Test
+    fun `a route sample does not print its destination`() {
+        val text = BleRecord(drive_state = driving).toRouteSample(VEHICLE).toString()
+        assertEquals(false, text.contains("Test destination"))
+        assertEquals(true, text.contains("<redacted>"))
+    }
+
+    @Test
     fun `a drive record without a route yields no route sample`() {
         val parked = DriveState(shift_state = ShiftState(P = Void()), timestamp = ofEpochSecond(5, 0))
         assertNull(BleRecord(drive_state = parked).toRouteSample(VEHICLE))
