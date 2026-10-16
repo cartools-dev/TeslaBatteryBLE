@@ -36,6 +36,7 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -58,6 +59,7 @@ import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.dzid26.teslable.EnergyPriceStore
+import com.dzid26.teslable.UnitStore
 import com.dzid26.teslable.ble.BatteryPercent
 import com.dzid26.teslable.ble.BleUiState
 import com.dzid26.teslable.ble.ConnectionDisplay
@@ -92,6 +94,7 @@ import com.dzid26.teslable.core.protocol.chargingStateKind
 import com.dzid26.teslable.health.healthSummary
 import com.tesla.generated.carserver.vehicle.ChargeState
 import kotlinx.coroutines.delay
+import java.text.DecimalFormatSymbols
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
@@ -221,15 +224,18 @@ internal fun CarScreen(
             ) {
                 val context = LocalContext.current
                 val pricePerKwh = remember { EnergyPriceStore(context).pricePerKwh() }
-                HeroCard(
-                    pricePerKwh = pricePerKwh,
-                    connection = connection,
-                    advert = advert,
-                    vehicle = vehicle,
-                    history = vehicleHistory,
-                    statusHistory = vehicleStatuses,
-                    nowMillis = nowMillis ?: rememberNowMillis(connection?.chargeAtMillis),
-                )
+                val distanceUnit = remember { UnitStore(context).preference().resolve() }
+                CompositionLocalProvider(LocalDistanceUnit provides distanceUnit) {
+                    HeroCard(
+                        pricePerKwh = pricePerKwh,
+                        connection = connection,
+                        advert = advert,
+                        vehicle = vehicle,
+                        history = vehicleHistory,
+                        statusHistory = vehicleStatuses,
+                        nowMillis = nowMillis ?: rememberNowMillis(connection?.chargeAtMillis),
+                    )
+                }
                 // Once the app key is enrolled the hero carries its status; the
                 // card only exists for pairing, so it disappears when there is
                 // nothing to do.
@@ -237,7 +243,9 @@ internal fun CarScreen(
                     KeyCard(connection, vehicle, onPair)
                 }
                 BatteryHistoryCard(vehicleHistory, vehicleDrives, nowMillis = nowMillis ?: System.currentTimeMillis())
-                BatteryHealthCard(health)
+                CompositionLocalProvider(LocalDistanceUnit provides distanceUnit) {
+                    BatteryHealthCard(health)
+                }
             }
         }
     }
@@ -455,7 +463,7 @@ private fun SocBlock(
         // right-aligned instead of crowding the age on narrow screens.
         rangeMiles?.let { miles ->
             Text(
-                text = "Range ${formatRangeMiles(miles)} mi",
+                text = "Range ${formatDistance(miles)}",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 textAlign = TextAlign.End,
@@ -941,7 +949,11 @@ private fun formatDuration(millis: Long): String {
     }
 }
 
-private fun formatRangeMiles(miles: Float): String = String.format(Locale.getDefault(), "%.1f", miles)
+@Composable
+private fun formatDistance(miles: Float): String {
+    val separator = remember { DecimalFormatSymbols.getInstance().decimalSeparator }
+    return LocalDistanceUnit.current.format(miles, decimals = 1, decimalSeparator = separator)
+}
 
 /** One decimal only when it adds information: "78%" but "77.6%". */
 private fun formatPercent(value: Float): String {

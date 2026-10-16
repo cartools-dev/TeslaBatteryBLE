@@ -10,6 +10,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
@@ -29,6 +30,9 @@ import com.dzid26.teslable.core.history.DriveSample
 import com.dzid26.teslable.core.history.HistoryRange
 import com.dzid26.teslable.core.protocol.ChargingStateKind
 import com.dzid26.teslable.core.protocol.ShiftStateKind
+import com.dzid26.teslable.core.units.DistanceUnit
+import com.dzid26.teslable.health.HealthConfidence
+import com.dzid26.teslable.health.HealthSummary
 import com.tesla.generated.carserver.common.Void
 import com.tesla.generated.carserver.vehicle.ChargeState
 import com.tesla.generated.vcsec.UserPresence_E
@@ -169,6 +173,46 @@ class CardSnapshots {
                 statusHistory = emptyList(),
                 nowMillis = NOW,
             )
+        }
+    }
+
+    @Test
+    fun heroCardMetric() {
+        snapCard("hero-card_metric") {
+            CompositionLocalProvider(LocalDistanceUnit provides DistanceUnit.KILOMETERS) {
+                HeroCard(
+                    connection = liveConnection(readAt = NOW - FRESH_MINUTES * MINUTE),
+                    advert = advert,
+                    vehicle = vehicle,
+                    history = emptyList(),
+                    statusHistory = emptyList(),
+                    nowMillis = NOW,
+                )
+            }
+        }
+    }
+
+    @Test
+    fun healthCardMetric() {
+        snapCard("health-card_metric") {
+            CompositionLocalProvider(LocalDistanceUnit provides DistanceUnit.KILOMETERS) {
+                BatteryHealthCard(
+                    HealthSummary(
+                        sessions = 6,
+                        learningTarget = 3,
+                        sohPercent = null,
+                        sohSpreadPoints = null,
+                        sohMismatch = false,
+                        capacityKwh = 57.2f,
+                        ratedKwhPerMile = 0.2736f,
+                        capacitySwingPercent = null,
+                        fullRangeMiles = 262f,
+                        fullRangeSteps = 42,
+                        confidence = HealthConfidence.MEDIUM,
+                        qualityNote = null,
+                    ),
+                )
+            }
         }
     }
 
