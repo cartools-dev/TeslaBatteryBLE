@@ -53,12 +53,14 @@ import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.drawText
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.dzid26.teslable.EnergyPriceStore
+import com.dzid26.teslable.R
 import com.dzid26.teslable.UnitStore
 import com.dzid26.teslable.ble.BatteryPercent
 import com.dzid26.teslable.ble.BleUiState
@@ -937,23 +939,28 @@ private fun chargeProjectionPaths(
     return line to beam
 }
 
-/**
- * "Parked · projected 52% (51–53%) by … · asleep 0.4 · mixed 2.4 %/day": the parked
- * projection in words. With no sleep evidence the one rate is the mixed one: "· 2.4%/day".
- */
+/** The parked projection in words: the line follows the asleep rate, listed first, when there is one. */
+@Composable
 private fun parkedText(projection: DischargeProjection): String {
-    val range =
-        projection.beam
-            ?.takeIf { (low, high) -> low.roundToInt() != high.roundToInt() }
-            ?.let { (low, high) -> " (${low.roundToInt()}–${high.roundToInt()}%)" }
-            .orEmpty()
-    val perDay = "%.1f".format(Locale.getDefault(), projection.percentPerHour * 24)
-    val rates =
-        projection.mixedPercentPerHour
-            ?.let { " · asleep $perDay · mixed ${"%.1f".format(Locale.getDefault(), it * 24)} %/day" }
-            ?: " · $perDay%/day"
-    return "Parked · projected ${projection.projectedPercent}%$range by " +
-        formatTime(projection.projectedAtMillis, showDate = true) + rates
+    val rates = parkedRates(projection, Locale.getDefault())
+    val rateText =
+        rates.mixed
+            ?.let { stringResource(R.string.history_parked_rates, rates.main, it) }
+            ?: stringResource(R.string.history_parked_rate, rates.main)
+    val time = formatTime(projection.projectedAtMillis, showDate = true)
+    val beam = projection.beam?.takeIf { (low, high) -> low.roundToInt() != high.roundToInt() }
+    return if (beam != null) {
+        stringResource(
+            R.string.history_parked_range,
+            projection.projectedPercent,
+            beam.first.roundToInt(),
+            beam.second.roundToInt(),
+            time,
+            rateText,
+        )
+    } else {
+        stringResource(R.string.history_parked, projection.projectedPercent, time, rateText)
+    }
 }
 
 private fun HistoryRange.label(): String =
