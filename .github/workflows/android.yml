@@ -514,10 +514,11 @@ jobs:
         run: bash .github/scripts/update-draft-release.sh
 
   preview:
-    name: Publish preview build
+    name: Attach signed build to the draft
     # Signed with the release key like a tagged release, and only after the
     # tests, static analysis and the emulator smoke test passed for this push.
-    needs: [tests, static, smoke]
+    # The draft job has created or updated "Next release (draft)" by then.
+    needs: [tests, static, smoke, draft]
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
     environment: release
     permissions:
@@ -568,7 +569,7 @@ jobs:
       - name: Build the signed release APK
         run: ./gradlew :app:assembleRelease
 
-      - name: Publish the preview release
+      - name: Attach the APK to the draft release
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
@@ -577,7 +578,7 @@ jobs:
           [ -f "$apk" ] || { echo "::error::$apk missing (unsigned build?)"; exit 1; }
           mkdir -p dist
           cp "$apk" dist/TeslaBatteryBLE-preview.apk
-          bash .github/scripts/publish-preview-release.sh
+          bash .github/scripts/attach-draft-apk.sh
 
   go-vectors:
     runs-on: ubuntu-latest
