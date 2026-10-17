@@ -96,6 +96,12 @@ every push to `main` that passes CI publishes a signed `preview-<sha>` prereleas
 In Obtainium's app settings also allow background updates and, on Android 12+,
 let it install silently (Settings -> Apps -> Obtainium -> Install unknown apps).
 
+The preview is signed with the release key, so it only updates an install signed
+with that key. A debug build you installed yourself uses the same package name
+but a different key; Android then offers to uninstall first. Do not accept that:
+uninstalling wipes the car pairing key. Install the preview next to a debug
+build only after the debug build is gone from the phone on purpose.
+
 No stable release has shipped yet. Signed stable releases and F-Droid are on the
 [roadmap](docs/master-plan.md).
 
