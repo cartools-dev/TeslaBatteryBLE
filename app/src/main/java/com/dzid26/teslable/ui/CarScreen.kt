@@ -939,14 +939,12 @@ private fun chargeProjectionPaths(
     return line to beam
 }
 
-/** The parked projection in words: the line follows the asleep rate, listed first, when there is one. */
+/** The parked projection in words: the deep-sleep rate when there is one, else the mixed rate. */
 @Composable
 private fun parkedText(projection: DischargeProjection): String {
     val rates = parkedRates(projection, Locale.getDefault())
     val rateText =
-        rates.mixed
-            ?.let { stringResource(R.string.history_parked_rates, rates.main, it) }
-            ?: stringResource(R.string.history_parked_rate, rates.main)
+        stringResource(if (rates.asleep) R.string.history_parked_rate_asleep else R.string.history_parked_rate, rates.main)
     val time = formatTime(projection.projectedAtMillis, showDate = true)
     val beam = projection.beam?.takeIf { (low, high) -> low.roundToInt() != high.roundToInt() }
     return if (beam != null) {

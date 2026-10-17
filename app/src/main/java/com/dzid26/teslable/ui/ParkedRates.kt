@@ -10,23 +10,19 @@ import kotlin.math.roundToInt
 internal class ParkedRates(
     /** The rate the line follows: deep sleep when the car has slept enough to tell, else the mixed one. */
     val main: String,
-    /** The mixed rate, only when [main] is the deep-sleep rate and the two differ once rounded. */
-    val mixed: String?,
+    /** True when [main] is the deep-sleep rate. */
+    val asleep: Boolean,
 )
 
 /**
- * The labels for a parked projection's rates. A rate above zero but under half a
- * tenth reads "<0.1" instead of a misleading "0.0"; when deep sleep and mixed
- * round to the same figure only one is kept.
+ * The label for a parked projection's rate: only the deep-sleep rate when the car
+ * has slept enough to tell, else the mixed one. A rate above zero but under half
+ * a tenth reads "<0.1" instead of a misleading "0.0".
  */
 internal fun parkedRates(
     projection: DischargeProjection,
     locale: Locale,
-): ParkedRates {
-    val main = perDay(projection.percentPerHour, locale)
-    val mixed = projection.mixedPercentPerHour?.let { perDay(it, locale) }
-    return ParkedRates(main, mixed?.takeIf { it != main })
-}
+): ParkedRates = ParkedRates(perDay(projection.percentPerHour, locale), projection.mixedPercentPerHour != null)
 
 private fun perDay(
     percentPerHour: Double,

@@ -96,5 +96,5 @@
     <string name="history_parked">Parked · projected %1$d%% by %2$s · %3$s</string>
     <string name="history_parked_range">Parked · projected %1$d%% (%2$d–%3$d%%) by %4$s · %5$s</string>
     <string name="history_parked_rate">%1$s%%/day</string>
-    <string name="history_parked_rates">asleep %1$s%%/day · mixed %2$s%%/day</string>
+    <string name="history_parked_rate_asleep">asleep %1$s%%/day</string>
 </resources>

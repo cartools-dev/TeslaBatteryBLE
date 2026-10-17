@@ -5,7 +5,8 @@ package com.dzid26.teslable.ui
 import com.dzid26.teslable.core.history.BatterySample
 import com.dzid26.teslable.core.history.DischargeProjection
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertNull
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.util.Locale
 
@@ -23,30 +24,21 @@ class ParkedRatesTest {
     )
 
     @Test
-    fun `with no sleep evidence there is one rate`() {
+    fun `with no sleep evidence the one rate is the mixed one`() {
         val rates = parkedRates(projection(2.4), Locale.US)
         assertEquals("2.4", rates.main)
-        assertNull(rates.mixed)
+        assertFalse(rates.asleep)
     }
 
     @Test
-    fun `both rates show when they differ`() {
+    fun `with sleep evidence only the deep-sleep rate shows`() {
         val rates = parkedRates(projection(0.4, mixedPerDay = 2.4), Locale.US)
         assertEquals("0.4", rates.main)
-        assertEquals("2.4", rates.mixed)
-    }
-
-    @Test
-    fun `equal after rounding keeps one`() {
-        val rates = parkedRates(projection(1.51, mixedPerDay = 1.54), Locale.US)
-        assertEquals("1.5", rates.main)
-        assertNull(rates.mixed)
+        assertTrue(rates.asleep)
     }
 
     @Test
     fun `a tiny drain reads under a tenth, not zero`() {
-        val rates = parkedRates(projection(0.03, mixedPerDay = 1.0), Locale.US)
-        assertEquals("<0.1", rates.main)
-        assertEquals("1.0", rates.mixed)
+        assertEquals("<0.1", parkedRates(projection(0.03, mixedPerDay = 1.0), Locale.US).main)
     }
 }
