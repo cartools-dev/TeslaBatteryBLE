@@ -53,14 +53,12 @@ import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.drawText
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.dzid26.teslable.EnergyPriceStore
-import com.dzid26.teslable.R
 import com.dzid26.teslable.UnitStore
 import com.dzid26.teslable.ble.BatteryPercent
 import com.dzid26.teslable.ble.BleUiState
@@ -714,11 +712,9 @@ internal fun BatteryHistoryCard(
                 }
                 discharge?.let {
                     Spacer(Modifier.height(6.dp))
-                    Text(
-                        text = parkedText(it),
-                        style = MaterialTheme.typography.bodySmall,
-                        // The measured line's colour; muted while a charge is
-                        // the main story.
+                    ParkedProjectionLine(
+                        projection = it,
+                        // The measured line's colour; muted while a charge is the main story.
                         color =
                             if (charge != null) {
                                 MaterialTheme.colorScheme.onSurfaceVariant
@@ -937,28 +933,6 @@ private fun chargeProjectionPaths(
             close()
         }
     return line to beam
-}
-
-/** The parked projection in words: the deep-sleep rate when there is one, else the mixed rate. */
-@Composable
-private fun parkedText(projection: DischargeProjection): String {
-    val rates = parkedRates(projection, Locale.getDefault())
-    val rateText =
-        stringResource(if (rates.asleep) R.string.history_parked_rate_asleep else R.string.history_parked_rate, rates.main)
-    val time = formatTime(projection.projectedAtMillis, showDate = true)
-    val beam = projection.beam?.takeIf { (low, high) -> low.roundToInt() != high.roundToInt() }
-    return if (beam != null) {
-        stringResource(
-            R.string.history_parked_range,
-            projection.projectedPercent,
-            beam.first.roundToInt(),
-            beam.second.roundToInt(),
-            time,
-            rateText,
-        )
-    } else {
-        stringResource(R.string.history_parked, projection.projectedPercent, time, rateText)
-    }
 }
 
 private fun HistoryRange.label(): String =

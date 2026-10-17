@@ -93,8 +93,10 @@
     <string name="main_keep_open">Keep the app open and stay near the car.</string>
     <string name="main_pull_down">Pull down to scan.</string>
 
-    <string name="history_parked">Parked · projected %1$d%% by %2$s · %3$s</string>
-    <string name="history_parked_range">Parked · projected %1$d%% (%2$d–%3$d%%) by %4$s · %5$s</string>
+    <string name="history_parked_projected">Parked · projected %1$d%%</string>
+    <string name="history_parked_range">(%1$d–%2$d%%)</string>
     <string name="history_parked_rate">%1$s%%/day</string>
-    <string name="history_parked_rate_asleep">asleep %1$s%%/day</string>
+    <string name="history_parked_range_hint">Worst and best case at the chart’s right edge: the drain could be two standard errors faster or slower than measured, from how much the parked readings scatter around the line.</string>
+    <string name="history_parked_rate_hint_asleep">Deep-sleep drain: the rate over the gaps the car slept through (a sleep status inside the gap), the quietest the battery drains. The dashed line follows it.</string>
+    <string name="history_parked_rate_hint_mixed">Parked drain over all parked time, asleep or awake. Once the car has slept long enough to measure deep sleep, this switches to the deep-sleep rate.</string>
 </resources>
