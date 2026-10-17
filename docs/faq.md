@@ -132,8 +132,8 @@ enabled.
 
 ## Is it on F-Droid or Play?
 
-Not yet. Right now the preview APK is published as a rolling GitHub preview
-release (debug builds). Signed stable releases and F-Droid are planned — see
+Not yet. Right now every passing push to `main` is published as a signed GitHub
+preview release (`preview-<sha>`). Signed stable releases and F-Droid are planned — see
 the [master plan](master-plan.md).
 
 ## How do I report a bug / security issue?

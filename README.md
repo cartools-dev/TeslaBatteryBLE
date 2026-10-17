@@ -90,6 +90,12 @@ Releases are signed with the owner key and include prereleases such as betas.
    pre-releases (for example betas), enable **Include prereleases**.
 4. Install and let Obtainium keep it updated
 
+To follow `main` instead of tagged releases, keep **Include prereleases** on:
+every push to `main` that passes CI publishes a signed `preview-<sha>` prerelease
+(the newest five are kept), and each one updates the previous install in place.
+In Obtainium's app settings also allow background updates and, on Android 12+,
+let it install silently (Settings -> Apps -> Obtainium -> Install unknown apps).
+
 No stable release has shipped yet. Signed stable releases and F-Droid are on the
 [roadmap](docs/master-plan.md).
 
