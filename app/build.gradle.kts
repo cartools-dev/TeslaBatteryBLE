@@ -79,10 +79,12 @@ val gitVersionCode: Int =
                 else -> Regex("""\d+$""").find(preRelease)?.value?.toInt() ?: 0
             }
         require(preRelease.isEmpty() || stage < 99) { "pre-release number must stay below 99: $gitDescribe" }
-        val distance = distanceText.ifEmpty { "0" }.toInt()
-        require(distance < 1000) { "more than 999 commits since the last tag: $gitDescribe" }
+        // Clamped so a long stretch without a tag never breaks a build; the CI
+        // preview job refuses to publish once the real count reaches 1000.
+        val distance = distanceText.ifEmpty { "0" }.toInt().coerceAtMost(999)
         val release = major.toLong() * 1_000_000 + minor * 10_000 + patch * 100 + stage
         val code = release * 1000 + distance
+        // Int tops out at 2_147_483_647, i.e. about v2.14.x: past that, versionCode needs a new scheme.
         require(code <= Int.MAX_VALUE) { "versionCode overflows: $gitDescribe" }
         code.toInt()
     } ?: 1

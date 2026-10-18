@@ -98,6 +98,11 @@ tells Obtainium a new build exists). Also allow background updates and, on
 Android 12+, let it install silently (Settings -> Apps -> Obtainium -> Install
 unknown apps).
 
+**Include prereleases** now also follows `main`: tagged betas are pre-releases too,
+so with it on you get whichever is newer. To follow only tagged releases and
+betas, keep it on and set the app's release-title filter in Obtainium to a regex
+that excludes previews, for example `^(?!Preview).*`.
+
 The preview is signed with the release key, so it only updates an install signed
 with that key. A debug build you installed yourself uses the same package name
 but a different key; Android then offers to uninstall first. Do not accept that:
