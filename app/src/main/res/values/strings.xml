@@ -100,6 +100,13 @@
     <string name="history_hours">%1$d h</string>
     <string name="history_days">%1$d d</string>
     <string name="history_parked_rate">%1$s%%/day</string>
+    <string name="history_parked_rate_tiny">&lt;0.1%%/day</string>
+    <string name="history_hint_description">%1$s. %2$s</string>
+    <string name="history_range_6h">6h</string>
+    <string name="history_range_24h">24h</string>
+    <string name="history_range_7d">7d</string>
+    <string name="history_range_30d">30d</string>
+    <string name="history_range_all">All</string>
     <string name="history_parked_range_hint">Worst and best case at that point: the drain could be two standard errors faster or slower than measured, from how much the parked readings scatter around the line.</string>
     <string name="history_parked_rate_hint_asleep">Deep-sleep drain: the rate over the gaps the car slept through (a sleep status inside the gap), the quietest the battery drains. The dashed line follows it.</string>
     <string name="history_parked_rate_hint_mixed">Parked drain over all parked time, asleep or awake. Once the car has slept long enough to measure deep sleep, this switches to the deep-sleep rate.</string>

@@ -9,7 +9,7 @@ import kotlin.math.roundToInt
 /** The parked drain rates as shown, percent per day with one decimal. */
 internal class ParkedRates(
     /** The rate the line follows: deep sleep when the car has slept enough to tell, else the mixed one. */
-    val main: String,
+    val main: String?,
     /** True when [main] is the deep-sleep rate. */
     val asleep: Boolean,
 )
@@ -17,7 +17,7 @@ internal class ParkedRates(
 /**
  * The label for a parked projection's rate: only the deep-sleep rate when the car
  * has slept enough to tell, else the mixed one. A rate above zero but under half
- * a tenth reads "<0.1" instead of a misleading "0.0".
+ * a tenth has no figure (the caller says "under 0.1") instead of a misleading "0.0".
  */
 internal fun parkedRates(
     projection: DischargeProjection,
@@ -41,9 +41,9 @@ internal fun parkedHorizon(horizonMillis: Long): ParkedHorizon =
 private fun perDay(
     percentPerHour: Double,
     locale: Locale,
-): String {
+): String? {
     val rate = percentPerHour * HOURS_PER_DAY
-    return if (rate > 0.0 && (rate * TENTHS).roundToInt() == 0) "<0.1" else "%.1f".format(locale, rate)
+    return if (rate > 0.0 && (rate * TENTHS).roundToInt() == 0) null else "%.1f".format(locale, rate)
 }
 
 private const val HOURS_PER_DAY = 24

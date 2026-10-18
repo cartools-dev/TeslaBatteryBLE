@@ -45,6 +45,7 @@ internal fun HintText(
 ) {
     val state = rememberTooltipState(isPersistent = true)
     val scope = rememberCoroutineScope()
+    val description = stringResource(R.string.history_hint_description, text, hint)
     val dash = with(LocalDensity.current) { floatArrayOf(2.dp.toPx(), 2.dp.toPx()) }
     TooltipBox(
         positionProvider = TooltipDefaults.rememberTooltipPositionProvider(),
@@ -58,7 +59,7 @@ internal fun HintText(
             color = color,
             modifier =
                 Modifier
-                    .semantics { contentDescription = "$text. $hint" }
+                    .semantics { contentDescription = description }
                     .drawBehind {
                         val y = size.height - 1.dp.toPx()
                         drawLine(
@@ -114,8 +115,17 @@ internal fun ParkedProjectionLine(
             color = color,
         )
         HintText(
-            text = stringResource(R.string.history_parked_rate, rates.main),
-            hint = stringResource(if (rates.asleep) R.string.history_parked_rate_hint_asleep else R.string.history_parked_rate_hint_mixed),
+            text =
+                rates.main?.let {
+                    stringResource(
+                        R.string.history_parked_rate,
+                        it,
+                    )
+                } ?: stringResource(R.string.history_parked_rate_tiny),
+            hint =
+                stringResource(
+                    if (rates.asleep) R.string.history_parked_rate_hint_asleep else R.string.history_parked_rate_hint_mixed,
+                ),
             color = color,
         )
     }

@@ -53,12 +53,14 @@ import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.drawText
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.dzid26.teslable.EnergyPriceStore
+import com.dzid26.teslable.R
 import com.dzid26.teslable.UnitStore
 import com.dzid26.teslable.ble.BatteryPercent
 import com.dzid26.teslable.ble.BleUiState
@@ -936,14 +938,17 @@ private fun chargeProjectionPaths(
     return line to beam
 }
 
+@Composable
 private fun HistoryRange.label(): String =
-    when (this) {
-        HistoryRange.SIX_HOURS -> "6h"
-        HistoryRange.DAY -> "24h"
-        HistoryRange.WEEK -> "7d"
-        HistoryRange.MONTH -> "30d"
-        HistoryRange.ALL -> "All"
-    }
+    stringResource(
+        when (this) {
+            HistoryRange.SIX_HOURS -> R.string.history_range_6h
+            HistoryRange.DAY -> R.string.history_range_24h
+            HistoryRange.WEEK -> R.string.history_range_7d
+            HistoryRange.MONTH -> R.string.history_range_30d
+            HistoryRange.ALL -> R.string.history_range_all
+        },
+    )
 
 private const val REFRESH_FEEDBACK_MS = 2500L
 

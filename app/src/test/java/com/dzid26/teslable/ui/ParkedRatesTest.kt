@@ -6,6 +6,7 @@ import com.dzid26.teslable.core.history.BatterySample
 import com.dzid26.teslable.core.history.DischargeProjection
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.util.Locale
@@ -38,8 +39,8 @@ class ParkedRatesTest {
     }
 
     @Test
-    fun `a tiny drain reads under a tenth, not zero`() {
-        assertEquals("<0.1", parkedRates(projection(0.03, mixedPerDay = 1.0), Locale.US).main)
+    fun `a tiny drain has no figure, not a zero`() {
+        assertNull(parkedRates(projection(0.03, mixedPerDay = 1.0), Locale.US).main)
     }
 
     @Test
