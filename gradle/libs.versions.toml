@@ -23,7 +23,7 @@ androidx-compose-ui-tooling-preview = { group = "androidx.compose.ui", name = "u
 androidx-compose-material3 = { group = "androidx.compose.material3", name = "material3" }
 androidx-compose-material-icons-core = { group = "androidx.compose.material", name = "material-icons-core" }
 junit = { group = "junit", name = "junit", version.ref = "junit" }
-material-kolor = { group = "com.materialkolor", name = "material-kolor", version = "3.0.1" }
+material-kolor = { group = "com.materialkolor", name = "material-kolor", version = "5.0.1" }
 paparazzi = { group = "app.cash.paparazzi", name = "paparazzi", version.ref = "paparazzi" }
 leakcanary-android = { group = "com.squareup.leakcanary", name = "leakcanary-android", version.ref = "leakcanary" }
 wire-runtime = { group = "com.squareup.wire", name = "wire-runtime", version.ref = "wire" }
