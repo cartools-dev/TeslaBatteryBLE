@@ -166,10 +166,10 @@ class CardSnapshots {
     fun heroCardFresh() {
         snapCard("hero-card_fresh") {
             HeroCard(
-                connection = liveConnection(readAt = NOW - FRESH_MINUTES * MINUTE),
+                connection = liveConnection(readAt = NOW - FRESH_MINUTES * MINUTE, charge = learntCharge),
                 advert = advert,
                 vehicle = vehicle,
-                history = emptyList(),
+                history = learntSamples,
                 statusHistory = emptyList(),
                 nowMillis = NOW,
             )
@@ -181,10 +181,10 @@ class CardSnapshots {
         snapCard("hero-card_metric") {
             CompositionLocalProvider(LocalDistanceUnit provides DistanceUnit.KILOMETERS) {
                 HeroCard(
-                    connection = liveConnection(readAt = NOW - FRESH_MINUTES * MINUTE),
+                    connection = liveConnection(readAt = NOW - FRESH_MINUTES * MINUTE, charge = learntCharge),
                     advert = advert,
                     vehicle = vehicle,
-                    history = emptyList(),
+                    history = learntSamples,
                     statusHistory = emptyList(),
                     nowMillis = NOW,
                 )
@@ -219,7 +219,7 @@ class CardSnapshots {
     @Test
     fun heroCardCharging() {
         val charging =
-            liveCharge.copy(
+            learntCharge.copy(
                 charging_state = ChargeState.ChargingState(Charging = Void()),
                 charger_voltage = 240,
                 charger_actual_current = 16,
@@ -230,7 +230,7 @@ class CardSnapshots {
                 connection = liveConnection(readAt = NOW - FRESH_MINUTES * MINUTE, charge = charging),
                 advert = advert,
                 vehicle = vehicle,
-                history = emptyList(),
+                history = learntSamples,
                 statusHistory = emptyList(),
                 nowMillis = NOW,
             )
@@ -240,7 +240,7 @@ class CardSnapshots {
     @Test
     fun heroCardChargeCost() {
         val charging =
-            liveCharge.copy(
+            learntCharge.copy(
                 charging_state = ChargeState.ChargingState(Charging = Void()),
                 charger_voltage = 240,
                 charger_actual_current = 16,
@@ -254,7 +254,7 @@ class CardSnapshots {
                 connection = liveConnection(readAt = NOW - FRESH_MINUTES * MINUTE, charge = charging),
                 advert = advert,
                 vehicle = vehicle,
-                history = emptyList(),
+                history = learntSamples,
                 statusHistory = emptyList(),
                 nowMillis = NOW,
                 pricePerKwh = 0.30f,
@@ -869,6 +869,12 @@ class CardSnapshots {
 
         // The live reading agrees with the learnt 270-mile scale: 62.4% is
         // 168.5 rated miles, which the fit shows as 62.4% against the int 62.
+        private val learntCharge =
+            ChargeState(
+                battery_level = LIVE_PERCENT,
+                battery_range = 168.5f,
+                charge_limit_soc = CHARGE_LIMIT,
+            )
         private val learntState =
             screenState.copy(
                 connections =
