@@ -78,6 +78,8 @@ import com.dzid26.teslable.ble.batteryPercent
 import com.dzid26.teslable.ble.chargingStateText
 import com.dzid26.teslable.ble.connectionDisplay
 import com.dzid26.teslable.ble.vehicleStatusText
+import com.dzid26.teslable.core.health.chargeSessionOpen
+import com.dzid26.teslable.core.health.lastFinishedChargeStats
 import com.dzid26.teslable.core.history.BatterySample
 import com.dzid26.teslable.core.history.ChargeProjection
 import com.dzid26.teslable.core.history.DischargeProjection
@@ -89,7 +91,6 @@ import com.dzid26.teslable.core.history.ProjectionContext
 import com.dzid26.teslable.core.history.StatusSample
 import com.dzid26.teslable.core.history.TENTHS_PER_PERCENT
 import com.dzid26.teslable.core.history.chargeProjection
-import com.dzid26.teslable.core.history.chargeStats
 import com.dzid26.teslable.core.history.compactDuration
 import com.dzid26.teslable.core.history.dischargeProjection
 import com.dzid26.teslable.core.history.projectionHorizonMillis
@@ -236,7 +237,11 @@ internal fun CarScreen(
                 val pricePerKwh = remember { EnergyPriceStore(context).pricePerKwh() }
                 val currencyCode = remember { EnergyPriceStore(context).currencyCode() }
                 val distanceUnit = remember { UnitStore(context).preference().resolve() }
-                CompositionLocalProvider(LocalDistanceUnit provides distanceUnit, LocalCurrencyCode provides currencyCode) {
+                CompositionLocalProvider(
+                    LocalDistanceUnit provides distanceUnit,
+                    LocalCurrencyCode provides currencyCode,
+                    LocalPricePerKwh provides pricePerKwh,
+                ) {
                     HeroCard(
                         pricePerKwh = pricePerKwh,
                         connection = connection,
@@ -360,7 +365,14 @@ internal fun HeroCard(
                     nowMillis = nowMillis,
                 )
                 Spacer(Modifier.height(8.dp))
-                ChargeDetails(charge, pricePerKwh)
+                // The session's kWh and cost stay up top while it runs; once it ends they move to the history card's Last charge line.
+                val sessionOpen =
+                    chargeSessionOpen(
+                        charge?.chargingStateKind,
+                        history.lastOrNull { it.isCharging }?.timestampMillis,
+                        nowMillis,
+                    )
+                ChargeDetails(charge, pricePerKwh, showSession = sessionOpen)
             }
             // The card's top-right corner, clear of the title and the pill: a spinner while a
             // read is in flight.
@@ -393,6 +405,7 @@ private fun heroStatusText(
 private fun ChargeDetails(
     charge: ChargeState?,
     pricePerKwh: Float?,
+    showSession: Boolean,
 ) {
     if (charge == null) return
     val details =
@@ -400,7 +413,7 @@ private fun ChargeDetails(
             charge.charge_limit_soc?.let { add("Charge limit\u00A0$it%") }
             chargerElectricalText(charge)?.let { add(it) }
             charge.chargingStateKind?.let { add(chargingStateText(it)) }
-            sessionCostText(charge, pricePerKwh, LocalCurrencyCode.current)?.let { add(it) }
+            if (showSession) sessionEnergyText(charge.charge_energy_added, pricePerKwh, LocalCurrencyCode.current)?.let { add(it) }
         }
     if (details.isNotEmpty()) {
         Text(
@@ -652,7 +665,7 @@ internal fun BatteryHistoryCard(
     var range by rememberSaveable { mutableStateOf(initialRange) }
     val now = nowMillis
     val visible = samples.within(range, now)
-    val stats = chargeStats(samples)
+    val stats = lastFinishedChargeStats(samples, now)
     // Fitted once: the stats, the projection and the chart all read it.
     val scale = remember(samples) { FullRangeScaleEstimator.estimate(samples) }
 
@@ -741,12 +754,13 @@ internal fun BatteryHistoryCard(
             }
             stats?.let {
                 Spacer(Modifier.height(8.dp))
+                val energy = sessionEnergyText(it.energyKwh, LocalPricePerKwh.current, LocalCurrencyCode.current)
                 Text(
                     text =
                         "Last charge:\u00A0${formatPercent(
                             it.chargePercent(scale),
-                        )}% · ${formatDuration(now - it.sinceMillis)}\u00A0ago · " +
-                            "${formatPercent(it.usedPercent(scale))}%\u00A0used",
+                        )}% · ${formatDuration(now - it.sinceMillis)}\u00A0ago" +
+                            energy?.let { e -> " · $e" }.orEmpty(),
                     style = MaterialTheme.typography.bodySmall,
                 )
             }

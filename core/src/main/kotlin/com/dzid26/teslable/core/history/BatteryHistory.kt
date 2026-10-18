@@ -91,6 +91,8 @@ data class ChargeStats(
     val currentLevel: Int,
     val minLevel: Int,
     val maxLevel: Int,
+    /** The car's `charge_energy_added` on the newest charging sample: the kWh that session added; null when it reported none. */
+    val energyKwh: Float? = null,
 ) {
     /** Rated miles drained since the charge; null when either end has no rated range. */
     val usedMiles: Float?
@@ -142,5 +144,6 @@ fun chargeStats(samples: List<BatterySample>): ChargeStats? {
         currentLevel = newest.percent,
         minLevel = tail.minOf { it.percent },
         maxLevel = tail.maxOf { it.percent },
+        energyKwh = charged.chargeEnergyAdded?.takeIf { it > 0f },
     )
 }

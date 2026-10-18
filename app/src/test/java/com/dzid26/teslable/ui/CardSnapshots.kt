@@ -42,6 +42,7 @@ import com.tesla.generated.vcsec.VehicleSleepStatus_E
 import com.tesla.generated.vcsec.VehicleStatus
 import org.junit.Rule
 import org.junit.Test
+import java.util.Locale
 
 /**
  * Fast JVM snapshots of the two battery cards, light AND dark: the cars-list
@@ -249,7 +250,7 @@ class CardSnapshots {
                 charge_energy_added = 12.5f,
             )
         // The cost is formatted in the default locale; pin it so the render does not depend on the machine.
-        java.util.Locale.setDefault(java.util.Locale.US)
+        Locale.setDefault(Locale.US)
         snapCard("hero-card_charge-cost") {
             HeroCard(
                 connection = liveConnection(readAt = NOW - FRESH_MINUTES * MINUTE, charge = charging),
@@ -350,6 +351,21 @@ class CardSnapshots {
                 drives = emptyList(),
                 nowMillis = NOW,
             )
+        }
+    }
+
+    @Test
+    fun historyCardChargeCost() {
+        // The cost is formatted in the default locale; pin it so the render does not depend on the machine.
+        Locale.setDefault(Locale.US)
+        snapCard("history-card_charge-cost") {
+            CompositionLocalProvider(LocalPricePerKwh provides 0.20f) {
+                BatteryHistoryCard(
+                    samples = screenSamples,
+                    drives = emptyList(),
+                    nowMillis = NOW,
+                )
+            }
         }
     }
 

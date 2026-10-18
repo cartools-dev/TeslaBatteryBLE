@@ -2,6 +2,8 @@
 package com.dzid26.teslable.core.health
 
 import com.dzid26.teslable.core.history.BatterySample
+import com.dzid26.teslable.core.history.ChargeStats
+import com.dzid26.teslable.core.history.chargeStats
 import com.dzid26.teslable.core.protocol.ChargingStateKind
 
 /**
@@ -54,7 +56,9 @@ data class ChargeSession(
  * restarted by the car (a stale value from the previous session on a `Starting`
  * sample, say); the session then carries the last value.
  */
-fun chargeSessions(samples: List<BatterySample>): List<ChargeSession> {
+fun chargeSessions(samples: List<BatterySample>): List<ChargeSession> = chargeRuns(samples).map { it.toSession() }
+
+private fun chargeRuns(samples: List<BatterySample>): List<List<BatterySample>> {
     val runs = mutableListOf<MutableList<BatterySample>>()
     var current: MutableList<BatterySample>? = null
     var paused = false
@@ -79,7 +83,21 @@ fun chargeSessions(samples: List<BatterySample>): List<ChargeSession> {
             }
         }
     }
-    return runs.map { it.toSession() }
+    return runs
+}
+
+/**
+ * Stats of the last charge that has finished: [chargeStats] once the session is over, and while one is
+ * still open (see [chargeSessionOpen]) the charge before it, so the figures stay put and are swapped
+ * when the session ends. Null when there is no earlier charge to show.
+ */
+fun lastFinishedChargeStats(
+    samples: List<BatterySample>,
+    nowMillis: Long,
+): ChargeStats? {
+    val currentStart =
+        if (chargeSessionOpen(samples, nowMillis)) chargeRuns(samples).lastOrNull()?.first()?.timestampMillis else null
+    return chargeStats(currentStart?.let { start -> samples.filter { it.timestampMillis < start } } ?: samples)
 }
 
 private fun List<BatterySample>.toSession(): ChargeSession =
@@ -100,6 +118,34 @@ private fun List<BatterySample>.counterGrowth(counter: (BatterySample) -> Float?
     val restarted = mapNotNull(counter).zipWithNext().any { (before, after) -> after < before }
     return (if (restarted) end else end - start).takeIf { it > 0f }
 }
+
+/**
+ * Whether a charge session is still going at [nowMillis]: the car is charging or starting, or it paused
+ * (Stopped or NoPower) less than ten minutes after [lastChargingMillis], the same margin [chargeSessions] uses.
+ * Past that the session has ended, and its energy belongs with the finished charge.
+ */
+fun chargeSessionOpen(
+    state: ChargingStateKind?,
+    lastChargingMillis: Long?,
+    nowMillis: Long,
+): Boolean =
+    when (state) {
+        ChargingStateKind.Charging, ChargingStateKind.Starting -> true
+        ChargingStateKind.Stopped, ChargingStateKind.NoPower ->
+            lastChargingMillis != null && nowMillis - lastChargingMillis < MAX_PAUSE_MILLIS
+        else -> false
+    }
+
+/** [chargeSessionOpen] for a history: the newest sample's state and the newest charging sample's time. */
+fun chargeSessionOpen(
+    samples: List<BatterySample>,
+    nowMillis: Long,
+): Boolean =
+    chargeSessionOpen(
+        samples.maxByOrNull { it.timestampMillis }?.chargingState,
+        samples.filter { it.isCharging }.maxOfOrNull { it.timestampMillis },
+        nowMillis,
+    )
 
 /** Below this swing the estimator itself refuses to compute a capacity. */
 const val MIN_SWING_PERCENT = 5f

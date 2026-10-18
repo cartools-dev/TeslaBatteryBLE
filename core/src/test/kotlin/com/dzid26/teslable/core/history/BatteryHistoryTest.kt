@@ -162,4 +162,17 @@ class BatteryHistoryTest {
         assertEquals(75f, stats.currentPercent(null))
         assertEquals(5f, stats.usedPercent(null))
     }
+
+    @Test
+    fun chargeStatsCarryTheSessionEnergy() {
+        val samples =
+            listOf(
+                sample(0, 70, ChargingStateKind.Charging).copy(chargeEnergyAdded = 10f),
+                sample(30, 85, ChargingStateKind.Charging).copy(chargeEnergyAdded = 31.3f),
+                sample(60, 84),
+            )
+
+        assertEquals(31.3f, chargeStats(samples)!!.energyKwh)
+        assertNull(chargeStats(samples.map { it.copy(chargeEnergyAdded = 0f) })!!.energyKwh)
+    }
 }
