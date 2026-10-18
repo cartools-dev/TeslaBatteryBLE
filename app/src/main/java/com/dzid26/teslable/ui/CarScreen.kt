@@ -228,8 +228,9 @@ internal fun CarScreen(
             ) {
                 val context = LocalContext.current
                 val pricePerKwh = remember { EnergyPriceStore(context).pricePerKwh() }
+                val currencyCode = remember { EnergyPriceStore(context).currencyCode() }
                 val distanceUnit = remember { UnitStore(context).preference().resolve() }
-                CompositionLocalProvider(LocalDistanceUnit provides distanceUnit) {
+                CompositionLocalProvider(LocalDistanceUnit provides distanceUnit, LocalCurrencyCode provides currencyCode) {
                     HeroCard(
                         pricePerKwh = pricePerKwh,
                         connection = connection,
@@ -239,20 +240,18 @@ internal fun CarScreen(
                         statusHistory = vehicleStatuses,
                         nowMillis = nowMillis ?: rememberNowMillis(connection?.chargeAtMillis),
                     )
-                }
-                // Once the app key is enrolled the hero carries its status; the
-                // card only exists for pairing, so it disappears when there is
-                // nothing to do.
-                if (!paired) {
-                    KeyCard(connection, vehicle, onPair)
-                }
-                BatteryHistoryCard(
-                    vehicleHistory,
-                    vehicleDrives,
-                    nowMillis = nowMillis ?: System.currentTimeMillis(),
-                    statuses = vehicleStatuses,
-                )
-                CompositionLocalProvider(LocalDistanceUnit provides distanceUnit) {
+                    // Once the app key is enrolled the hero carries its status; the
+                    // card only exists for pairing, so it disappears when there is
+                    // nothing to do.
+                    if (!paired) {
+                        KeyCard(connection, vehicle, onPair)
+                    }
+                    BatteryHistoryCard(
+                        vehicleHistory,
+                        vehicleDrives,
+                        nowMillis = nowMillis ?: System.currentTimeMillis(),
+                        statuses = vehicleStatuses,
+                    )
                     BatteryHealthCard(health)
                 }
             }
@@ -394,7 +393,7 @@ private fun ChargeDetails(
             charge.charge_limit_soc?.let { add("Charge limit\u00A0$it%") }
             chargerElectricalText(charge)?.let { add(it) }
             charge.chargingStateKind?.let { add(chargingStateText(it)) }
-            sessionCostText(charge, pricePerKwh)?.let { add(it) }
+            sessionCostText(charge, pricePerKwh, LocalCurrencyCode.current)?.let { add(it) }
         }
     if (details.isNotEmpty()) {
         Text(

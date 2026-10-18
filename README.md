@@ -37,7 +37,7 @@ Light and dark themes, side by side.
 - **How long each state has held** — the car view shows how long the car has been asleep and locked ("Asleep 1h 12m · Locked 3h · User away")
   from the status history, and the notification shows how long the car has been asleep;
   no duration is shown when the history does not reach back to the change
-- **Charge session cost** � set your electricity price per kWh in Settings and the car view shows the energy added and what the session cost
+- **Charge session cost** � set your electricity price per kWh in Settings and the car view shows the energy added and what the session cost; the currency defaults to your phone's and can be changed there
 - **Metric or imperial** — pick System default, Metric or Imperial in Settings; range and the health card show km or mi (display only, the car reports miles)
 - **On-demand wake** — the car is only woken when you ask, never in the background
 - **Lets the car sleep** — while it is charging, driving, in Sentry mode or running the climate (the car stays
