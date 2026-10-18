@@ -95,12 +95,6 @@ else
   gh release create "$TAG" --title "$TAG" --notes-file "$NOTES" "${PRE_FLAG[@]}"
 fi
 
-# The draft carries the signed preview APK of main (attach-draft-apk.sh); the
-# release ships the APK built for the tag instead.
-gh release view "$TAG" --json assets --jq '.assets[].name' \
-  | grep -E '^TeslaBatteryBLE-preview-.*[.]apk$' \
-  | while read -r stale; do gh release delete-asset "$TAG" "$stale" --yes; done || true
-
 # Uploads are flaky; retry before failing the release.
 for attempt in 1 2 3; do
   gh release upload "$TAG" "$APK" --clobber && break

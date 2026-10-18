@@ -91,12 +91,12 @@ Releases are signed with the owner key and include prereleases such as betas.
 4. Install and let Obtainium keep it updated
 
 To follow `main` instead of tagged releases, every push to `main` that passes CI
-attaches a signed APK to the maintainer-only "Next release (draft)". Drafts are
-not public, so users never see these builds; Obtainium can read them only when
-it is signed in to GitHub with a token that has push access (Obtainium -> app
--> GitHub token). In Obtainium's app settings also allow background updates and,
-on Android 12+, let it install silently (Settings -> Apps -> Obtainium ->
-Install unknown apps).
+replaces the single `main-latest` pre-release with a signed build. Keep
+**Include prereleases** on and, in the app's Obtainium settings, turn on
+**Release date as version** (the tag name never changes, so the date is what
+tells Obtainium a new build exists). Also allow background updates and, on
+Android 12+, let it install silently (Settings -> Apps -> Obtainium -> Install
+unknown apps).
 
 The preview is signed with the release key, so it only updates an install signed
 with that key. A debug build you installed yourself uses the same package name
