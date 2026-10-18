@@ -57,10 +57,14 @@ class DischargeProjectionTest {
     }
 
     @Test
-    fun `the horizon is half the selected range`() {
+    fun `the horizon is a round figure of the selected range`() {
         val samples = listOf(sample(0, 80), sample(60, 75), sample(120, 70))
         assertEquals(12 * HOUR, assertNotNull(project(samples, rangeMillis = 24 * HOUR)).horizonMillis)
-        assertEquals(84 * HOUR, assertNotNull(project(samples, rangeMillis = 7 * 24 * HOUR)).horizonMillis)
+        // Half of a week is 3.5 days: three days. A month looks a week ahead.
+        assertEquals(72 * HOUR, assertNotNull(project(samples, rangeMillis = 7 * 24 * HOUR)).horizonMillis)
+        assertEquals(7 * 24 * HOUR, assertNotNull(project(samples, rangeMillis = 30 * 24 * HOUR)).horizonMillis)
+        assertEquals(3 * HOUR, projectionHorizonMillis(6 * HOUR))
+        assertEquals(48 * HOUR, projectionHorizonMillis(4 * 24 * HOUR))
     }
 
     @Test

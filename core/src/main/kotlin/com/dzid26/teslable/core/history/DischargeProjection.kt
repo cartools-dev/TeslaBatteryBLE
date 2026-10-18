@@ -79,7 +79,7 @@ data class DischargeProjection(
  *
  * @param samples one vehicle's battery samples, oldest first.
  * @param drives the same vehicle's drive samples, oldest first.
- * @param rangeMillis the selected range: its samples feed the rate, and the projection looks half of it ahead.
+ * @param rangeMillis the selected range: its samples feed the rate; [projectionHorizonMillis] says how far ahead it looks.
  * @param context the fitted scale and the status log that refine the rate.
  */
 fun dischargeProjection(
@@ -92,7 +92,7 @@ fun dischargeProjection(
     val scale = context.scale
     val statuses = context.statuses
     val last = samples.lastOrNull() ?: return null
-    val horizon = rangeMillis / 2
+    val horizon = projectionHorizonMillis(rangeMillis)
     if (nowMillis - last.timestampMillis > horizon) return null
 
     val windowed = samples.filter { it.timestampMillis >= last.timestampMillis - rangeMillis }
@@ -272,6 +272,23 @@ private fun driveReadingsAt(
             ?.takeIf { abs(it.timestampMillis - sample.timestampMillis) <= DRIVE_MATCH_MILLIS }
     }
 }
+
+/**
+ * How far ahead a range's projection looks, rounded to a figure a person can
+ * say: half the range up to a week (3 h, 12 h, 3 days), a quarter beyond
+ * (a week for a month), floored to 1, 2, 3, 6 or 12 hours or 1, 2, 3 or 7
+ * days, then whole weeks.
+ */
+fun projectionHorizonMillis(rangeMillis: Long): Long {
+    val raw = if (rangeMillis <= WEEK_MILLIS) rangeMillis / 2 else rangeMillis / 4
+    return NICE_HORIZONS_MILLIS.lastOrNull { it <= raw } ?: raw.coerceAtLeast(HOUR)
+}
+
+private val NICE_HORIZONS_MILLIS =
+    listOf(1L, 2L, 3L, 6L, 12L).map { it * 60 * 60_000L } +
+        listOf(1L, 2L, 3L, 7L, 14L, 21L, 28L).map { it * 24 * 60 * 60_000L }
+
+private const val WEEK_MILLIS = 7 * 24 * 60 * 60_000L
 
 /** A full battery, percent. */
 private const val FULL_PERCENT = 100f

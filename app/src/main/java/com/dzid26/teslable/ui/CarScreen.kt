@@ -53,12 +53,14 @@ import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.drawText
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.dzid26.teslable.EnergyPriceStore
+import com.dzid26.teslable.R
 import com.dzid26.teslable.UnitStore
 import com.dzid26.teslable.ble.BatteryPercent
 import com.dzid26.teslable.ble.BleUiState
@@ -85,6 +87,7 @@ import com.dzid26.teslable.core.history.chargeProjection
 import com.dzid26.teslable.core.history.chargeStats
 import com.dzid26.teslable.core.history.compactDuration
 import com.dzid26.teslable.core.history.dischargeProjection
+import com.dzid26.teslable.core.history.projectionHorizonMillis
 import com.dzid26.teslable.core.history.soc
 import com.dzid26.teslable.core.history.statusDurations
 import com.dzid26.teslable.core.history.within
@@ -674,10 +677,10 @@ internal fun BatteryHistoryCard(
                 // stretches the car moved. Shown next to the charge
                 // projection too: where the battery heads if unplugged now.
                 val discharge = dischargeProjection(samples, drives, baseMillis, now, ProjectionContext(scale, statuses))
-                // The projection gets room on the x-axis: half the range ahead.
+                // The projection gets room on the x-axis: its round-figure horizon ahead.
                 val windowEnd =
                     if (charge != null || discharge != null) {
-                        now + baseMillis / 2
+                        now + projectionHorizonMillis(baseMillis)
                     } else {
                         now
                     }
@@ -712,11 +715,9 @@ internal fun BatteryHistoryCard(
                 }
                 discharge?.let {
                     Spacer(Modifier.height(6.dp))
-                    Text(
-                        text = parkedText(it),
-                        style = MaterialTheme.typography.bodySmall,
-                        // The measured line's colour; muted while a charge is
-                        // the main story.
+                    ParkedProjectionLine(
+                        projection = it,
+                        // The measured line's colour; muted while a charge is the main story.
                         color =
                             if (charge != null) {
                                 MaterialTheme.colorScheme.onSurfaceVariant
@@ -937,29 +938,17 @@ private fun chargeProjectionPaths(
     return line to beam
 }
 
-/** "Parked · projected 52% (51–53%) by … · 1.6%/day (mixed 2.4)": the parked projection in words. */
-private fun parkedText(projection: DischargeProjection): String {
-    val range =
-        projection.beam
-            ?.takeIf { (low, high) -> low.roundToInt() != high.roundToInt() }
-            ?.let { (low, high) -> " (${low.roundToInt()}–${high.roundToInt()}%)" }
-            .orEmpty()
-    val perDay = "%.1f".format(Locale.getDefault(), projection.percentPerHour * 24)
-    val mixed =
-        projection.mixedPercentPerHour
-            ?.let { " (mixed ${"%.1f".format(Locale.getDefault(), it * 24)})" }
-            .orEmpty()
-    return "Parked · projected ${projection.projectedPercent}%$range by " +
-        formatTime(projection.projectedAtMillis, showDate = true) + " · $perDay%/day$mixed"
-}
-
+@Composable
 private fun HistoryRange.label(): String =
-    when (this) {
-        HistoryRange.SIX_HOURS -> "6h"
-        HistoryRange.DAY -> "24h"
-        HistoryRange.WEEK -> "7d"
-        HistoryRange.ALL -> "All"
-    }
+    stringResource(
+        when (this) {
+            HistoryRange.SIX_HOURS -> R.string.history_range_6h
+            HistoryRange.DAY -> R.string.history_range_24h
+            HistoryRange.WEEK -> R.string.history_range_7d
+            HistoryRange.MONTH -> R.string.history_range_30d
+            HistoryRange.ALL -> R.string.history_range_all
+        },
+    )
 
 private const val REFRESH_FEEDBACK_MS = 2500L
 
