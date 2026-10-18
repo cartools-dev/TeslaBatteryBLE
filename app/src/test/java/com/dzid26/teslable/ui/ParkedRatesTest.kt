@@ -41,4 +41,14 @@ class ParkedRatesTest {
     fun `a tiny drain reads under a tenth, not zero`() {
         assertEquals("<0.1", parkedRates(projection(0.03, mixedPerDay = 1.0), Locale.US).main)
     }
+
+    @Test
+    fun `the horizon reads in whole hours under a day and whole days from a day`() {
+        val hours = parkedHorizon(12 * 60 * 60_000L)
+        assertEquals(12, hours.amount)
+        assertFalse(hours.days)
+        val days = parkedHorizon(3 * 24 * 60 * 60_000L)
+        assertEquals(3, days.amount)
+        assertTrue(days.days)
+    }
 }

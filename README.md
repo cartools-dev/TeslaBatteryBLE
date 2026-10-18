@@ -52,10 +52,10 @@ Light and dark themes, side by side.
   is on and a car is paired. Some phones (Xiaomi, Huawei, Oppo/Vivo, Samsung "sleeping apps") block this unless
   you allow autostart for the app or set its battery usage to unrestricted. After a force stop, Android keeps
   the app stopped until you open it again.
-- **History graph** (6 h / 24 h / 7 d / all) with since-last-charge stats to a tenth of a percent once the full range is learned;
+- **History graph** (6 h / 24 h / 7 d / 30 d / all) with since-last-charge stats to a tenth of a percent once the full range is learned;
   every measurement is a dot (dense samples form a thick band), and dashed
-  lines project the charge completion and the parked drain half the range ahead
-  (stretches where the odometer moved, or the car was in gear, are left out). Both
+  lines project the charge completion and the parked drain a round figure ahead
+  (3 h, 12 h, 3 days, a week for the 30 d range; stretches where the odometer moved, or the car was in gear, are left out). Both
   are fitted on the rated range once the scale is learned, so they read in
   fractions of a percent, and each carries a faint beam for how far the fit could
   be off (for a charge also the supply-voltage swings seen in the session)

@@ -74,8 +74,9 @@ internal fun HintText(
 }
 
 /**
- * The parked projection as one line of value-and-unit pieces: "Parked · projected 66%",
- * the worst and best case and the rate (the date is the chart's right edge). The range and the rate carry the
+ * The parked projection as one line of value-and-unit pieces: "Parked · projected
+ * 64–66% in 12 h · 0.4%/day": the worst and best case (a single value when they
+ * round together), how far ahead, and the rate. The range and the rate carry the
  * hints; the line wraps only when the screen is too narrow for it.
  */
 @OptIn(ExperimentalLayoutApi::class)
@@ -86,9 +87,11 @@ internal fun ParkedProjectionLine(
 ) {
     val rates = parkedRates(projection, androidx.compose.ui.text.intl.Locale.current.platformLocale)
     val beam = projection.beam?.takeIf { (low, high) -> low.roundToInt() != high.roundToInt() }
+    val horizon = parkedHorizon(projection.horizonMillis)
+    val horizonText = stringResource(if (horizon.days) R.string.history_days else R.string.history_hours, horizon.amount)
     FlowRow(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
         Text(
-            text = stringResource(R.string.history_parked_projected, projection.projectedPercent),
+            text = stringResource(R.string.history_parked_projected),
             style = MaterialTheme.typography.bodySmall,
             color = color,
         )
@@ -98,7 +101,18 @@ internal fun ParkedProjectionLine(
                 hint = stringResource(R.string.history_parked_range_hint),
                 color = color,
             )
+        } else {
+            Text(
+                text = stringResource(R.string.history_parked_value, projection.projectedPercent),
+                style = MaterialTheme.typography.bodySmall,
+                color = color,
+            )
         }
+        Text(
+            text = stringResource(R.string.history_parked_in, horizonText),
+            style = MaterialTheme.typography.bodySmall,
+            color = color,
+        )
         HintText(
             text = stringResource(R.string.history_parked_rate, rates.main),
             hint = stringResource(if (rates.asleep) R.string.history_parked_rate_hint_asleep else R.string.history_parked_rate_hint_mixed),

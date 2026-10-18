@@ -24,6 +24,20 @@ internal fun parkedRates(
     locale: Locale,
 ): ParkedRates = ParkedRates(perDay(projection.percentPerHour, locale), projection.mixedPercentPerHour != null)
 
+/** How far ahead a projection looks, as a whole number of hours or days. */
+internal class ParkedHorizon(
+    val amount: Int,
+    val days: Boolean,
+)
+
+/** The horizon in whole days from a day on, else whole hours (it is already a round figure). */
+internal fun parkedHorizon(horizonMillis: Long): ParkedHorizon =
+    if (horizonMillis >= DAY_MILLIS) {
+        ParkedHorizon((horizonMillis / DAY_MILLIS).toInt(), days = true)
+    } else {
+        ParkedHorizon((horizonMillis / HOUR_MILLIS).toInt(), days = false)
+    }
+
 private fun perDay(
     percentPerHour: Double,
     locale: Locale,
@@ -33,4 +47,6 @@ private fun perDay(
 }
 
 private const val HOURS_PER_DAY = 24
+private const val HOUR_MILLIS = 60 * 60_000L
+private const val DAY_MILLIS = 24 * HOUR_MILLIS
 private const val TENTHS = 10

@@ -85,6 +85,7 @@ import com.dzid26.teslable.core.history.chargeProjection
 import com.dzid26.teslable.core.history.chargeStats
 import com.dzid26.teslable.core.history.compactDuration
 import com.dzid26.teslable.core.history.dischargeProjection
+import com.dzid26.teslable.core.history.projectionHorizonMillis
 import com.dzid26.teslable.core.history.soc
 import com.dzid26.teslable.core.history.statusDurations
 import com.dzid26.teslable.core.history.within
@@ -674,10 +675,10 @@ internal fun BatteryHistoryCard(
                 // stretches the car moved. Shown next to the charge
                 // projection too: where the battery heads if unplugged now.
                 val discharge = dischargeProjection(samples, drives, baseMillis, now, ProjectionContext(scale, statuses))
-                // The projection gets room on the x-axis: half the range ahead.
+                // The projection gets room on the x-axis: its round-figure horizon ahead.
                 val windowEnd =
                     if (charge != null || discharge != null) {
-                        now + baseMillis / 2
+                        now + projectionHorizonMillis(baseMillis)
                     } else {
                         now
                     }
@@ -940,6 +941,7 @@ private fun HistoryRange.label(): String =
         HistoryRange.SIX_HOURS -> "6h"
         HistoryRange.DAY -> "24h"
         HistoryRange.WEEK -> "7d"
+        HistoryRange.MONTH -> "30d"
         HistoryRange.ALL -> "All"
     }
 

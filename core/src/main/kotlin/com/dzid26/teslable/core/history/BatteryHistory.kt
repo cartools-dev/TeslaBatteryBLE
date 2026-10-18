@@ -52,8 +52,13 @@ enum class HistoryRange(
     SIX_HOURS(6 * 60 * 60 * 1000L),
     DAY(24 * 60 * 60 * 1000L),
     WEEK(7 * 24 * 60 * 60 * 1000L),
+    MONTH(MONTH_DAYS * DAY_MILLIS),
     ALL(null),
 }
+
+private const val DAY_MILLIS = 24 * 60 * 60 * 1000L
+
+private const val MONTH_DAYS = 30L
 
 fun List<BatterySample>.within(
     range: HistoryRange,
