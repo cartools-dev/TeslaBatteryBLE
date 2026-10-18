@@ -2,8 +2,6 @@
 
 package com.dzid26.teslable.core.history
 
-import com.dzid26.teslable.core.protocol.ShiftStateKind
-import kotlin.math.abs
 import kotlin.math.roundToInt
 import kotlin.math.sqrt
 
@@ -250,29 +248,6 @@ private fun sleptThrough(
     return sawAsleep
 }
 
-/** In R, N or D: the car is being driven even if the odometer has not ticked yet. */
-private val DriveSample.inGear: Boolean
-    get() = shiftState == ShiftStateKind.R || shiftState == ShiftStateKind.N || shiftState == ShiftStateKind.D
-
-/**
- * The drive sample nearest to each battery sample, or null when none lies
- * within [DRIVE_MATCH_MILLIS]. One sweep, since both lists are oldest first.
- */
-private fun driveReadingsAt(
-    samples: List<BatterySample>,
-    drives: List<DriveSample>,
-): List<DriveSample?> {
-    var next = 0
-    return samples.map { sample ->
-        // Advance to the first drive sample after this battery sample; the
-        // nearest one is either it or the one just before.
-        while (next < drives.size && drives[next].timestampMillis <= sample.timestampMillis) next++
-        listOfNotNull(drives.getOrNull(next - 1), drives.getOrNull(next))
-            .minByOrNull { abs(it.timestampMillis - sample.timestampMillis) }
-            ?.takeIf { abs(it.timestampMillis - sample.timestampMillis) <= DRIVE_MATCH_MILLIS }
-    }
-}
-
 /**
  * How far ahead a range's projection looks, rounded to a figure a person can
  * say: half the range up to a week (3 h, 12 h, 3 days), a quarter beyond
@@ -308,6 +283,3 @@ private const val HOUR = 60 * MINUTE
 
 /** Less parked time than this makes the rate too noisy to extrapolate. */
 private const val MIN_RATE_SPAN_MILLIS = 10 * MINUTE
-
-/** A drive sample this close to a battery sample gives its odometer; a drive read follows each charge read. */
-private const val DRIVE_MATCH_MILLIS = 2 * MINUTE
