@@ -2,17 +2,18 @@
 package com.dzid26.teslable.ui
 
 import androidx.annotation.StringRes
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.selection.selectable
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
 import com.dzid26.teslable.R
 import com.dzid26.teslable.core.units.EfficiencyUnit
@@ -26,7 +27,7 @@ internal fun OptionRow(
 ) {
     Row(
         verticalAlignment = Alignment.CenterVertically,
-        modifier = Modifier.fillMaxWidth().clickable(onClick = onSelect),
+        modifier = Modifier.fillMaxWidth().selectable(selected = selected, onClick = onSelect, role = Role.RadioButton),
     ) {
         RadioButton(selected = selected, onClick = null)
         Spacer(Modifier.width(12.dp))
