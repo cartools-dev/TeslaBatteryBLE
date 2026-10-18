@@ -4,6 +4,7 @@ package com.dzid26.teslable.ui
 import android.os.Build
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -56,7 +57,6 @@ import com.dzid26.teslable.ble.Vehicle
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import java.text.NumberFormat
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -287,14 +287,8 @@ private fun UnitsCard(unitStore: UnitStore) {
 /** The electricity price that turns a charge session's energy into a cost on the car view. */
 @Composable
 private fun EnergyPriceCard(priceStore: EnergyPriceStore) {
-    val currency =
-        remember {
-            NumberFormat
-                .getCurrencyInstance()
-                .currency
-                ?.symbol
-                .orEmpty()
-        }
+    var currencyText by remember { mutableStateOf(priceStore.currencyCode() ?: localeCurrencyCode()) }
+    val symbol = currencyOrNull(currencyText)?.symbol ?: currencyText
     var text by remember { mutableStateOf(priceStore.pricePerKwh()?.toString().orEmpty()) }
     Card(modifier = Modifier.fillMaxWidth()) {
         Column(Modifier.padding(16.dp)) {
@@ -303,18 +297,32 @@ private fun EnergyPriceCard(priceStore: EnergyPriceStore) {
                 style = MaterialTheme.typography.titleMedium,
             )
             Spacer(Modifier.height(12.dp))
-            OutlinedTextField(
-                value = text,
-                onValueChange = { input ->
-                    text = input
-                    // A comma decimal is common; a half-typed or empty value clears the price.
-                    priceStore.setPricePerKwh(input.replace(',', '.').toFloatOrNull())
-                },
-                label = { Text(stringResource(R.string.settings_price_per_kwh, currency)) },
-                singleLine = true,
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
-                modifier = Modifier.fillMaxWidth(),
-            )
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                OutlinedTextField(
+                    value = text,
+                    onValueChange = { input ->
+                        text = input
+                        // A comma decimal is common; a half-typed or empty value clears the price.
+                        priceStore.setPricePerKwh(input.replace(',', '.').toFloatOrNull())
+                    },
+                    label = { Text(stringResource(R.string.settings_price_per_kwh, symbol)) },
+                    singleLine = true,
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                    modifier = Modifier.weight(1f),
+                )
+                OutlinedTextField(
+                    value = currencyText,
+                    onValueChange = { input ->
+                        currencyText = input.take(CURRENCY_CODE_LENGTH).uppercase()
+                        // Only a real ISO 4217 code is kept; anything else falls back to the phone's currency.
+                        priceStore.setCurrencyCode(currencyText.takeIf { currencyOrNull(it) != null })
+                    },
+                    label = { Text(stringResource(R.string.settings_currency)) },
+                    singleLine = true,
+                    isError = currencyOrNull(currencyText) == null,
+                    modifier = Modifier.width(CURRENCY_FIELD_WIDTH),
+                )
+            }
             Spacer(Modifier.height(8.dp))
             Text(
                 text = stringResource(R.string.settings_energy_cost_hint),
@@ -501,3 +509,6 @@ private fun ClearPairingCacheDialog(
 }
 
 private fun ByteArray.toHex(): String = joinToString("") { byte -> (byte.toInt() and 0xFF).toString(16).padStart(2, '0') }
+
+private const val CURRENCY_CODE_LENGTH = 3
+private val CURRENCY_FIELD_WIDTH = 104.dp

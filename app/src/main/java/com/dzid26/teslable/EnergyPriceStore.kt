@@ -3,7 +3,7 @@ package com.dzid26.teslable
 
 import android.content.Context
 
-/** The owner's electricity price per kWh, in their own currency; used to price charge sessions. */
+/** The owner's electricity price per kWh and the currency it is in; used to price charge sessions. */
 class EnergyPriceStore(
     context: Context,
 ) {
@@ -21,8 +21,17 @@ class EnergyPriceStore(
             }.apply()
     }
 
+    /** The ISO 4217 code the owner chose, or null to follow the phone's locale. */
+    fun currencyCode(): String? = prefs.getString(KEY_CURRENCY, null)
+
+    /** Saves [code]; null clears it back to the locale's currency. */
+    fun setCurrencyCode(code: String?) {
+        prefs.edit().apply { if (code != null) putString(KEY_CURRENCY, code) else remove(KEY_CURRENCY) }.apply()
+    }
+
     private companion object {
         const val PREFS = "teslable_energy_price"
         const val KEY_PRICE = "price_per_kwh"
+        const val KEY_CURRENCY = "currency_code"
     }
 }

@@ -225,8 +225,9 @@ internal fun CarScreen(
             ) {
                 val context = LocalContext.current
                 val pricePerKwh = remember { EnergyPriceStore(context).pricePerKwh() }
+                val currencyCode = remember { EnergyPriceStore(context).currencyCode() }
                 val distanceUnit = remember { UnitStore(context).preference().resolve() }
-                CompositionLocalProvider(LocalDistanceUnit provides distanceUnit) {
+                CompositionLocalProvider(LocalDistanceUnit provides distanceUnit, LocalCurrencyCode provides currencyCode) {
                     HeroCard(
                         pricePerKwh = pricePerKwh,
                         connection = connection,
@@ -391,7 +392,7 @@ private fun ChargeDetails(
             charge.charge_limit_soc?.let { add("Charge limit\u00A0$it%") }
             chargerElectricalText(charge)?.let { add(it) }
             charge.chargingStateKind?.let { add(chargingStateText(it)) }
-            sessionCostText(charge, pricePerKwh)?.let { add(it) }
+            sessionCostText(charge, pricePerKwh, LocalCurrencyCode.current)?.let { add(it) }
         }
     if (details.isNotEmpty()) {
         Text(

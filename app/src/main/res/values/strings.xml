@@ -33,6 +33,7 @@
     <string name="settings_clear_cache_confirm">Clear cache</string>
     <string name="action_back">Back</string>
     <string name="action_cancel">Cancel</string>
+    <string name="settings_currency">Currency</string>
     <string name="settings_price_per_kwh">Price per kWh (%1$s)</string>
     <string name="settings_version">TeslaBatteryBLE version: %1$s</string>
     <string name="perm_scan_title">Allow Bluetooth scanning</string>
