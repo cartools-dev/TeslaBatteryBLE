@@ -40,8 +40,11 @@ import com.tesla.generated.vcsec.UserPresence_E
 import com.tesla.generated.vcsec.VehicleLockState_E
 import com.tesla.generated.vcsec.VehicleSleepStatus_E
 import com.tesla.generated.vcsec.VehicleStatus
+import org.junit.After
+import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
+import java.util.Locale
 
 /**
  * Fast JVM snapshots of the two battery cards, light AND dark: the cars-list
@@ -75,6 +78,15 @@ class CardSnapshots {
      */
     @get:Rule
     val paparazzi = Paparazzi()
+
+    private val defaultLocale: Locale = Locale.getDefault()
+
+    // Chart times read the default locale; pin it so renders match across machines.
+    @Before
+    fun pinLocale() = Locale.setDefault(Locale.US)
+
+    @After
+    fun restoreLocale() = Locale.setDefault(defaultLocale)
 
     @Test
     fun vehicleCardFresh() {
@@ -1048,15 +1060,17 @@ private fun CardFrame(
     darkTheme: Boolean,
     content: @Composable () -> Unit,
 ) {
-    MaterialTheme(colorScheme = if (darkTheme) darkColorScheme() else lightColorScheme()) {
-        Surface {
-            Column(
-                modifier =
-                    Modifier
-                        .fillMaxWidth()
-                        .padding(all = 16.dp),
-            ) {
-                content()
+    CompositionLocalProvider(LocalIs24Hour provides true) {
+        MaterialTheme(colorScheme = if (darkTheme) darkColorScheme() else lightColorScheme()) {
+            Surface {
+                Column(
+                    modifier =
+                        Modifier
+                            .fillMaxWidth()
+                            .padding(all = 16.dp),
+                ) {
+                    content()
+                }
             }
         }
     }
@@ -1072,5 +1086,7 @@ private fun ScreenFrame(
     darkTheme: Boolean,
     content: @Composable () -> Unit,
 ) {
-    DemoSystemBars(darkTheme = darkTheme, content = content)
+    CompositionLocalProvider(LocalIs24Hour provides true) {
+        DemoSystemBars(darkTheme = darkTheme, content = content)
+    }
 }
