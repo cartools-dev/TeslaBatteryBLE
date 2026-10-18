@@ -112,4 +112,8 @@
     <string name="history_parked_rate_hint_asleep">Deep-sleep drain: the rate over the gaps the car slept through (a sleep status inside the gap), the quietest the battery drains. The dashed line follows it.</string>
     <string name="history_parked_rate_hint_mixed">Parked drain over all parked time, asleep or awake. Once the car has slept long enough to measure deep sleep, this switches to the deep-sleep rate.</string>
     <string name="soc_description">%1$s percent</string>
+    <string name="settings_units">Units</string>
+    <string name="units_system">System default</string>
+    <string name="units_metric">Metric (km)</string>
+    <string name="units_imperial">Imperial (mi)</string>
 </resources>

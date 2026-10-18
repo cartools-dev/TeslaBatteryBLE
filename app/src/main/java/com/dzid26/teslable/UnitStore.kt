@@ -5,17 +5,18 @@ import android.content.Context
 import android.icu.util.LocaleData
 import android.icu.util.ULocale
 import android.os.Build
+import androidx.annotation.StringRes
 import com.dzid26.teslable.core.units.DistanceUnit
 import com.dzid26.teslable.core.units.countryUsesMiles
 import java.util.Locale
 
 /** Which distance unit the owner wants: follow the phone's region, or force one. */
 enum class UnitPreference(
-    val label: String,
+    @StringRes val label: Int,
 ) {
-    SYSTEM("System default"),
-    METRIC("Metric (km)"),
-    IMPERIAL("Imperial (mi)"),
+    SYSTEM(R.string.units_system),
+    METRIC(R.string.units_metric),
+    IMPERIAL(R.string.units_imperial),
     ;
 
     /** The unit to display; [SYSTEM] follows the locale's measurement system (SI uses km, US and UK use miles). */

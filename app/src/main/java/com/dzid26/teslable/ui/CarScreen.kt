@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 package com.dzid26.teslable.ui
 
+import android.text.format.DateFormat
 import android.widget.Toast
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.Canvas
@@ -967,8 +968,17 @@ private const val REFRESH_FEEDBACK_MS = 2500L
 /** Green shared by charging segments, dots, and the projected line. */
 internal val chargingChartColor = Color(0xFF43A047)
 
-private val timeFormatter = DateTimeFormatter.ofPattern("HH:mm")
-private val dateTimeFormatter = DateTimeFormatter.ofPattern("dd MMM HH:mm")
+// The skeleton's "j" resolves to the locale's own hour cycle (12 or 24 hour), so
+// 12-hour regions read "9:05 PM" and the rest "21:05".
+private val timeFormatters = mutableMapOf<Pair<Locale, Boolean>, DateTimeFormatter>()
+
+private fun timeFormatter(showDate: Boolean): DateTimeFormatter {
+    val locale = Locale.getDefault()
+    return timeFormatters.getOrPut(locale to showDate) {
+        val skeleton = if (showDate) "MMMdjm" else "jm"
+        DateTimeFormatter.ofPattern(DateFormat.getBestDateTimePattern(locale, skeleton), locale)
+    }
+}
 
 private fun formatTime(
     millis: Long,
@@ -977,7 +987,7 @@ private fun formatTime(
     Instant
         .ofEpochMilli(millis)
         .atZone(ZoneId.systemDefault())
-        .format(if (showDate) dateTimeFormatter else timeFormatter)
+        .format(timeFormatter(showDate))
 
 private fun formatDuration(millis: Long): String {
     val minutes = (millis / 60_000).coerceAtLeast(0)
