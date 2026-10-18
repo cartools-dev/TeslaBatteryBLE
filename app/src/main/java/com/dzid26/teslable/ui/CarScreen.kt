@@ -237,20 +237,18 @@ internal fun CarScreen(
                         statusHistory = vehicleStatuses,
                         nowMillis = nowMillis ?: rememberNowMillis(connection?.chargeAtMillis),
                     )
-                }
-                // Once the app key is enrolled the hero carries its status; the
-                // card only exists for pairing, so it disappears when there is
-                // nothing to do.
-                if (!paired) {
-                    KeyCard(connection, vehicle, onPair)
-                }
-                BatteryHistoryCard(
-                    vehicleHistory,
-                    vehicleDrives,
-                    nowMillis = nowMillis ?: System.currentTimeMillis(),
-                    statuses = vehicleStatuses,
-                )
-                CompositionLocalProvider(LocalDistanceUnit provides distanceUnit) {
+                    // Once the app key is enrolled the hero carries its status; the
+                    // card only exists for pairing, so it disappears when there is
+                    // nothing to do.
+                    if (!paired) {
+                        KeyCard(connection, vehicle, onPair)
+                    }
+                    BatteryHistoryCard(
+                        vehicleHistory,
+                        vehicleDrives,
+                        nowMillis = nowMillis ?: System.currentTimeMillis(),
+                        statuses = vehicleStatuses,
+                    )
                     BatteryHealthCard(health)
                 }
             }

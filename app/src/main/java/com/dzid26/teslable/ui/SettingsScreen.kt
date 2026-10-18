@@ -44,6 +44,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalInspectionMode
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import com.dzid26.teslable.BuildConfig
@@ -287,8 +288,9 @@ private fun UnitsCard(unitStore: UnitStore) {
 /** The electricity price that turns a charge session's energy into a cost on the car view. */
 @Composable
 private fun EnergyPriceCard(priceStore: EnergyPriceStore) {
-    var currencyText by remember { mutableStateOf(priceStore.currencyCode() ?: localeCurrencyCode()) }
-    val symbol = currencyOrNull(currencyText)?.symbol ?: currencyText
+    // Blank follows the phone; a chosen code is pinned.
+    var currencyText by remember { mutableStateOf(priceStore.currencyCode().orEmpty()) }
+    val symbol = (currencyOrNull(currencyText) ?: localeCurrencyOrNull())?.symbol.orEmpty()
     var text by remember { mutableStateOf(priceStore.pricePerKwh()?.toString().orEmpty()) }
     Card(modifier = Modifier.fillMaxWidth()) {
         Column(Modifier.padding(16.dp)) {
@@ -314,12 +316,14 @@ private fun EnergyPriceCard(priceStore: EnergyPriceStore) {
                     value = currencyText,
                     onValueChange = { input ->
                         currencyText = input.take(CURRENCY_CODE_LENGTH).uppercase()
-                        // Only a real ISO 4217 code is kept; anything else falls back to the phone's currency.
-                        priceStore.setCurrencyCode(currencyText.takeIf { currencyOrNull(it) != null })
+                        // Only a real ISO 4217 code is kept; blank or anything else follows the phone's currency.
+                        priceStore.setCurrencyCode(currencyText.trim().takeIf { currencyOrNull(it) != null })
                     },
                     label = { Text(stringResource(R.string.settings_currency)) },
+                    placeholder = { Text(localeCurrencyOrNull()?.currencyCode.orEmpty()) },
                     singleLine = true,
-                    isError = currencyOrNull(currencyText) == null,
+                    isError = currencyText.isNotBlank() && currencyOrNull(currencyText) == null,
+                    keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Characters, autoCorrectEnabled = false),
                     modifier = Modifier.width(CURRENCY_FIELD_WIDTH),
                 )
             }
