@@ -260,8 +260,6 @@ class CardSnapshots {
                 charge_current_request = 32,
                 charge_energy_added = 12.5f,
             )
-        // The cost is formatted in the default locale; pin it so the render does not depend on the machine.
-        Locale.setDefault(Locale.US)
         snapCard("hero-card_charge-cost") {
             HeroCard(
                 connection = liveConnection(readAt = NOW - FRESH_MINUTES * MINUTE, charge = charging),
@@ -367,8 +365,6 @@ class CardSnapshots {
 
     @Test
     fun historyCardChargeCost() {
-        // The cost is formatted in the default locale; pin it so the render does not depend on the machine.
-        Locale.setDefault(Locale.US)
         snapCard("history-card_charge-cost") {
             CompositionLocalProvider(LocalPricePerKwh provides 0.20f) {
                 BatteryHistoryCard(
