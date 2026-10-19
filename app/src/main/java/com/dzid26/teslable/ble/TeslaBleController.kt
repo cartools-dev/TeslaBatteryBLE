@@ -10,6 +10,7 @@ import com.dzid26.teslable.core.history.Command
 import com.dzid26.teslable.core.history.CommandRecords
 import com.dzid26.teslable.core.history.ConnectionEvent
 import com.dzid26.teslable.core.history.DriveSample
+import com.dzid26.teslable.core.history.RouteSample
 import com.dzid26.teslable.core.history.StatusSample
 import com.dzid26.teslable.core.infotainment.InfotainmentPollPolicy
 import com.dzid26.teslable.core.infotainment.InfotainmentSessionGate
@@ -71,6 +72,9 @@ class TeslaBleController(
 
     /** Drive readings recorded from every DriveState response, oldest first. */
     val driveHistory: StateFlow<List<DriveSample>> get() = historyStore.driveSamples
+
+    /** The newest route-bearing drive reading per car, for the live trip card. */
+    val latestRoutes: StateFlow<Map<String, RouteSample>> get() = historyStore.latestRoutes
 
     private val links = mutableMapOf<String, VehicleLink>()
     private val handler = Handler(Looper.getMainLooper())
