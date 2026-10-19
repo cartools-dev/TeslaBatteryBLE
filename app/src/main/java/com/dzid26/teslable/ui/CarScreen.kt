@@ -730,16 +730,14 @@ internal fun BatteryHistoryCard(
                         now
                     }
                 BatteryChart(
-                    samples = visible,
-                    charge = charge,
-                    discharge = discharge,
-                    scale = scale,
-                    windowStart =
-                        range.durationMillis?.let { now - it }
-                            ?: visible.first().timestampMillis,
-                    windowEnd = windowEnd,
-                    showDate = range != HistoryRange.SIX_HOURS,
-                    is24Hour = is24Hour,
+                    data = ChartData(visible, charge, discharge, scale),
+                    axis =
+                        TimeAxis(
+                            windowStart = range.durationMillis?.let { now - it } ?: visible.first().timestampMillis,
+                            windowEnd = windowEnd,
+                            showDate = range != HistoryRange.SIX_HOURS,
+                            is24Hour = is24Hour,
+                        ),
                     modifier =
                         Modifier
                             .fillMaxWidth()

@@ -29,7 +29,7 @@ class BatteryChartShapeTest {
         samples: List<BatterySample>,
         charge: ChargeProjection? = null,
         windowEnd: Long = 10 * hour,
-    ) = batteryShape(samples, charge, null, null, Window(0L, windowEnd), Color.Blue, Color.Green)
+    ) = batteryShape(ChartData(samples, charge, null, null), Window(0L, windowEnd), Color.Blue, Color.Green)
 
     @Test
     fun runsTakeTheColourOfTheirEndingSample() {

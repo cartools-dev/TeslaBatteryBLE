@@ -43,6 +43,22 @@ import kotlin.math.roundToLong
 /** What a series of the battery chart draws; the line provider maps each kind to its look. */
 internal enum class SeriesKind { MEASURED, MEASURED_CHARGING, DOTS, DOTS_CHARGING, CHARGE_PROJECTION, DISCHARGE_PROJECTION }
 
+/** What the chart plots: the readings, the projections and the scale that turns them into percent. */
+internal data class ChartData(
+    val samples: List<BatterySample>,
+    val charge: ChargeProjection?,
+    val discharge: DischargeProjection?,
+    val scale: FullRangeScale?,
+)
+
+/** The time window and how its times are written. */
+internal data class TimeAxis(
+    val windowStart: Long,
+    val windowEnd: Long,
+    val showDate: Boolean,
+    val is24Hour: Boolean,
+)
+
 /** One series of the model: x in hours since the window start, y in percent. */
 internal class SeriesSpec(
     val kind: SeriesKind,
@@ -78,16 +94,18 @@ internal class Beam(
  */
 @Composable
 internal fun BatteryChart(
-    samples: List<BatterySample>,
-    charge: ChargeProjection?,
-    discharge: DischargeProjection?,
-    scale: FullRangeScale?,
-    windowStart: Long,
-    windowEnd: Long,
-    showDate: Boolean,
-    is24Hour: Boolean,
+    data: ChartData,
+    axis: TimeAxis,
     modifier: Modifier = Modifier,
 ) {
+    val samples = data.samples
+    val charge = data.charge
+    val discharge = data.discharge
+    val scale = data.scale
+    val windowStart = axis.windowStart
+    val windowEnd = axis.windowEnd
+    val showDate = axis.showDate
+    val is24Hour = axis.is24Hour
     val lineColor = MaterialTheme.colorScheme.primary
     val chargingColor = chargingChartColor
     // Keyed on the minute: the card passes a fresh wall-clock read on every recomposition, which
@@ -97,7 +115,7 @@ internal fun BatteryChart(
 
     val shape =
         remember(samples, charge, discharge, scale, window, lineColor) {
-            batteryShape(samples, charge, discharge, scale, window, lineColor, chargingColor)
+            batteryShape(data, window, lineColor, chargingColor)
         }
     val lines = rememberBatteryLines(lineColor, chargingColor, parkedMuted = charge != null)
     val timeFormatter = rememberTimeFormatter(window, showDate, is24Hour)
@@ -197,14 +215,15 @@ internal class Window(
 }
 
 internal fun batteryShape(
-    samples: List<BatterySample>,
-    charge: ChargeProjection?,
-    discharge: DischargeProjection?,
-    scale: FullRangeScale?,
+    data: ChartData,
     window: Window,
     lineColor: Color,
     chargingColor: Color,
 ): BatteryShape {
+    val samples = data.samples
+    val charge = data.charge
+    val discharge = data.discharge
+    val scale = data.scale
     val socs = samples.map { it.soc(scale) }
     val (yMin, yMax) = yBounds(socs, charge, discharge)
     val xs = samples.map { window.hours(it.timestampMillis) }
