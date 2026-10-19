@@ -26,7 +26,6 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
@@ -55,6 +54,7 @@ import com.dzid26.teslable.UnitStore
 import com.dzid26.teslable.ble.DebugSwitches
 import com.dzid26.teslable.ble.PairingKeyStore
 import com.dzid26.teslable.ble.Vehicle
+import com.dzid26.teslable.core.units.EfficiencyUnit
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -258,6 +258,9 @@ private fun VehicleKeysCard(
 @Composable
 private fun UnitsCard(unitStore: UnitStore) {
     var selected by remember { mutableStateOf(unitStore.preference()) }
+    var efficiency by remember { mutableStateOf(unitStore.efficiency()) }
+    // The labels name the distance unit already chosen above, so they need no examples.
+    val distanceSymbol = selected.resolve().symbol
     Card(modifier = Modifier.fillMaxWidth()) {
         Column(Modifier.padding(16.dp)) {
             Text(
@@ -266,19 +269,20 @@ private fun UnitsCard(unitStore: UnitStore) {
             )
             Spacer(Modifier.height(8.dp))
             UnitPreference.entries.forEach { option ->
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    modifier =
-                        Modifier
-                            .fillMaxWidth()
-                            .clickable {
-                                selected = option
-                                unitStore.setPreference(option)
-                            },
-                ) {
-                    RadioButton(selected = selected == option, onClick = null)
-                    Spacer(Modifier.width(12.dp))
-                    Text(text = stringResource(option.label), style = MaterialTheme.typography.bodyLarge)
+                OptionRow(stringResource(option.label), selected == option) {
+                    selected = option
+                    unitStore.setPreference(option)
+                }
+            }
+            Spacer(Modifier.height(12.dp))
+            Text(
+                text = stringResource(R.string.settings_efficiency),
+                style = MaterialTheme.typography.titleSmall,
+            )
+            EfficiencyUnit.entries.forEach { option ->
+                OptionRow(stringResource(efficiencyLabel(option), distanceSymbol), efficiency == option) {
+                    efficiency = option
+                    unitStore.setEfficiency(option)
                 }
             }
         }

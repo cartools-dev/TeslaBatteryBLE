@@ -32,6 +32,7 @@ import com.dzid26.teslable.core.history.StatusSample
 import com.dzid26.teslable.core.protocol.ChargingStateKind
 import com.dzid26.teslable.core.protocol.ShiftStateKind
 import com.dzid26.teslable.core.units.DistanceUnit
+import com.dzid26.teslable.core.units.EfficiencyUnit
 import com.dzid26.teslable.health.HealthConfidence
 import com.dzid26.teslable.health.HealthSummary
 import com.tesla.generated.carserver.common.Void
@@ -210,21 +211,32 @@ class CardSnapshots {
         snapCard("health-card_metric") {
             CompositionLocalProvider(LocalDistanceUnit provides DistanceUnit.KILOMETERS) {
                 BatteryHealthCard(
-                    HealthSummary(
-                        sessions = 6,
-                        learningTarget = 3,
-                        sohPercent = null,
-                        sohSpreadPoints = null,
-                        sohMismatch = false,
-                        capacityKwh = 57.2f,
-                        ratedKwhPerMile = 0.2736f,
-                        capacitySwingPercent = null,
-                        fullRangeMiles = 262f,
-                        fullRangeSteps = 42,
-                        confidence = HealthConfidence.MEDIUM,
-                        qualityNote = null,
-                    ),
+                    healthSummary,
                 )
+            }
+        }
+    }
+
+    @Test
+    fun healthCardEnergyPer100() {
+        snapCard("health-card_energy-per-100") {
+            CompositionLocalProvider(
+                LocalDistanceUnit provides DistanceUnit.KILOMETERS,
+                LocalEfficiencyUnit provides EfficiencyUnit.ENERGY_PER_100_DISTANCE,
+            ) {
+                BatteryHealthCard(healthSummary)
+            }
+        }
+    }
+
+    @Test
+    fun healthCardDistancePerEnergy() {
+        snapCard("health-card_distance-per-energy") {
+            CompositionLocalProvider(
+                LocalDistanceUnit provides DistanceUnit.MILES,
+                LocalEfficiencyUnit provides EfficiencyUnit.DISTANCE_PER_ENERGY,
+            ) {
+                BatteryHealthCard(healthSummary)
             }
         }
     }
@@ -869,6 +881,22 @@ class CardSnapshots {
                 // Enrolled, so the app-key card stays out of the car screen.
                 keySlot = 3,
             )
+        private val healthSummary =
+            HealthSummary(
+                sessions = 6,
+                learningTarget = 3,
+                sohPercent = null,
+                sohSpreadPoints = null,
+                sohMismatch = false,
+                capacityKwh = 57.2f,
+                ratedKwhPerMile = 0.2736f,
+                capacitySwingPercent = null,
+                fullRangeMiles = 262f,
+                fullRangeSteps = 42,
+                confidence = HealthConfidence.MEDIUM,
+                qualityNote = null,
+            )
+
         private val advert = TeslaAdvert(name = BLE_NAME, address = ADDRESS, rssi = -70)
 
         /**

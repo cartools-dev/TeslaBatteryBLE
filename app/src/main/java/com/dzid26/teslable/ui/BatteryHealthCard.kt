@@ -13,12 +13,14 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.dzid26.teslable.health.HealthConfidence
 import com.dzid26.teslable.health.HealthSummary
+import java.text.DecimalFormatSymbols
 import kotlin.math.roundToInt
 
 /**
@@ -30,6 +32,8 @@ import kotlin.math.roundToInt
 @Composable
 internal fun BatteryHealthCard(summary: HealthSummary) {
     val unit = LocalDistanceUnit.current
+    val efficiency = LocalEfficiencyUnit.current
+    val separator = remember { DecimalFormatSymbols.getInstance().decimalSeparator }
     Card(modifier = Modifier.fillMaxWidth()) {
         Column(Modifier.padding(12.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -60,7 +64,7 @@ internal fun BatteryHealthCard(summary: HealthSummary) {
                     value = "~${(kwh * 10).roundToInt() / 10f} kWh",
                     detail =
                         summary.ratedKwhPerMile?.let { constant ->
-                            "rated constant ${(unit.energyPerUnit(constant) * WH_PER_KWH).roundToInt()} Wh/${unit.symbol}"
+                            efficiency.format(constant, unit, separator)?.let { "rated constant $it" }
                         } ?: "energy added over the last charge",
                 )
             }
@@ -186,5 +190,3 @@ private fun confidenceLine(summary: HealthSummary): String =
 
         HealthConfidence.HIGH -> "${summary.sessions} charge sessions recorded."
     }
-
-private const val WH_PER_KWH = 1000f

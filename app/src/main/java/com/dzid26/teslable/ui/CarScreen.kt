@@ -239,9 +239,12 @@ internal fun CarScreen(
                 val context = LocalContext.current
                 val pricePerKwh = remember { EnergyPriceStore(context).pricePerKwh() }
                 val currencyCode = remember { EnergyPriceStore(context).currencyCode() }
-                val distanceUnit = remember { UnitStore(context).preference().resolve() }
+                val unitStore = remember { UnitStore(context) }
+                val distanceUnit = remember { unitStore.preference().resolve() }
+                val efficiencyUnit = remember { unitStore.efficiency() }
                 CompositionLocalProvider(
                     LocalDistanceUnit provides distanceUnit,
+                    LocalEfficiencyUnit provides efficiencyUnit,
                     LocalCurrencyCode provides currencyCode,
                     LocalPricePerKwh provides pricePerKwh,
                 ) {

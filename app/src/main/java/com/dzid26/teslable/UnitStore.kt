@@ -7,6 +7,7 @@ import android.icu.util.ULocale
 import android.os.Build
 import androidx.annotation.StringRes
 import com.dzid26.teslable.core.units.DistanceUnit
+import com.dzid26.teslable.core.units.EfficiencyUnit
 import com.dzid26.teslable.core.units.countryUsesMiles
 import java.util.Locale
 
@@ -49,8 +50,18 @@ class UnitStore(
         prefs.edit().putString(KEY_UNIT, preference.name).apply()
     }
 
+    /** How energy per distance reads; Wh per distance (the car's own display) until chosen. Stored by name. */
+    fun efficiency(): EfficiencyUnit =
+        EfficiencyUnit.entries.firstOrNull { it.name == prefs.getString(KEY_EFFICIENCY, null) }
+            ?: EfficiencyUnit.ENERGY_PER_DISTANCE
+
+    fun setEfficiency(unit: EfficiencyUnit) {
+        prefs.edit().putString(KEY_EFFICIENCY, unit.name).apply()
+    }
+
     private companion object {
         const val PREFS = "teslable_units"
         const val KEY_UNIT = "distance_unit"
+        const val KEY_EFFICIENCY = "efficiency_unit"
     }
 }
