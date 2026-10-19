@@ -35,9 +35,9 @@
     <string name="action_cancel">Cancel</string>
     <string name="settings_currency">Currency</string>
     <string name="settings_efficiency">Energy per distance</string>
-    <string name="settings_efficiency_wh">Wh per distance (Wh/mi, Wh/km)</string>
-    <string name="settings_efficiency_per_100">kWh per 100 distance (kWh/100 mi, kWh/100 km)</string>
-    <string name="settings_efficiency_inverse">Distance per kWh (mi/kWh, km/kWh)</string>
+    <string name="settings_efficiency_wh">Wh per %1$s</string>
+    <string name="settings_efficiency_per_100">kWh per 100 %1$s</string>
+    <string name="settings_efficiency_inverse">%1$s per kWh</string>
     <string name="settings_price_per_kwh">Price per kWh (%1$s)</string>
     <string name="settings_version">TeslaBatteryBLE version: %1$s</string>
     <string name="perm_scan_title">Allow Bluetooth scanning</string>

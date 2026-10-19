@@ -259,6 +259,8 @@ private fun VehicleKeysCard(
 private fun UnitsCard(unitStore: UnitStore) {
     var selected by remember { mutableStateOf(unitStore.preference()) }
     var efficiency by remember { mutableStateOf(unitStore.efficiency()) }
+    // The labels name the distance unit already chosen above, so they need no examples.
+    val distanceSymbol = selected.resolve().symbol
     Card(modifier = Modifier.fillMaxWidth()) {
         Column(Modifier.padding(16.dp)) {
             Text(
@@ -278,7 +280,7 @@ private fun UnitsCard(unitStore: UnitStore) {
                 style = MaterialTheme.typography.titleSmall,
             )
             EfficiencyUnit.entries.forEach { option ->
-                OptionRow(stringResource(efficiencyLabel(option)), efficiency == option) {
+                OptionRow(stringResource(efficiencyLabel(option), distanceSymbol), efficiency == option) {
                     efficiency = option
                     unitStore.setEfficiency(option)
                 }
