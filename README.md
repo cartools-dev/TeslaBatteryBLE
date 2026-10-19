@@ -1,6 +1,6 @@
 # TeslaBatteryBLE
 
-**Your Tesla's battery, tracked locally over Bluetooth LE. No cloud, no account, nothing leaves the phone.**
+So far the only Android app that tracks Tesla battery usage - directly over Bluetooth LE.
 
 [![Android CI](https://github.com/dzid26/TeslaBatteryBLE/actions/workflows/android.yml/badge.svg)](https://github.com/dzid26/TeslaBatteryBLE/actions/workflows/android.yml)
 [![Website](https://img.shields.io/badge/website-live-brightgreen.svg)](https://dzid26.github.io/TeslaBatteryBLE/)
