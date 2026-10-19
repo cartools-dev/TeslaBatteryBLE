@@ -49,7 +49,7 @@ class MetadataTest {
 
     @Test
     fun `computes a stable hmac checksum for a fixed key`() {
-        val metadata = Metadata.hmacSha256(ByteArray(16) { it.toByte() }).add(2, "testVIN".toByteArray())
+        val metadata = Metadata.hmacSha256(ByteArray(16) { it.toByte() }).add(2, "testVIN".encodeToByteArray())
         assertContentEquals(HMAC_CHECKSUM.hex(), metadata.checksum(byteArrayOf()))
     }
 

@@ -26,7 +26,7 @@ class TeslaCryptoTest {
     fun `round trips aes gcm with a twelve byte nonce`() {
         val key = ByteArray(16) { it.toByte() }
         val nonce = ByteArray(12) { (it + 1).toByte() }
-        val plaintext = "edge-case".toByteArray()
+        val plaintext = "edge-case".encodeToByteArray()
         val associatedData = byteArrayOf(9, 9)
 
         val (ciphertext, tag) = TeslaCrypto.encryptGcm(key, nonce, plaintext, associatedData)
@@ -42,7 +42,7 @@ class TeslaCryptoTest {
         val key = ByteArray(16) { it.toByte() }
         val nonce = ByteArray(12) { 7 }
         val associatedData = byteArrayOf(1, 2, 3)
-        val (ciphertext, tag) = TeslaCrypto.encryptGcm(key, nonce, "payload".toByteArray(), associatedData)
+        val (ciphertext, tag) = TeslaCrypto.encryptGcm(key, nonce, "payload".encodeToByteArray(), associatedData)
 
         val flippedCiphertext = ciphertext.copyOf().also { it[0] = (it[0] + 1).toByte() }
         assertNull(TeslaCrypto.decryptGcm(key, nonce, flippedCiphertext, tag, associatedData))

@@ -91,8 +91,8 @@ class TeslaSession private constructor(
         if (info == null || !info.publicKey.toByteArray().contentEquals(remotePublicRaw)) return false
         val newEpoch = info.epoch.toByteArray()
         // Counters and clocks are unsigned on the wire, as in the Go signer.
-        if (!epoch.contentEquals(newEpoch) || Integer.compareUnsigned(clockTime, info.clock_time) <= 0) {
-            if (Integer.compareUnsigned(counter, info.counter) < 0) counter = info.counter
+        if (!epoch.contentEquals(newEpoch) || clockTime.toUInt() <= info.clock_time.toUInt()) {
+            if (counter.toUInt() < info.counter.toUInt()) counter = info.counter
             epoch = newEpoch
             clockTime = info.clock_time
             timeZeroMs = clock() - info.clock_time * MILLIS_PER_SECOND
