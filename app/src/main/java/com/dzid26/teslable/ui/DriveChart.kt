@@ -16,6 +16,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.LinearGradientShader
 import androidx.compose.ui.graphics.Paint
 import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.patrykandpatrick.vico.compose.cartesian.CartesianChartHost
 import com.patrykandpatrick.vico.compose.cartesian.CartesianDrawingContext
@@ -184,12 +185,9 @@ private class RegenBands(
 ) : Decoration {
     override fun drawUnderLayers(context: CartesianDrawingContext) {
         with(context) {
-            val yRange = ranges.getYRange(null)
-            val origin = layerBounds.left + layerDimensions.startPadding - scroll
+            fun xOf(distance: Double): Float = canvasX(distance)
 
-            fun xOf(distance: Double): Float = origin + layerDimensions.xSpacing * ((distance - ranges.minX) / ranges.xStep).toFloat()
-
-            fun yOf(value: Float): Float = layerBounds.bottom - ((value - yRange.minY) / yRange.length).toFloat() * layerBounds.height
+            fun yOf(value: Float): Float = canvasY(value.toDouble())
 
             // Hoisted: inside Paint().apply, `color` would resolve to Paint.color.
             val top = color.copy(alpha = REGEN_TOP_ALPHA)
@@ -219,13 +217,16 @@ private class RegenBands(
 }
 
 @Composable
-private fun rememberPoint(color: Color): LineCartesianLayer.Point {
+internal fun rememberPoint(
+    color: Color,
+    size: Dp = 5.dp,
+): LineCartesianLayer.Point {
     val component = rememberShapeComponent(fill = Fill(color), shape = CircleShape)
-    return remember(component) { LineCartesianLayer.Point(component, size = 5.dp) }
+    return remember(component) { LineCartesianLayer.Point(component, size = size) }
 }
 
 /** 1, 2 or 5 times a power of ten: the axis step nearest above [raw]. */
-private fun niceStep(raw: Double): Double {
+internal fun niceStep(raw: Double): Double {
     if (raw <= 0.0) return 1.0
     val magnitude = DECADE.pow(floor(log10(raw)))
     return listOf(1.0, 2.0, HALF_DECADE, DECADE).first { it * magnitude >= raw } * magnitude
@@ -245,3 +246,13 @@ private const val Y_LABELS = 4
 private const val Y_MIN_STEP = 1.0
 private const val Y_PAD = 1.0
 private const val PERCENT_FULL = 100.0
+
+/** The canvas x of a data x on the first layer, for decorations that draw between data points. */
+internal fun CartesianDrawingContext.canvasX(x: Double): Float =
+    layerBounds.left + layerDimensions.startPadding - scroll + layerDimensions.xSpacing * ((x - ranges.minX) / ranges.xStep).toFloat()
+
+/** The canvas y of a data y on the first layer's y range. */
+internal fun CartesianDrawingContext.canvasY(y: Double): Float {
+    val yRange = ranges.getYRange(null)
+    return layerBounds.bottom - ((y - yRange.minY) / yRange.length).toFloat() * layerBounds.height
+}
