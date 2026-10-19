@@ -22,12 +22,11 @@ Date: 2026-10-15
 - The drive chart is the first user. It renders from a static
   `CartesianChartModel` (no async model producer), with scroll and zoom off
   and the content fitted to the card, so snapshots are deterministic.
-- The battery history chart stays on `Canvas` for now; porting it is a
-  separate change once Vico has proven itself on the drive chart.
+- The battery history chart started on `Canvas` and was ported once Vico had proven itself on the drive chart (#229 landed first); the beams are a Vico `Decoration`, the projections dashed series, and a press shows a cursor with the value and time.
 
 ## Consequences
 
 - One more runtime dependency (Apache-2.0, compatible with AGPL-3.0-only),
   listed in `THIRD_PARTY_NOTICES.md`.
 - Cursors and gradients become configuration rather than drawing code.
-- Two chart styles coexist until the history chart is ported.
+- Both charts share one framework; syncing the two cursors is a later change.

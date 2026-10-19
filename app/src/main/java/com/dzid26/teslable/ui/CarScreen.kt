@@ -4,7 +4,6 @@ package com.dzid26.teslable.ui
 import android.text.format.DateFormat
 import android.widget.Toast
 import androidx.activity.compose.BackHandler
-import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -48,20 +47,13 @@ import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.Path
-import androidx.compose.ui.graphics.PathEffect
-import androidx.compose.ui.graphics.StrokeCap
-import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.buildAnnotatedString
-import androidx.compose.ui.text.drawText
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
@@ -84,7 +76,6 @@ import com.dzid26.teslable.core.health.chargeSessionOpen
 import com.dzid26.teslable.core.health.lastFinishedChargeStats
 import com.dzid26.teslable.core.history.BatterySample
 import com.dzid26.teslable.core.history.ChargeProjection
-import com.dzid26.teslable.core.history.DischargeProjection
 import com.dzid26.teslable.core.history.DriveSample
 import com.dzid26.teslable.core.history.FullRangeScale
 import com.dzid26.teslable.core.history.FullRangeScaleEstimator
@@ -96,7 +87,6 @@ import com.dzid26.teslable.core.history.chargeProjection
 import com.dzid26.teslable.core.history.compactDuration
 import com.dzid26.teslable.core.history.dischargeProjection
 import com.dzid26.teslable.core.history.projectionHorizonMillis
-import com.dzid26.teslable.core.history.soc
 import com.dzid26.teslable.core.history.socTenths
 import com.dzid26.teslable.core.history.statusDurations
 import com.dzid26.teslable.core.history.within
@@ -740,20 +730,18 @@ internal fun BatteryHistoryCard(
                         now
                     }
                 BatteryChart(
-                    samples = visible,
-                    charge = charge,
-                    discharge = discharge,
-                    scale = scale,
-                    windowStart =
-                        range.durationMillis?.let { now - it }
-                            ?: visible.first().timestampMillis,
-                    windowEnd = windowEnd,
-                    showDate = range != HistoryRange.SIX_HOURS,
-                    is24Hour = is24Hour,
+                    data = ChartData(visible, charge, discharge, scale),
+                    axis =
+                        TimeAxis(
+                            windowStart = range.durationMillis?.let { now - it } ?: visible.first().timestampMillis,
+                            windowEnd = windowEnd,
+                            showDate = range != HistoryRange.SIX_HOURS,
+                            is24Hour = is24Hour,
+                        ),
                     modifier =
                         Modifier
                             .fillMaxWidth()
-                            .height(140.dp),
+                            .height(160.dp),
                 )
                 charge?.let { ChargeProjectionLine(it, is24Hour) }
                 discharge?.let {
@@ -784,203 +772,6 @@ internal fun BatteryHistoryCard(
             }
         }
     }
-}
-
-@Composable
-private fun BatteryChart(
-    samples: List<BatterySample>,
-    charge: ChargeProjection?,
-    discharge: DischargeProjection?,
-    scale: FullRangeScale?,
-    windowStart: Long,
-    windowEnd: Long,
-    showDate: Boolean,
-    is24Hour: Boolean,
-    modifier: Modifier = Modifier,
-) {
-    val lineColor = MaterialTheme.colorScheme.primary
-    val chargingColor = chargingChartColor
-    val gridColor = MaterialTheme.colorScheme.outlineVariant
-    val labelStyle =
-        MaterialTheme.typography.labelSmall.copy(
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-    val textMeasurer = rememberTextMeasurer()
-
-    Canvas(modifier) {
-        val left = 36.dp.toPx()
-        val bottom = 20.dp.toPx()
-        val top = 8.dp.toPx()
-        val right = 8.dp.toPx()
-        val width = size.width - left - right
-        val height = size.height - top - bottom
-        if (width <= 0f || height <= 0f) return@Canvas
-
-        val minPercent = minOf(samples.minOf { it.soc(scale) }, discharge?.let { it.lowSoc ?: it.projectedSoc } ?: 100f)
-        val maxPercent = maxOf(samples.maxOf { it.soc(scale) }, (charge?.targetPercent ?: 0).toFloat())
-        var yMin = ((minPercent - 2).toInt().coerceAtLeast(0) / 5) * 5
-        var yMax = (((maxPercent + 2).toInt().coerceAtMost(100) + 4) / 5) * 5
-        if (yMax <= yMin) {
-            yMin = (yMin - 5).coerceAtLeast(0)
-            yMax = (yMin + 5).coerceAtMost(100)
-        }
-        val span = (windowEnd - windowStart).coerceAtLeast(1L).toFloat()
-
-        fun x(timestampMillis: Long): Float = left + ((timestampMillis - windowStart).toFloat() / span).coerceIn(0f, 1f) * width
-
-        fun y(percent: Float): Float = top + height - ((percent - yMin) / (yMax - yMin)) * height
-
-        fun y(percent: Int): Float = y(percent.toFloat())
-
-        listOf(yMin, (yMin + yMax) / 2, yMax).forEach { value ->
-            val gridY = y(value)
-            drawLine(
-                color = gridColor,
-                start = Offset(left, gridY),
-                end = Offset(left + width, gridY),
-                strokeWidth = 1.dp.toPx(),
-            )
-            val label = textMeasurer.measure("$value%", labelStyle)
-            drawText(
-                textLayoutResult = label,
-                topLeft =
-                    Offset(
-                        x = left - label.size.width - 6.dp.toPx(),
-                        y = gridY - label.size.height / 2f,
-                    ),
-            )
-        }
-
-        // Constant narrow line; the dots below mark where measurements exist.
-        for (index in 1 until samples.size) {
-            val previous = samples[index - 1]
-            val current = samples[index]
-            drawLine(
-                color = if (current.isCharging) chargingColor else lineColor,
-                start = Offset(x(previous.timestampMillis), y(previous.soc(scale))),
-                end = Offset(x(current.timestampMillis), y(current.soc(scale))),
-                strokeWidth = 1.5.dp.toPx(),
-                cap = StrokeCap.Round,
-            )
-        }
-
-        // One dot per measurement, no decimation: dense samples overlap into a
-        // thick band, sparse ones read as separate dots.
-        samples.forEach { sample ->
-            drawCircle(
-                color = if (sample.isCharging) chargingColor else lineColor,
-                radius = 2.dp.toPx(),
-                center = Offset(x(sample.timestampMillis), y(sample.soc(scale))),
-            )
-        }
-
-        charge?.let { target ->
-            // The beam: where the limit lands if the supply voltage stayed at the
-            // best or worst it showed this run.
-            val (line, beam) = chargeProjectionPaths(target, windowEnd, ::x) { percent -> y(percent) }
-            beam?.let { drawPath(path = it, color = chargingColor.copy(alpha = 0.25f)) }
-            drawPath(
-                path = line,
-                color = chargingColor.copy(alpha = 0.65f),
-                style =
-                    Stroke(
-                        width = 2.dp.toPx(),
-                        pathEffect = PathEffect.dashPathEffect(floatArrayOf(8.dp.toPx(), 6.dp.toPx())),
-                    ),
-            )
-        }
-
-        discharge?.let { target ->
-            val end =
-                Offset(
-                    x(target.projectedAtMillis),
-                    y(target.projectedSoc),
-                )
-            val start = Offset(x(target.from.timestampMillis), y(target.fromSoc))
-            // The beam: two standard errors of the parked rate at the horizon.
-            val low = target.lowSoc
-            val high = target.highSoc
-            if (low != null && high != null) {
-                drawPath(
-                    path =
-                        Path().apply {
-                            moveTo(start.x, start.y)
-                            lineTo(end.x, y(low))
-                            lineTo(end.x, y(high))
-                            close()
-                        },
-                    color = lineColor.copy(alpha = if (charge != null) 0.1f else 0.2f),
-                )
-            }
-            drawPath(
-                path =
-                    Path().apply {
-                        moveTo(start.x, start.y)
-                        lineTo(end.x, end.y)
-                    },
-                color = lineColor.copy(alpha = if (charge != null) 0.35f else 0.65f),
-                style =
-                    Stroke(
-                        width = 2.dp.toPx(),
-                        pathEffect = PathEffect.dashPathEffect(floatArrayOf(8.dp.toPx(), 6.dp.toPx())),
-                    ),
-            )
-        }
-
-        val startLabel = textMeasurer.measure(formatTime(windowStart, showDate, is24Hour), labelStyle)
-        drawText(
-            textLayoutResult = startLabel,
-            topLeft = Offset(left, size.height - startLabel.size.height),
-        )
-        val endLabel = textMeasurer.measure(formatTime(windowEnd, showDate, is24Hour), labelStyle)
-        drawText(
-            textLayoutResult = endLabel,
-            topLeft = Offset(left + width - endLabel.size.width, size.height - endLabel.size.height),
-        )
-    }
-}
-
-/**
- * The projected line from the latest sample to the limit, and the beam's wedge
- * to the earliest and latest completion (null without a beam). A completion
- * past the chart's right edge is cut where its line crosses the edge, so the
- * line and the wedge keep their slope instead of flattening onto the edge.
- */
-private fun chargeProjectionPaths(
-    projection: ChargeProjection,
-    windowEnd: Long,
-    x: (Long) -> Float,
-    y: (Float) -> Float,
-): Pair<Path, Path?> {
-    val fromMillis = projection.from.timestampMillis
-    val fromPercent = projection.from.percent
-
-    // A completion past the chart's right edge would flatten the wedge onto the
-    // edge, so cut each side where it crosses the edge instead.
-    fun end(completionMillis: Long): Pair<Float, Float> {
-        if (completionMillis <= windowEnd) return x(completionMillis) to y(projection.targetPercent.toFloat())
-        val share = (windowEnd - fromMillis).toFloat() / (completionMillis - fromMillis)
-        // Not rounded: far from the limit the two sides differ by well under a point.
-        val percentAtEdge = fromPercent + (projection.targetPercent - fromPercent) * share
-        return x(windowEnd) to y(percentAtEdge)
-    }
-    val (lineX, lineY) = end(projection.completionMillis)
-    val line =
-        Path().apply {
-            moveTo(x(fromMillis), y(fromPercent.toFloat()))
-            lineTo(lineX, lineY)
-        }
-    val (earliest, latest) = projection.beam ?: return line to null
-    val (earlyX, earlyY) = end(earliest)
-    val (lateX, lateY) = end(latest)
-    val beam =
-        Path().apply {
-            moveTo(x(fromMillis), y(fromPercent.toFloat()))
-            lineTo(earlyX, earlyY)
-            lineTo(lateX, lateY)
-            close()
-        }
-    return line to beam
 }
 
 @Composable
@@ -1022,7 +813,7 @@ private fun timeFormatter(
     }
 }
 
-private fun formatTime(
+internal fun formatTime(
     millis: Long,
     showDate: Boolean,
     is24Hour: Boolean,
@@ -1050,7 +841,7 @@ private fun formatDistance(miles: Float): String {
 }
 
 /** One decimal only when it adds information: "78%" but "77.6%". */
-private fun formatPercent(value: Float): String {
+internal fun formatPercent(value: Float): String {
     val rounded = value.roundToInt()
     return if (rounded.toFloat() == value) "$rounded" else String.format(Locale.getDefault(), "%.1f", value)
 }
