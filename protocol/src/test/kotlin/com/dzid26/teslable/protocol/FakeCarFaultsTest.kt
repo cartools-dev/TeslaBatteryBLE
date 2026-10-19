@@ -139,7 +139,7 @@ class FakeCarFaultsTest {
         val request =
             RoutableMessage(
                 to_destination = Destination(domain = Domain.DOMAIN_VEHICLE_SECURITY),
-                protobuf_message_as_bytes = "x".toByteArray().toByteString(),
+                protobuf_message_as_bytes = "x".encodeToByteArray().toByteString(),
             )
         return handshake[Domain.DOMAIN_VEHICLE_SECURITY]!!
             .encrypt(request, 5)!!

@@ -10,12 +10,12 @@ import com.tesla.generated.universalmessage.Destination
 import com.tesla.generated.universalmessage.Domain
 import com.tesla.generated.universalmessage.RoutableMessage
 import okio.ByteString.Companion.toByteString
-import org.junit.Assert.assertArrayEquals
-import org.junit.Assert.assertEquals
-import org.junit.Assert.assertFalse
-import org.junit.Assert.assertNotNull
-import org.junit.Assert.assertTrue
-import org.junit.Test
+import kotlin.test.Test
+import kotlin.test.assertContentEquals
+import kotlin.test.assertEquals
+import kotlin.test.assertFalse
+import kotlin.test.assertNotNull
+import kotlin.test.assertTrue
 
 class TeslaSessionTest {
     private val vin = "5YJ3E1EA7KF000001"
@@ -93,26 +93,26 @@ class TeslaSessionTest {
             RoutableMessage(
                 to_destination = Destination(domain = Domain.DOMAIN_INFOTAINMENT),
                 from_destination = Destination(routing_address = ByteArray(16).toByteString()),
-                protobuf_message_as_bytes = "hello".toByteArray().toByteString(),
+                protobuf_message_as_bytes = "hello".encodeToByteArray().toByteString(),
             )
 
         val encrypted = session.encrypt(message, 5)
         assertNotNull(encrypted)
-        val gcm = encrypted!!.signature_data?.AES_GCM_Personalized_data
+        val gcm = encrypted.signature_data?.AES_GCM_Personalized_data
         assertNotNull(gcm)
-        assertEquals(8, gcm!!.counter)
+        assertEquals(8, gcm.counter)
         assertFalse(
             encrypted.protobuf_message_as_bytes!!
                 .toByteArray()
-                .contentEquals("hello".toByteArray()),
+                .contentEquals("hello".encodeToByteArray()),
         )
 
         val requestId = session.requestId(encrypted)!!
-        val response = vehicleResponse(requestId, "world".toByteArray(), counter = 3)
+        val response = vehicleResponse(requestId, "world".encodeToByteArray(), counter = 3)
         val window = AntiReplayWindow()
         val plaintext = session.decrypt(response, requestId, window)
         assertNotNull(plaintext)
-        assertArrayEquals("world".toByteArray(), plaintext)
+        assertContentEquals("world".encodeToByteArray(), plaintext)
 
         assertEquals(null, session.decrypt(response, requestId, window))
     }
@@ -172,7 +172,7 @@ class TeslaSessionTest {
         val encrypted = session.encrypt(infotainmentMessage(), 5)!!
         val gcm = encrypted.signature_data!!.AES_GCM_Personalized_data!!
         assertEquals(51, gcm.counter)
-        assertArrayEquals(ByteArray(16) { 9 }, gcm.epoch.toByteArray())
+        assertContentEquals(ByteArray(16) { 9 }, gcm.epoch.toByteArray())
     }
 
     @Test
@@ -190,7 +190,7 @@ class TeslaSessionTest {
         RoutableMessage(
             to_destination = Destination(domain = Domain.DOMAIN_INFOTAINMENT),
             from_destination = Destination(routing_address = ByteArray(16).toByteString()),
-            protobuf_message_as_bytes = "hello".toByteArray().toByteString(),
+            protobuf_message_as_bytes = "hello".encodeToByteArray().toByteString(),
         )
 
     /** The counter the session's next request carries. */
@@ -227,19 +227,19 @@ class TeslaSessionTest {
 
         val first =
             session.decrypt(
-                vehicleResponse(firstId, "first".toByteArray(), counter = 0, nonceSeed = 1),
+                vehicleResponse(firstId, "first".encodeToByteArray(), counter = 0, nonceSeed = 1),
                 firstId,
                 AntiReplayWindow(),
             )
         val second =
             session.decrypt(
-                vehicleResponse(secondId, "second".toByteArray(), counter = 0, nonceSeed = 2),
+                vehicleResponse(secondId, "second".encodeToByteArray(), counter = 0, nonceSeed = 2),
                 secondId,
                 AntiReplayWindow(),
             )
 
-        assertArrayEquals("first".toByteArray(), first)
-        assertArrayEquals("second".toByteArray(), second)
+        assertContentEquals("first".encodeToByteArray(), first)
+        assertContentEquals("second".encodeToByteArray(), second)
     }
 
     @Test
@@ -262,10 +262,10 @@ class TeslaSessionTest {
             RoutableMessage(
                 to_destination = Destination(domain = Domain.DOMAIN_INFOTAINMENT),
                 from_destination = Destination(routing_address = ByteArray(16).toByteString()),
-                protobuf_message_as_bytes = "hello".toByteArray().toByteString(),
+                protobuf_message_as_bytes = "hello".encodeToByteArray().toByteString(),
             )
         val encrypted = session.encrypt(message, 5)!!
-        assertArrayEquals(
+        assertContentEquals(
             fixedNonce,
             encrypted.signature_data
                 ?.AES_GCM_Personalized_data
