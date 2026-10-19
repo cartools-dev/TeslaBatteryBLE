@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 package com.dzid26.teslable.ui
 
+import android.text.format.DateFormat
 import android.widget.Toast
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.Canvas
@@ -43,6 +44,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -109,6 +111,7 @@ import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.util.Locale
+import java.util.concurrent.ConcurrentHashMap
 import kotlin.math.roundToInt
 
 // -------------------------------------------------------------------- car view
@@ -650,6 +653,7 @@ internal fun BatteryHistoryCard(
     statuses: List<StatusSample> = emptyList(),
 ) {
     var range by rememberSaveable { mutableStateOf(initialRange) }
+    val is24Hour = LocalIs24Hour.current ?: DateFormat.is24HourFormat(LocalContext.current)
     val now = nowMillis
     val visible = samples.within(range, now)
     val stats = chargeStats(samples)
@@ -706,6 +710,7 @@ internal fun BatteryHistoryCard(
                             ?: visible.first().timestampMillis,
                     windowEnd = windowEnd,
                     showDate = range != HistoryRange.SIX_HOURS,
+                    is24Hour = is24Hour,
                     modifier =
                         Modifier
                             .fillMaxWidth()
@@ -716,10 +721,14 @@ internal fun BatteryHistoryCard(
                     Text(
                         text =
                             "Charging · projected ${it.targetPercent}% around " +
-                                formatTime(it.completionMillis, showDate = true) +
+                                formatTime(it.completionMillis, showDate = true, is24Hour = is24Hour) +
                                 it.beam
                                     ?.let { (earliest, latest) ->
-                                        " (${formatTime(earliest, showDate = false)}–${formatTime(latest, showDate = false)})"
+                                        " (${formatTime(
+                                            earliest,
+                                            showDate = false,
+                                            is24Hour = is24Hour,
+                                        )}–${formatTime(latest, showDate = false, is24Hour = is24Hour)})"
                                     }.orEmpty(),
                         style = MaterialTheme.typography.bodySmall,
                         color = chargingChartColor,
@@ -763,6 +772,7 @@ private fun BatteryChart(
     windowStart: Long,
     windowEnd: Long,
     showDate: Boolean,
+    is24Hour: Boolean,
     modifier: Modifier = Modifier,
 ) {
     val lineColor = MaterialTheme.colorScheme.primary
@@ -894,12 +904,12 @@ private fun BatteryChart(
             )
         }
 
-        val startLabel = textMeasurer.measure(formatTime(windowStart, showDate), labelStyle)
+        val startLabel = textMeasurer.measure(formatTime(windowStart, showDate, is24Hour), labelStyle)
         drawText(
             textLayoutResult = startLabel,
             topLeft = Offset(left, size.height - startLabel.size.height),
         )
-        val endLabel = textMeasurer.measure(formatTime(windowEnd, showDate), labelStyle)
+        val endLabel = textMeasurer.measure(formatTime(windowEnd, showDate, is24Hour), labelStyle)
         drawText(
             textLayoutResult = endLabel,
             topLeft = Offset(left + width - endLabel.size.width, size.height - endLabel.size.height),
@@ -967,17 +977,37 @@ private const val REFRESH_FEEDBACK_MS = 2500L
 /** Green shared by charging segments, dots, and the projected line. */
 internal val chargingChartColor = Color(0xFF43A047)
 
-private val timeFormatter = DateTimeFormatter.ofPattern("HH:mm")
-private val dateTimeFormatter = DateTimeFormatter.ofPattern("dd MMM HH:mm")
+/**
+ * Overrides the phone's 12/24-hour switch for the chart times; null follows it.
+ * The Paparazzi snapshots pin it so renders do not depend on the machine.
+ */
+internal val LocalIs24Hour = staticCompositionLocalOf<Boolean?> { null }
+
+private val timeFormatters = ConcurrentHashMap<Triple<Locale, Boolean, Boolean>, DateTimeFormatter>()
+
+// The skeleton carries the phone's 12/24-hour choice (H or h); the locale still
+// decides the rest, so US reads "Oct 18, 9:05 PM" or "Oct 18, 21:05".
+private fun timeFormatter(
+    showDate: Boolean,
+    is24Hour: Boolean,
+): DateTimeFormatter {
+    val locale = Locale.getDefault()
+    return timeFormatters.getOrPut(Triple(locale, showDate, is24Hour)) {
+        val hour = if (is24Hour) "H" else "h"
+        val skeleton = (if (showDate) "MMMd" else "") + hour + "m"
+        DateTimeFormatter.ofPattern(DateFormat.getBestDateTimePattern(locale, skeleton), locale)
+    }
+}
 
 private fun formatTime(
     millis: Long,
     showDate: Boolean,
+    is24Hour: Boolean,
 ): String =
     Instant
         .ofEpochMilli(millis)
         .atZone(ZoneId.systemDefault())
-        .format(if (showDate) dateTimeFormatter else timeFormatter)
+        .format(timeFormatter(showDate, is24Hour))
 
 private fun formatDuration(millis: Long): String {
     val minutes = (millis / 60_000).coerceAtLeast(0)

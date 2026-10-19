@@ -261,7 +261,7 @@ private fun UnitsCard(unitStore: UnitStore) {
     Card(modifier = Modifier.fillMaxWidth()) {
         Column(Modifier.padding(16.dp)) {
             Text(
-                text = "Units",
+                text = stringResource(R.string.settings_units),
                 style = MaterialTheme.typography.titleMedium,
             )
             Spacer(Modifier.height(8.dp))
@@ -278,7 +278,7 @@ private fun UnitsCard(unitStore: UnitStore) {
                 ) {
                     RadioButton(selected = selected == option, onClick = null)
                     Spacer(Modifier.width(12.dp))
-                    Text(text = option.label, style = MaterialTheme.typography.bodyLarge)
+                    Text(text = stringResource(option.label), style = MaterialTheme.typography.bodyLarge)
                 }
             }
         }
