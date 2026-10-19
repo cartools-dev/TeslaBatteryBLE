@@ -219,8 +219,6 @@ class CardSnapshots {
 
     @Test
     fun healthCardEnergyPer100() {
-        // The decimal separator follows the default locale; pin it so the render does not depend on the machine.
-        java.util.Locale.setDefault(java.util.Locale.US)
         snapCard("health-card_energy-per-100") {
             CompositionLocalProvider(
                 LocalDistanceUnit provides DistanceUnit.KILOMETERS,
@@ -233,8 +231,6 @@ class CardSnapshots {
 
     @Test
     fun healthCardDistancePerEnergy() {
-        // The decimal separator follows the default locale; pin it so the render does not depend on the machine.
-        java.util.Locale.setDefault(java.util.Locale.US)
         snapCard("health-card_distance-per-energy") {
             CompositionLocalProvider(
                 LocalDistanceUnit provides DistanceUnit.MILES,
