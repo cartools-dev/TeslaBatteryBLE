@@ -75,6 +75,7 @@ import com.dzid26.teslable.ble.vehicleStatusText
 import com.dzid26.teslable.core.health.chargeSessionOpen
 import com.dzid26.teslable.core.health.lastFinishedChargeStats
 import com.dzid26.teslable.core.history.BatterySample
+import com.dzid26.teslable.core.history.ChargeProjection
 import com.dzid26.teslable.core.history.DriveSample
 import com.dzid26.teslable.core.history.FullRangeScale
 import com.dzid26.teslable.core.history.FullRangeScaleEstimator
