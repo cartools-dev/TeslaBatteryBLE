@@ -8,7 +8,7 @@ import android.bluetooth.le.ScanFilter
 import android.bluetooth.le.ScanResult
 import android.bluetooth.le.ScanSettings
 import android.content.Context
-import com.dzid26.teslable.core.TeslaNames
+import com.dzid26.teslable.protocol.TeslaNames
 
 class TeslaScanner(
     context: Context,

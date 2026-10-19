@@ -2,7 +2,7 @@
 
 package com.dzid26.teslable.core.history
 
-import com.dzid26.teslable.core.protocol.ShiftStateKind
+import com.dzid26.teslable.protocol.ShiftStateKind
 import kotlin.math.abs
 
 /** One battery reading on the drive chart: placed by distance driven, not time. */
