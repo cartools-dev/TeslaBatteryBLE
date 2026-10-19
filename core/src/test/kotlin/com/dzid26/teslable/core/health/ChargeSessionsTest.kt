@@ -5,6 +5,7 @@ import com.dzid26.teslable.core.history.BatterySample
 import com.dzid26.teslable.core.protocol.ChargingStateKind
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
@@ -264,5 +265,79 @@ class ChargeSessionsTest {
 
         val noMiles = session.copy(milesAddedRated = null)
         assertNull(noMiles.kwhPerMile)
+    }
+
+    @Test
+    fun `a session stays open while charging and through a short pause`() {
+        val last = 100 * 60_000L
+        assertTrue(chargeSessionOpen(ChargingStateKind.Charging, last, last + 3_600_000L))
+        assertTrue(chargeSessionOpen(ChargingStateKind.Starting, null, last))
+        assertTrue(chargeSessionOpen(ChargingStateKind.Stopped, last, last + 9 * 60_000L))
+        assertTrue(chargeSessionOpen(ChargingStateKind.NoPower, last, last + 9 * 60_000L))
+    }
+
+    @Test
+    fun `a session is over after a long pause or once the car is not charging`() {
+        val last = 100 * 60_000L
+        assertFalse(chargeSessionOpen(ChargingStateKind.Stopped, last, last + 10 * 60_000L))
+        assertFalse(chargeSessionOpen(ChargingStateKind.Stopped, null, last))
+        assertFalse(chargeSessionOpen(ChargingStateKind.Complete, last, last + 1))
+        assertFalse(chargeSessionOpen(ChargingStateKind.Disconnected, last, last + 1))
+        assertFalse(chargeSessionOpen(null, last, last + 1))
+    }
+
+    @Test
+    fun `after a charge the energy is shown on exactly one of the hero and the last charge line`() {
+        for (end in listOf(ChargingStateKind.Complete, ChargingStateKind.Disconnected)) {
+            val samples =
+                listOf(
+                    sample(0, 80, ChargingStateKind.Charging),
+                    sample(30, 85, ChargingStateKind.Charging),
+                    sample(31, 85, end),
+                )
+            for (minutesAfter in listOf(1L, 6L, 11L)) {
+                // The hero reads the live state, the history line the newest sample; both say the session is over.
+                val now = (30 + minutesAfter) * 60_000L
+                assertFalse(chargeSessionOpen(samples, now))
+                assertFalse(chargeSessionOpen(end, 30 * 60_000L, now))
+            }
+        }
+    }
+
+    @Test
+    fun `a paused session hands over after the ten minute margin`() {
+        val samples =
+            listOf(
+                sample(0, 80, ChargingStateKind.Charging),
+                sample(30, 85, ChargingStateKind.Charging),
+                sample(31, 85, ChargingStateKind.Stopped),
+            )
+        assertTrue(chargeSessionOpen(samples, 36 * 60_000L))
+        assertFalse(chargeSessionOpen(samples, 41 * 60_000L))
+    }
+
+    @Test
+    fun `while a new session runs the last finished charge stays and then gets swapped`() {
+        val samples =
+            listOf(
+                sample(0, 50, ChargingStateKind.Charging, energyAddedKwh = 10f),
+                sample(30, 70, ChargingStateKind.Charging, energyAddedKwh = 31.3f),
+                sample(60, 69, ChargingStateKind.Disconnected),
+                sample(600, 20, ChargingStateKind.Charging, energyAddedKwh = 5f),
+            )
+        val during = lastFinishedChargeStats(samples, 601 * 60_000L)!!
+        assertEquals(30 * 60_000L, during.sinceMillis)
+        assertEquals(31.3f, during.energyKwh)
+
+        val ended = samples + sample(640, 55, ChargingStateKind.Complete)
+        val after = lastFinishedChargeStats(ended, 700 * 60_000L)!!
+        assertEquals(600 * 60_000L, after.sinceMillis)
+        assertEquals(5f, after.energyKwh)
+    }
+
+    @Test
+    fun `there is nothing to show while the first charge is still running`() {
+        val samples = listOf(sample(0, 50, ChargingStateKind.Disconnected), sample(10, 52, ChargingStateKind.Charging))
+        assertNull(lastFinishedChargeStats(samples, 11 * 60_000L))
     }
 }

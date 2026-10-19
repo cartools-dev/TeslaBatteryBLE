@@ -9,6 +9,9 @@ import java.util.Locale
 /** The ISO 4217 code chosen in Settings; null follows the phone's locale. Provided once per car screen. */
 internal val LocalCurrencyCode = compositionLocalOf<String?> { null }
 
+/** The owner's price per kWh, for the finished charge's cost on the history card; null shows the kWh alone. */
+internal val LocalPricePerKwh = compositionLocalOf<Float?> { null }
+
 private const val FALLBACK_CODE = "USD"
 
 /**
