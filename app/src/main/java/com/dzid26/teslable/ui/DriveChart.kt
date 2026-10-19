@@ -226,7 +226,7 @@ internal fun rememberPoint(
 }
 
 /** 1, 2 or 5 times a power of ten: the axis step nearest above [raw]. */
-internal fun niceStep(raw: Double): Double {
+private fun niceStep(raw: Double): Double {
     if (raw <= 0.0) return 1.0
     val magnitude = DECADE.pow(floor(log10(raw)))
     return listOf(1.0, 2.0, HALF_DECADE, DECADE).first { it * magnitude >= raw } * magnitude
