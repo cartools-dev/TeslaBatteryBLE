@@ -592,6 +592,40 @@ class CardSnapshots {
     }
 
     @Test
+    fun screenCarDetailNavigating() {
+        // The car is navigating: the trip card sits above the battery history.
+        val route =
+            RouteSample(
+                timestampMillis = NOW,
+                vehicleId = DemoScreenFixtures.vehicle.bleName,
+                destination = "Home",
+                milesToArrival = 4.7f,
+                minutesToArrival = 12.2f,
+                trafficDelayMinutes = 0f,
+                energyAtArrivalPercent = 44f,
+                readAtMillis = NOW,
+            )
+        snapScreen("screen-car-detail-navigating") {
+            CarScreen(
+                state = DemoScreenFixtures.carState(NOW),
+                vehicle = DemoScreenFixtures.vehicle,
+                advert = DemoScreenFixtures.carAdvert,
+                address = DemoScreenFixtures.DEMO_ADDRESS,
+                history = DemoScreenFixtures.history(NOW),
+                driveHistory = DemoScreenFixtures.drives(NOW),
+                statusHistory = emptyList(),
+                routes = mapOf(DemoScreenFixtures.vehicle.bleName to route),
+                onBack = {},
+                onPair = {},
+                onRefresh = {},
+                onOpenSettings = {},
+                onToggleTracking = {},
+                nowMillis = NOW,
+            )
+        }
+    }
+
+    @Test
     fun screenSettings() {
         snapScreen("screen-settings") {
             SettingsScreen(
