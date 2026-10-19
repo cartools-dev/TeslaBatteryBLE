@@ -2,14 +2,25 @@
 
 package com.dzid26.teslable.ui
 
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.unit.dp
+import com.patrykandpatrick.vico.compose.cartesian.axis.Axis
+import com.patrykandpatrick.vico.compose.cartesian.axis.HorizontalAxis
+import com.patrykandpatrick.vico.compose.cartesian.axis.VerticalAxis
+import com.patrykandpatrick.vico.compose.cartesian.axis.rememberAxisGuidelineComponent
+import com.patrykandpatrick.vico.compose.cartesian.axis.rememberAxisLabelComponent
+import com.patrykandpatrick.vico.compose.cartesian.axis.rememberAxisLineComponent
+import com.patrykandpatrick.vico.compose.cartesian.axis.rememberAxisTickComponent
+import com.patrykandpatrick.vico.compose.cartesian.data.CartesianValueFormatter
 import com.patrykandpatrick.vico.compose.cartesian.layer.LineCartesianLayer
 import com.patrykandpatrick.vico.compose.cartesian.layer.rememberLine
 import com.patrykandpatrick.vico.compose.common.Fill
+import com.patrykandpatrick.vico.compose.common.component.LineComponent
+import com.patrykandpatrick.vico.compose.common.component.TextComponent
 
 @Composable
 internal fun rememberBatteryLines(
@@ -72,3 +83,53 @@ private val dotSize = 4.dp
 private const val CHARGE_LINE_ALPHA = 0.65f
 private const val DISCHARGE_LINE_ALPHA = 0.65f
 private const val DISCHARGE_LINE_MUTED_ALPHA = 0.35f
+
+/** The axis parts, quieter than Vico's defaults: muted labels, outline-coloured lines. */
+internal class AxisStyle(
+    val label: TextComponent,
+    val line: LineComponent,
+    val tick: LineComponent,
+    val guideline: LineComponent,
+)
+
+@Composable
+internal fun rememberAxisStyle(): AxisStyle {
+    val muted = MaterialTheme.colorScheme.onSurfaceVariant
+    val outline = Fill(MaterialTheme.colorScheme.outlineVariant)
+    return AxisStyle(
+        label = rememberAxisLabelComponent(style = MaterialTheme.typography.labelSmall.copy(color = muted)),
+        line = rememberAxisLineComponent(fill = outline),
+        tick = rememberAxisTickComponent(fill = outline),
+        guideline = rememberAxisGuidelineComponent(fill = outline),
+    )
+}
+
+@Composable
+internal fun rememberPercentAxis(): VerticalAxis<Axis.Position.Vertical.Start> {
+    val style = rememberAxisStyle()
+    val formatter = remember { CartesianValueFormatter { _, value, _ -> "${formatPercent(value.toFloat())}%" } }
+    return VerticalAxis.rememberStart(
+        valueFormatter = formatter,
+        label = style.label,
+        line = style.line,
+        tick = style.tick,
+        guideline = style.guideline,
+        itemPlacer = remember { VerticalAxis.ItemPlacer.count({ Y_GRIDLINES }) },
+    )
+}
+
+/** Two labels, at the window's start and end. */
+@Composable
+internal fun rememberTimeAxis(formatter: CartesianValueFormatter): HorizontalAxis<Axis.Position.Horizontal.Bottom> {
+    val style = rememberAxisStyle()
+    return HorizontalAxis.rememberBottom(
+        valueFormatter = formatter,
+        label = style.label,
+        line = style.line,
+        tick = style.tick,
+        guideline = style.guideline,
+        itemPlacer = remember { HorizontalAxis.ItemPlacer.aligned(spacing = { 1 }, addExtremeLabelPadding = true) },
+    )
+}
+
+private const val Y_GRIDLINES = 3

@@ -741,7 +741,7 @@ internal fun BatteryHistoryCard(
                     modifier =
                         Modifier
                             .fillMaxWidth()
-                            .height(140.dp),
+                            .height(160.dp),
                 )
                 charge?.let { ChargeProjectionLine(it, is24Hour) }
                 discharge?.let {

@@ -19,8 +19,6 @@ import com.dzid26.teslable.core.history.soc
 import com.patrykandpatrick.vico.compose.cartesian.CartesianChartHost
 import com.patrykandpatrick.vico.compose.cartesian.CartesianDrawingContext
 import com.patrykandpatrick.vico.compose.cartesian.Zoom
-import com.patrykandpatrick.vico.compose.cartesian.axis.HorizontalAxis
-import com.patrykandpatrick.vico.compose.cartesian.axis.VerticalAxis
 import com.patrykandpatrick.vico.compose.cartesian.data.CartesianChartModel
 import com.patrykandpatrick.vico.compose.cartesian.data.CartesianLayerRangeProvider
 import com.patrykandpatrick.vico.compose.cartesian.data.CartesianValueFormatter
@@ -29,6 +27,7 @@ import com.patrykandpatrick.vico.compose.cartesian.decoration.Decoration
 import com.patrykandpatrick.vico.compose.cartesian.layer.LineCartesianLayer
 import com.patrykandpatrick.vico.compose.cartesian.layer.rememberLineCartesianLayer
 import com.patrykandpatrick.vico.compose.cartesian.marker.CartesianMarker
+import com.patrykandpatrick.vico.compose.cartesian.marker.CartesianMarkerController
 import com.patrykandpatrick.vico.compose.cartesian.marker.DefaultCartesianMarker
 import com.patrykandpatrick.vico.compose.cartesian.marker.LineCartesianLayerMarkerTarget
 import com.patrykandpatrick.vico.compose.cartesian.marker.rememberDefaultCartesianMarker
@@ -119,7 +118,6 @@ internal fun BatteryChart(
         }
     val lines = rememberBatteryLines(lineColor, chargingColor, parkedMuted = charge != null)
     val timeFormatter = rememberTimeFormatter(window, showDate, is24Hour)
-    val yFormatter = remember { CartesianValueFormatter { _, value, _ -> "${formatPercent(value.toFloat())}%" } }
     val xStep = spanHours / X_LABEL_STEPS
     val lastMeasuredMillis = samples.last().timestampMillis
     val description = remember(samples, scale) { chartDescription(samples, scale) }
@@ -138,17 +136,10 @@ internal fun BatteryChart(
                             CartesianLayerRangeProvider.fixed(minX = 0.0, maxX = spanHours, minY = shape.yMin, maxY = shape.yMax)
                         },
                 ),
-                startAxis =
-                    VerticalAxis.rememberStart(
-                        valueFormatter = yFormatter,
-                        itemPlacer = remember { VerticalAxis.ItemPlacer.count({ Y_GRIDLINES }) },
-                    ),
-                bottomAxis =
-                    HorizontalAxis.rememberBottom(
-                        valueFormatter = timeFormatter,
-                        itemPlacer = remember { HorizontalAxis.ItemPlacer.aligned(spacing = { 1 }, addExtremeLabelPadding = true) },
-                    ),
+                startAxis = rememberPercentAxis(),
+                bottomAxis = rememberTimeAxis(timeFormatter),
                 marker = rememberCursorMarker(window, showDate, is24Hour, lastMeasuredMillis),
+                markerController = CartesianMarkerController.rememberToggleOnTap(),
                 decorations = remember(shape.beams) { listOf(Beams(shape.beams)) },
                 getXStep = { _, _, _ -> xStep },
             )
@@ -358,7 +349,7 @@ private class Beams(
 
 private const val MILLIS_PER_HOUR = 3_600_000.0
 private const val X_LABEL_STEPS = 1
-private const val Y_GRIDLINES = 3
+
 private const val MILLIS_PER_MINUTE = 60_000L
 private const val PERCENT_FULL = 100f
 private const val Y_MARGIN = 2
