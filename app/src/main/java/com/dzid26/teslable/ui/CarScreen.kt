@@ -90,8 +90,10 @@ import com.dzid26.teslable.core.history.FullRangeScale
 import com.dzid26.teslable.core.history.FullRangeScaleEstimator
 import com.dzid26.teslable.core.history.HistoryRange
 import com.dzid26.teslable.core.history.ProjectionContext
+import com.dzid26.teslable.core.history.RouteSample
 import com.dzid26.teslable.core.history.StatusSample
 import com.dzid26.teslable.core.history.TENTHS_PER_PERCENT
+import com.dzid26.teslable.core.history.activeRoute
 import com.dzid26.teslable.core.history.chargeProjection
 import com.dzid26.teslable.core.history.compactDuration
 import com.dzid26.teslable.core.history.dischargeProjection
@@ -127,6 +129,8 @@ internal fun CarScreen(
     history: List<BatterySample>,
     driveHistory: List<DriveSample>,
     statusHistory: List<StatusSample>,
+    // The newest route-bearing drive reading per car, for the live trip card.
+    routes: Map<String, RouteSample> = emptyMap(),
     onBack: () -> Unit,
     onPair: () -> Unit,
     onRefresh: () -> Unit,
@@ -158,6 +162,8 @@ internal fun CarScreen(
         }
     val paired = isPaired(connection, vehicle)
     val health = remember(vehicleHistory) { healthSummary(vehicleHistory) }
+    // Fitted once for every card below: the hero, the trip, both history charts.
+    val scale = remember(vehicleHistory) { FullRangeScaleEstimator.estimate(vehicleHistory) }
     // What a pull on this screen will do, and the feedback while it runs.
     val pullLabel =
         when {
@@ -256,6 +262,7 @@ internal fun CarScreen(
                         history = vehicleHistory,
                         statusHistory = vehicleStatuses,
                         nowMillis = nowMillis ?: rememberNowMillis(connection?.chargeAtMillis),
+                        scale = scale,
                     )
                     // Once the app key is enrolled the hero carries its status; the
                     // card only exists for pairing, so it disappears when there is
@@ -263,13 +270,20 @@ internal fun CarScreen(
                     if (!paired) {
                         KeyCard(connection, vehicle, onPair)
                     }
+                    TripSection(
+                        route = activeRoute(vehicle?.let { routes[it.bleName] }, nowMillis ?: rememberNowMillis()),
+                        currentRatedMiles = vehicleHistory.lastOrNull()?.ratedRangeMiles,
+                        scale = scale,
+                        ratedKwhPerMile = health.ratedKwhPerMile,
+                        pricePerKwh = pricePerKwh,
+                    )
                     BatteryHistoryCard(
                         vehicleHistory,
                         vehicleDrives,
                         nowMillis = nowMillis ?: System.currentTimeMillis(),
                         statuses = vehicleStatuses,
                     )
-                    DriveHistoryCard(vehicleHistory, vehicleDrives)
+                    DriveHistoryCard(vehicleHistory, vehicleDrives, scale = scale)
                     BatteryHealthCard(health)
                 }
             }
@@ -291,6 +305,8 @@ internal fun HeroCard(
     spinnerOverride: Boolean? = null,
     // The owner's price per kWh, for the session cost; null shows none.
     pricePerKwh: Float? = null,
+    // The fitted full-range scale; the car screen fits it once for all its cards.
+    scale: FullRangeScale? = remember(history) { FullRangeScaleEstimator.estimate(history) },
 ) {
     val context = LocalContext.current
     val display = connectionDisplay(connection, advert, vehicle = vehicle)
@@ -301,7 +317,6 @@ internal fun HeroCard(
     val reading = batteryPercent(connection, lastKnown, nowMillis)
     // Rated miles are the internal unit; SOC is derived at the edge from the
     // fitted scale (null until it pins, then the int level shows).
-    val scale = remember(history) { FullRangeScaleEstimator.estimate(history) }
     val durations = remember(statusHistory, nowMillis) { statusDurations(statusHistory, vehicle?.bleName.orEmpty(), nowMillis) }
     val keySlot = connection?.keySlot ?: vehicle?.keySlot
     val pairing = connection?.pairing ?: PairingPhase.IDLE

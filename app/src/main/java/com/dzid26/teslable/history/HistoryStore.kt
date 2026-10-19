@@ -10,10 +10,12 @@ import com.dzid26.teslable.core.history.Command
 import com.dzid26.teslable.core.history.CommandResult
 import com.dzid26.teslable.core.history.ConnectionEvent
 import com.dzid26.teslable.core.history.DriveSample
+import com.dzid26.teslable.core.history.RouteSample
 import com.dzid26.teslable.core.history.StatusSample
 import com.dzid26.teslable.core.history.shouldLogStatus
 import com.dzid26.teslable.core.history.toBatterySample
 import com.dzid26.teslable.core.history.toDriveSample
+import com.dzid26.teslable.core.history.toRouteSample
 import com.dzid26.teslable.core.history.toStatusSample
 import com.tesla.generated.carserver.vehicle.ChargeState
 import com.tesla.generated.carserver.vehicle.ClimateState
@@ -86,6 +88,15 @@ class HistoryStore(
     /** DriveState readings logged for every car, oldest first. */
     val driveSamples: StateFlow<List<DriveSample>> = _driveSamples.asStateFlow()
 
+    private val _latestRoutes = MutableStateFlow<Map<String, RouteSample>>(emptyMap())
+
+    /**
+     * The newest drive reading per car that carried route fields, for the live trip card (#207).
+     * Held in memory only: the destination name stays out of every read model but this one, and
+     * the raw reply in the drive log is the only place it is kept.
+     */
+    val latestRoutes: StateFlow<Map<String, RouteSample>> = _latestRoutes.asStateFlow()
+
     /** The newest status record logged per vehicle, which [shouldLogStatus] compares the next reading against. */
     private val lastLoggedStatus = mutableMapOf<String, BleRecord>()
 
@@ -94,7 +105,9 @@ class HistoryStore(
             mutex.withLock {
                 _samples.value = readSamples()
                 _statusSamples.value = readStatusSamples()
-                _driveSamples.value = readDriveSamples()
+                val (driveSamples, latestRoutes) = readDrive()
+                _driveSamples.value = driveSamples
+                _latestRoutes.value = latestRoutes
                 // Closures, climate and connection records have no read model
                 // yet. Reading the files only refreshes the record counts the
                 // cap trims by, so it holds across restarts.
@@ -174,10 +187,13 @@ class HistoryStore(
         // one stays in the log but out of [driveSamples].
         val record = BleRecord(device_timestamp = deviceTimestamp, rssi = rssi, drive_state = drive)
         val sample = record.toDriveSample(vehicleId)
+        val route = record.toRouteSample(vehicleId)
         scope.launch {
             mutex.withLock {
                 driveLogs.append(vehicleId, record)
                 if (sample != null) _driveSamples.value = (_driveSamples.value + sample).takeLast(MAX_SAMPLES)
+                // A reply without a route ends the trip: the card never outlives the navigation.
+                _latestRoutes.value = if (route != null) _latestRoutes.value + (vehicleId to route) else _latestRoutes.value - vehicleId
             }
         }
     }
@@ -313,15 +329,27 @@ class HistoryStore(
                 .takeLast(MAX_SAMPLES)
         }.getOrDefault(emptyList())
 
-    private fun readDriveSamples(): List<DriveSample> =
+    /**
+     * Reads every drive log once: the drive samples, and each car's route, which is the route of its
+     * newest drive record, so a newer reply without one means navigation ended.
+     */
+    private fun readDrive(): Pair<List<DriveSample>, Map<String, RouteSample>> =
         runCatching {
-            driveLogs
-                .readAll()
-                .flatMap { (vehicleId, records) ->
-                    records.mapNotNull { it.toDriveSample(vehicleId) }
-                }.sortedBy { it.timestampMillis }
-                .takeLast(MAX_SAMPLES)
-        }.getOrDefault(emptyList())
+            val logs = driveLogs.readAll()
+            val samples =
+                logs
+                    .flatMap { (vehicleId, records) ->
+                        records.mapNotNull { it.toDriveSample(vehicleId) }
+                    }.sortedBy { it.timestampMillis }
+                    .takeLast(MAX_SAMPLES)
+            val routes =
+                logs
+                    .mapNotNull { (vehicleId, records) ->
+                        val newest = records.maxByOrNull { it.drive_state?.timestamp?.toEpochMilli() ?: Long.MIN_VALUE }
+                        newest?.toRouteSample(vehicleId)?.let { vehicleId to it }
+                    }.toMap()
+            samples to routes
+        }.getOrDefault(emptyList<DriveSample>() to emptyMap())
 
     private companion object {
         const val HISTORY_DIR_NAME = "battery-history"
@@ -355,4 +383,6 @@ data class HistorySamples(
     val battery: List<BatterySample>,
     val drive: List<DriveSample>,
     val status: List<StatusSample> = emptyList(),
+    /** The newest route-bearing drive reading per car, by vehicle id. */
+    val routes: Map<String, RouteSample> = emptyMap(),
 )

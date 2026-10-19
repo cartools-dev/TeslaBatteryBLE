@@ -78,6 +78,7 @@ fun BleRecord.toRouteSample(vehicleId: String): RouteSample? {
             minutesToArrival = drive.active_route_minutes_to_arrival,
             trafficDelayMinutes = drive.active_route_traffic_minutes_delay,
             energyAtArrivalPercent = drive.active_route_energy_at_arrival,
+            readAtMillis = device_timestamp?.toEpochMilli(),
         )
     val hasRoute =
         sample.destination != null ||

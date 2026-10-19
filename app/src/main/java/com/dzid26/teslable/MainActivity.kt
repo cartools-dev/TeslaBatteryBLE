@@ -70,9 +70,10 @@ class MainActivity : ComponentActivity() {
                 val batteryHistory by controller.batteryHistory.collectAsState()
                 val driveHistory by controller.driveHistory.collectAsState()
                 val statusHistory by controller.statusHistory.collectAsState()
+                val latestRoutes by controller.latestRoutes.collectAsState()
                 val history =
-                    remember(batteryHistory, driveHistory, statusHistory) {
-                        HistorySamples(batteryHistory, driveHistory, statusHistory)
+                    remember(batteryHistory, driveHistory, statusHistory, latestRoutes) {
+                        HistorySamples(batteryHistory, driveHistory, statusHistory, latestRoutes)
                     }
                 var screen by rememberSaveable { mutableStateOf(AppScreen.MAIN) }
                 // MainScreen leaves the composition while Settings is open; keep its

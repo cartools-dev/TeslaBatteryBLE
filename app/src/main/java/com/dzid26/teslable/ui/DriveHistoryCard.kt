@@ -27,6 +27,7 @@ import androidx.compose.ui.unit.dp
 import com.dzid26.teslable.core.history.BatterySample
 import com.dzid26.teslable.core.history.DriveSample
 import com.dzid26.teslable.core.history.DriveWindow
+import com.dzid26.teslable.core.history.FullRangeScale
 import com.dzid26.teslable.core.history.FullRangeScaleEstimator
 import com.dzid26.teslable.core.history.drivePoints
 import com.dzid26.teslable.core.history.totalDrop
@@ -47,11 +48,12 @@ internal fun DriveHistoryCard(
     drives: List<DriveSample>,
     // Injectable for the Paparazzi snapshots; production opens on the middle window.
     initialWindow: DriveWindow = DriveWindow.MEDIUM,
+    // The fitted full-range scale; the car screen fits it once for all its cards.
+    scale: FullRangeScale? = remember(samples) { FullRangeScaleEstimator.estimate(samples) },
 ) {
     var window by rememberSaveable { mutableStateOf(initialWindow) }
     val unit = LocalDistanceUnit.current
-    // Up to 20k samples: fit and match only when the data or the window changes.
-    val scale = remember(samples) { FullRangeScaleEstimator.estimate(samples) }
+    // Up to 20k samples: match only when the data or the window changes.
     val points =
         remember(samples, drives, window, unit, scale) { drivePoints(samples, drives, scale, window.miles(unit), window.sinceLastCharge) }
     val used = remember(points) { points.totalDrop { it.socPercent } }

@@ -143,6 +143,7 @@ fun MainScreen(
             history = history.battery,
             driveHistory = history.drive,
             statusHistory = history.status,
+            routes = history.routes,
             onBack = { viewingBleName = null },
             onPair = { onPairKey(address) },
             onRefresh = {

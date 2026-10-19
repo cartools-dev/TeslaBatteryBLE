@@ -32,6 +32,12 @@ data class RouteSample(
      * the unit is not documented in the proto and still needs a real-car log to confirm.
      */
     val energyAtArrivalPercent: Float?,
+    /**
+     * The phone's clock when the reply was read (`device_timestamp`), or null when the record
+     * has none. [timestampMillis] is the car's clock, which can be off by minutes; how recent a
+     * route is, against the phone's own clock, is judged on this one.
+     */
+    val readAtMillis: Long? = null,
 ) {
     override fun toString(): String {
         val shownDestination = if (destination != null) "<redacted>" else "null"
