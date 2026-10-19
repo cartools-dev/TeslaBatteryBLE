@@ -39,7 +39,7 @@ Date: 2026-10-10
 - `pr-paparazzi-comment.yml` keeps the established untrusted-render →
   trusted-comment-from-main split: it runs from the default branch, validates
   the artifact inline (numeric PR, SHAs matching the run, PNG signatures,
-  card-state-theme names), uploads the shots as user attachments with
+  lowercase kebab-case name-theme file names, so a new card needs no list entry), uploads the shots as user attachments with
   `ATTACHMENTS_TOKEN` from the `release` environment, and posts/updates one
   per-SHA comment. Light by default: each changed state shows its light
   image (before/after pair, or after-only when new); the dark image follows

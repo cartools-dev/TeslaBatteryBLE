@@ -82,8 +82,8 @@ render() {
     shopt -s nullglob
     for file in app/src/test/snapshots/images/*.png; do
         base="$(basename "$file")"
-        if [[ "$base" =~ ((vehicle-card|hero-card|history-card|drive-card|trip-card)_[a-z-]+(_jelly)?|screen-[a-z-]+)_(light|dark)\.png$ ]]; then
-            cp "$file" "$dir/${BASH_REMATCH[0]}"
+        if [[ "$base" =~ ^[^_]+_[^_]+_[^_]+_([a-z0-9-]+(_[a-z0-9-]+)*_(light|dark)\.png)$ ]]; then
+            cp "$file" "$dir/${BASH_REMATCH[1]}"
             count=$((count + 1))
         else
             echo "::warning::unexpected snapshot name: $base" >&2
