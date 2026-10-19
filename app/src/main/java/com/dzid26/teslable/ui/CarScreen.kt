@@ -654,6 +654,29 @@ private fun pairingDetailText(pairing: PairingPhase): String? =
 // ---------------------------------------------------------------- battery card
 
 @Composable
+private fun ChargeProjectionLine(
+    charge: ChargeProjection,
+    is24Hour: Boolean,
+) {
+    Spacer(Modifier.height(6.dp))
+    Text(
+        text =
+            "Charging · projected ${charge.targetPercent}% around " +
+                formatTime(charge.completionMillis, showDate = true, is24Hour = is24Hour) +
+                charge.beam
+                    ?.let { (earliest, latest) ->
+                        " (${formatTime(
+                            earliest,
+                            showDate = false,
+                            is24Hour = is24Hour,
+                        )}–${formatTime(latest, showDate = false, is24Hour = is24Hour)})"
+                    }.orEmpty(),
+        style = MaterialTheme.typography.bodySmall,
+        color = chargingChartColor,
+    )
+}
+
+@Composable
 internal fun BatteryHistoryCard(
     samples: List<BatterySample>,
     drives: List<DriveSample>,
@@ -729,24 +752,7 @@ internal fun BatteryHistoryCard(
                             .fillMaxWidth()
                             .height(140.dp),
                 )
-                charge?.let {
-                    Spacer(Modifier.height(6.dp))
-                    Text(
-                        text =
-                            "Charging · projected ${it.targetPercent}% around " +
-                                formatTime(it.completionMillis, showDate = true, is24Hour = is24Hour) +
-                                it.beam
-                                    ?.let { (earliest, latest) ->
-                                        " (${formatTime(
-                                            earliest,
-                                            showDate = false,
-                                            is24Hour = is24Hour,
-                                        )}–${formatTime(latest, showDate = false, is24Hour = is24Hour)})"
-                                    }.orEmpty(),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = chargingChartColor,
-                    )
-                }
+                charge?.let { ChargeProjectionLine(it, is24Hour) }
                 discharge?.let {
                     Spacer(Modifier.height(6.dp))
                     ParkedProjectionLine(
