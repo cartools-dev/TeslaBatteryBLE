@@ -191,7 +191,7 @@ internal fun formatMoney(
     currencyCode: String?,
 ): String = currencyFormat(currencyCode).format(amount.toDouble())
 
-internal const val MILLIS_PER_MINUTE = 60_000L
+private const val MILLIS_PER_MINUTE = 60_000L
 private const val PERCENT_FULL = 100f
 
 /**
