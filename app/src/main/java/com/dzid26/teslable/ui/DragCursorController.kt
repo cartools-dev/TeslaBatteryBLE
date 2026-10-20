@@ -30,7 +30,7 @@ internal class CursorPin {
  * When the chart's live cursor shows. A finger held or dragged sideways on the
  * chart brings it up after a short delay (so a page scroll that starts on the
  * chart never flashes it) and moves it under the finger; on the lift it is
- * handed to [pin]. A tap that does not bring the cursor up clears the pin. A
+ * handed to [pin]. Any new touch on the chart clears the pin at once. A
  * drag that turns out mostly vertical is the page being scrolled and never
  * activates the cursor. Move events are not consumed, so the page's own scroll
  * still takes a vertical drag.
@@ -72,6 +72,8 @@ internal class DragCursorController(
     ): Boolean = active
 
     private fun press(point: Point): Boolean {
+        // A new touch on the chart clears the standing cursor at once, before any delay.
+        pin.targets = null
         pressedAt = point
         pressedNanos = nowNanos()
         scrolling = false
@@ -91,11 +93,9 @@ internal class DragCursorController(
         return active
     }
 
-    // The live cursor goes with the finger; where it was becomes the standing one. A tap that
-    // never brought it up dismisses the standing one.
+    // The live cursor goes with the finger; where it was becomes the standing one.
     private fun release(): Boolean {
-        // A drag that turned into a page scroll is not a tap: it leaves the standing cursor alone.
-        if (active || !scrolling) pin.targets = if (active) lastTargets else null
+        if (active) pin.targets = lastTargets
         pressedAt = null
         scrolling = false
         active = false
@@ -120,7 +120,7 @@ internal fun rememberCursorController(pin: CursorPin): CartesianMarkerController
     return remember(pin, slop) { DragCursorController(pin, slop) }
 }
 
-private const val SHOW_DELAY_NANOS = 150_000_000L
+private const val SHOW_DELAY_NANOS = 50_000_000L
 
 /** Redraws the cursor where the last drag left it: Vico hides its own on every lift. */
 internal class PinnedCursor(

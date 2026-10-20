@@ -33,7 +33,7 @@ class DragCursorControllerTest {
     fun aSidewaysDragShowsTheCursorOnlyAfterTheDelay() {
         accept(Interaction.Press(Point(10f, 100f)))
         assertFalse(drag(30f))
-        now = 200_000_000L
+        now = 60_000_000L
         assertTrue(drag(60f))
         assertTrue(controller.shouldShowMarker(Interaction.Move(Point(60f, 100f)), targets))
     }
@@ -41,7 +41,7 @@ class DragCursorControllerTest {
     @Test
     fun theCursorStandsAfterTheLiftAndATapClearsIt() {
         accept(Interaction.Press(Point(10f, 100f)))
-        now = 200_000_000L
+        now = 60_000_000L
         drag(60f)
         accept(Interaction.Release(Point(60f, 100f)))
         assertNotNull(pin.targets)
@@ -52,17 +52,24 @@ class DragCursorControllerTest {
     }
 
     @Test
-    fun aVerticalDragNeverShowsTheCursorAndKeepsTheStandingOne() {
+    fun aNewTouchClearsTheStandingCursorAtOnce() {
         accept(Interaction.Press(Point(10f, 100f)))
-        now = 200_000_000L
+        now = 60_000_000L
         drag(60f)
         accept(Interaction.Release(Point(60f, 100f)))
+        assertNotNull(pin.targets)
 
         accept(Interaction.Press(Point(10f, 100f)))
-        now = 400_000_000L
+        assertNull(pin.targets)
+    }
+
+    @Test
+    fun aVerticalDragNeverShowsTheCursor() {
+        accept(Interaction.Press(Point(10f, 100f)))
+        now = 120_000_000L
         assertFalse(drag(10f, 140f))
         assertFalse(drag(30f, 140f))
         accept(Interaction.Release(Point(30f, 140f)))
-        assertNotNull(pin.targets)
+        assertNull(pin.targets)
     }
 }
