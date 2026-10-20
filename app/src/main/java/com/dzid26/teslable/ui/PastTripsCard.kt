@@ -33,6 +33,7 @@ import com.dzid26.teslable.core.history.FullRangeScale
 import com.dzid26.teslable.core.history.Trip
 import com.dzid26.teslable.core.history.TripSummary
 import com.dzid26.teslable.core.history.summary
+import com.dzid26.teslable.core.units.DistanceUnit
 import java.text.DecimalFormatSymbols
 import kotlin.math.roundToInt
 
@@ -121,7 +122,11 @@ private fun rateLine(summary: TripSummary): String? {
     val unit = LocalDistanceUnit.current
     val separator = remember { DecimalFormatSymbols.getInstance().decimalSeparator }
     val efficiency = summary.kwhPerMile?.let { LocalEfficiencyUnit.current.format(it, unit, separator) }
-    val speed = summary.averageMilesPerHour?.let { stringResource(R.string.trip_per_hour, unit.format(it)) }
+    val speed =
+        summary.averageMilesPerHour?.let { mph ->
+            val id = if (unit == DistanceUnit.MILES) R.string.trip_speed_mph else R.string.trip_speed_kmh
+            stringResource(id, unit.fromMiles(mph).roundToInt())
+        }
     return when {
         efficiency != null && speed != null -> stringResource(R.string.trip_rate_speed, efficiency, speed)
         else -> efficiency ?: speed?.let { stringResource(R.string.trip_average_alone, it) }

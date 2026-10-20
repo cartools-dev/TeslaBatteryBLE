@@ -136,7 +136,8 @@
     <string name="trip_battery_used">Battery %1$d%% to %2$d%%</string>
     <string name="trip_rate_speed">%1$s · %2$s average</string>
     <string name="trip_average_alone">%1$s average</string>
-    <string name="trip_per_hour">%1$s/h</string>
+    <string name="trip_speed_mph">%1$d mph</string>
+    <string name="trip_speed_kmh">%1$d km/h</string>
     <string name="trip_past_title">Past trips</string>
     <string name="trip_past_selector_description">Choose a past trip</string>
     <string name="trip_energy_label">energy</string>

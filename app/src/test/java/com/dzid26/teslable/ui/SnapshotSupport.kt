@@ -76,7 +76,7 @@ internal fun demoPastTrips(now: Long): List<Trip> {
         listOf(
             demoRoute(home, "Home", 11.4f, 26f, 57f),
             demoRoute(home + 6 * DEMO_MINUTE_MILLIS, "Home", 7.2f, 17f, 57f),
-            demoRoute(home + 12 * DEMO_MINUTE_MILLIS, "Home", 2.1f, 6f, 56f),
+            demoRoute(home + 12 * DEMO_MINUTE_MILLIS, "Home", 1.2f, 3f, 56f),
             demoRoute(work, "Work", 18.3f, 40f, 38f),
             demoRoute(work + 8 * DEMO_MINUTE_MILLIS, "Work", 12.0f, 28f, 38f),
         ),

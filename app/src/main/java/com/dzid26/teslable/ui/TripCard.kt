@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Card
 import androidx.compose.material3.LinearProgressIndicator
@@ -130,7 +131,7 @@ internal fun TripStats(
     val kwh = estimate.energyKwh?.let(::formatKwh)
     val cost = estimate.costAtHomePrice?.let { formatMoney(it, currencyCode) }
     // The stats wrap whole on a narrow phone instead of squeezing the digits.
-    FlowRow(horizontalArrangement = Arrangement.spacedBy(20.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+    FlowRow(horizontalArrangement = Arrangement.spacedBy(STAT_GAP), verticalArrangement = Arrangement.spacedBy(4.dp)) {
         distance?.let { TripStat(it, stringResource(labels.distance)) }
         time?.let { TripStat(it, stringResource(labels.time)) }
         when {
@@ -153,9 +154,18 @@ private fun TripStat(
             color = MaterialTheme.colorScheme.primary,
             maxLines = 1,
         )
-        Text(text = label, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        // A long label wraps under its figure instead of widening the column and pushing the next figure down a row.
+        Text(
+            text = label,
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.widthIn(max = STAT_LABEL_MAX_WIDTH),
+        )
     }
 }
+
+private val STAT_GAP = 16.dp
+private val STAT_LABEL_MAX_WIDTH = 112.dp
 
 /** "Trip total: 11.4 mi · 26m": the whole route's length and time, of which the big figures are what is left. */
 @Composable
