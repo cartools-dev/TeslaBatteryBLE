@@ -27,12 +27,47 @@ data class Trip(
     /** The destination the car named, or null when it sent none. */
     val destination: String? get() = (last.destination ?: first.destination)?.takeIf { it.isNotBlank() }
 
-    /** From the first reading to the arrival: the time between them plus what the car still gave the last reading. */
+    /**
+     * True when the last reading was already close to the destination (within two miles or
+     * 15% of the route, or three minutes), so the trip reached it; the car stops sending the
+     * route on arrival, so the last reading is never exactly zero. A trip that was cancelled
+     * partway is not. Inferred from the readings, not reported by the car.
+     */
+    val arrived: Boolean
+        get() {
+            val miles = last.milesToArrival?.takeIf { it.isFinite() && it >= 0f }
+            val minutes = last.minutesToArrival?.takeIf { it.isFinite() && it >= 0f }
+            val closeByMiles = miles != null && miles <= maxOf(ARRIVED_MILES, (lengthMiles ?: 0f) * ARRIVED_FRACTION)
+            return closeByMiles || (minutes != null && minutes <= ARRIVED_MINUTES)
+        }
+
+    /**
+     * The distance in miles: for a trip in progress the whole route as planned, for a finished one
+     * what was actually driven, from the odometer when both readings carry it, else the route
+     * length less what was still left at the last reading. A cancelled trip is therefore short.
+     */
+    val distanceMiles: Float?
+        get() {
+            val start = first.odometerInHundredthsOfAMile
+            val end = last.odometerInHundredthsOfAMile
+            val remaining = last.milesToArrival?.takeIf { it.isFinite() && it >= 0f } ?: 0f
+            return when {
+                inProgress -> lengthMiles
+                start != null && end != null && end >= start -> (end - start) / HUNDREDTHS_PER_MILE
+                lengthMiles != null -> (lengthMiles - remaining).coerceAtLeast(0f)
+                else -> null
+            }
+        }
+
+    /**
+     * From the first reading to the last, plus the time the car still gave when the trip is in
+     * progress or reached its destination; a cancelled trip counts only the time it was driven.
+     */
     val durationMillis: Long
         get() {
-            val driven = last.observedAtMillis() - first.observedAtMillis()
+            val elapsed = last.observedAtMillis() - first.observedAtMillis()
             val left = last.minutesToArrival?.takeIf { it.isFinite() && it > 0f } ?: 0f
-            return driven + (left * MILLIS_PER_MINUTE).toLong()
+            return elapsed + if (inProgress || arrived) (left * MILLIS_PER_MINUTE).toLong() else 0L
         }
 }
 
@@ -79,8 +114,10 @@ data class TripSummary(
     val estimate: TripEstimate,
     /** The battery level just before the trip began, percent. */
     val startPercent: Float?,
-    /** The level on arrival: the battery reading just after the trip, else the car's own prediction. */
+    /** The level the trip ended at: the battery reading just after it, else the car's prediction when it reached its destination. */
     val arrivalPercent: Float?,
+    /** The distance shown: driven for a finished trip, the whole route for one in progress. */
+    val distanceMiles: Float?,
     /** Distance over duration, miles per hour. */
     val averageMilesPerHour: Float?,
     /** The energy over the distance, kWh per mile. */
@@ -98,23 +135,25 @@ fun Trip.summary(
     pricePerKwh: Float?,
 ): TripSummary {
     val before = sampleBefore(samples, first.timestampMillis)
-    val after = if (inProgress) null else sampleAfter(samples, last.timestampMillis + durationLeftMillis())
-    // The level the trip arrived at: the battery reading just after it, else the car's last prediction.
-    val arrival = after?.soc(scale) ?: last.energyAtArrivalPercent ?: first.energyAtArrivalPercent
+    val after = if (inProgress) null else sampleAfter(samples, last.timestampMillis + if (arrived) durationLeftMillis() else 0L)
+    // The level the trip ended at: the battery reading just after it, else the car's last prediction
+    // while that still points at where the trip went (in progress, or arrived).
+    val predicted = (last.energyAtArrivalPercent ?: first.energyAtArrivalPercent).takeIf { inProgress || arrived }
     val estimate =
         tripEstimate(
-            first.copy(milesToArrival = lengthMiles, energyAtArrivalPercent = arrival),
+            first.copy(milesToArrival = distanceMiles, energyAtArrivalPercent = after?.soc(scale) ?: predicted),
             before?.ratedRangeMiles,
             scale,
             ratedKwhPerMile,
             pricePerKwh,
         )
-    val miles = lengthMiles?.takeIf { it > 0f }
+    val miles = distanceMiles?.takeIf { it > 0f }
     val hours = durationMillis.takeIf { it >= MILLIS_PER_MINUTE }?.let { it / MILLIS_PER_HOUR }
     return TripSummary(
         estimate = estimate,
         startPercent = before?.soc(scale),
         arrivalPercent = estimate.arrivalPercent,
+        distanceMiles = distanceMiles,
         averageMilesPerHour = if (miles != null && hours != null) miles / hours else null,
         kwhPerMile = if (miles != null && miles >= MIN_RATE_MILES) estimate.energyKwh?.div(miles) else null,
     )
@@ -152,6 +191,10 @@ private fun namesDiffer(
 
 private const val MILLIS_PER_MINUTE = 60_000L
 private const val MILLIS_PER_HOUR = 3_600_000f
+private const val HUNDREDTHS_PER_MILE = 100f
+private const val ARRIVED_MILES = 2f
+private const val ARRIVED_FRACTION = 0.15f
+private const val ARRIVED_MINUTES = 3f
 private const val SAMPLE_MAX_AGE_MILLIS = 30 * MILLIS_PER_MINUTE
 
 /** A rate over less than this is noise: the efficiency of a few hundred metres means nothing. */

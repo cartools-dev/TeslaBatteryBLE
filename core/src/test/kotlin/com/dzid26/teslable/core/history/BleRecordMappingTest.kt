@@ -405,6 +405,7 @@ class BleRecordMappingTest {
                 minutesToArrival = 12.5f,
                 trafficDelayMinutes = 1.5f,
                 energyAtArrivalPercent = 61.5f,
+                odometerInHundredthsOfAMile = 1_234_567,
             ),
             BleRecord(drive_state = driving).toRouteSample(VEHICLE),
         )

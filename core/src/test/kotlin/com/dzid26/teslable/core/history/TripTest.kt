@@ -12,6 +12,7 @@ class TripTest {
         miles: Float,
         destination: String? = "Home",
         minutesLeft: Float? = null,
+        odometer: Int? = null,
     ) = RouteSample(
         timestampMillis = minute * MINUTE,
         vehicleId = "",
@@ -20,11 +21,12 @@ class TripTest {
         minutesToArrival = minutesLeft,
         trafficDelayMinutes = 0f,
         energyAtArrivalPercent = 44f,
+        odometerInHundredthsOfAMile = odometer,
     )
 
     @Test
     fun `readings a few minutes apart are one trip with its longest distance as the length`() {
-        val trips = segmentTrips(listOf(reading(0, 10f), reading(3, 7f), reading(6, 4f, minutesLeft = 5f)))
+        val trips = segmentTrips(listOf(reading(0, 10f), reading(3, 7f), reading(6, 1f, minutesLeft = 5f)))
         assertEquals(1, trips.size)
         assertEquals(10f, trips.single().lengthMiles)
         assertEquals("Home", trips.single().destination)
@@ -78,6 +80,45 @@ class TripTest {
         assertEquals(30f, summary.averageMilesPerHour!!, 0.01f)
         assertEquals(44f, trip.summary(emptyList(), scale, null, null).arrivalPercent)
         assertNull(trip.summary(emptyList(), scale, null, null).startPercent)
+    }
+
+    @Test
+    fun `a cancelled trip counts the miles driven and the time spent, not the plan`() {
+        val trip = segmentTrips(listOf(reading(0, 10f, minutesLeft = 20f), reading(10, 6f, minutesLeft = 12f))).single()
+        assertEquals(false, trip.arrived)
+        assertEquals(4f, trip.distanceMiles)
+        assertEquals(10 * MINUTE, trip.durationMillis)
+        val samples =
+            listOf(
+                BatterySample(-5 * MINUTE, 60, null, null, ratedRangeMiles = 180f),
+                BatterySample(12 * MINUTE, 57, null, null, ratedRangeMiles = 171f),
+            )
+        // The car's arrival prediction was for the destination it never reached.
+        assertNull(trip.summary(emptyList(), scale, null, null).arrivalPercent)
+        assertEquals(57f, trip.summary(samples, scale, null, null).arrivalPercent)
+    }
+
+    @Test
+    fun `a finished trip's distance comes from the odometer when it has one`() {
+        val trip =
+            segmentTrips(
+                listOf(
+                    reading(0, 10f, minutesLeft = 20f, odometer = 100_000),
+                    reading(10, 1f, minutesLeft = 2f, odometer = 100_480),
+                ),
+            ).single()
+        assertEquals(true, trip.arrived)
+        assertEquals(4.8f, trip.distanceMiles!!, 0.001f)
+    }
+
+    @Test
+    fun `a trip in progress shows the whole route and its predicted time`() {
+        val trip =
+            segmentTrips(
+                listOf(reading(0, 10f, minutesLeft = 20f), reading(5, 7f, minutesLeft = 14f)),
+            ).single().copy(inProgress = true)
+        assertEquals(10f, trip.distanceMiles)
+        assertEquals(19 * MINUTE, trip.durationMillis)
     }
 
     @Test

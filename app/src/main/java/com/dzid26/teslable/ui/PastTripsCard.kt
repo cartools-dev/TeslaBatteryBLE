@@ -66,7 +66,7 @@ internal fun PastTripsCard(
             TripSelector(trips.asReversed(), trip) { selectedStart = it.startMillis }
             Spacer(Modifier.height(8.dp))
             TripStats(
-                distance = tripDistanceText(summary.estimate.milesRemaining),
+                distance = tripDistanceText(summary.distanceMiles),
                 time = tripTimeText(trip.durationMillis),
                 estimate = summary.estimate,
                 currencyCode = LocalCurrencyCode.current,
@@ -84,7 +84,7 @@ internal fun PastTripsCard(
     }
 }
 
-/** "Arrived with 44% (about 132 mi left)", or "Arrive with ..." while the trip is still going. */
+/** "Arrived with 44% (about 132 mi left)"; "Arrive with ..." while the trip is going, "Ended with ..." when it stopped short. */
 @Composable
 private fun arrivalLine(
     trip: Trip,
@@ -95,12 +95,14 @@ private fun arrivalLine(
     val percent = level.roundToInt()
     val unit = LocalDistanceUnit.current
     val ratedMiles = scale?.takeIf { it.pinned }?.let { it.offsetMiles + it.milesPerPercent * level }
-    return when {
-        ratedMiles == null && trip.inProgress -> stringResource(R.string.trip_arrival, percent)
-        ratedMiles == null -> stringResource(R.string.trip_arrived, percent)
-        trip.inProgress -> stringResource(R.string.trip_arrival_range, percent, unit.format(ratedMiles))
-        else -> stringResource(R.string.trip_arrived_range, percent, unit.format(ratedMiles))
-    }
+    // "Arrive" while going, "Arrived" at the destination, "Ended" when the trip stopped short of it.
+    val ids =
+        when {
+            trip.inProgress -> R.string.trip_arrival to R.string.trip_arrival_range
+            trip.arrived -> R.string.trip_arrived to R.string.trip_arrived_range
+            else -> R.string.trip_ended to R.string.trip_ended_range
+        }
+    return if (ratedMiles == null) stringResource(ids.first, percent) else stringResource(ids.second, percent, unit.format(ratedMiles))
 }
 
 /** "Battery 62% to 44%": the level before the trip and on arrival, when both are known. */

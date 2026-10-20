@@ -88,7 +88,7 @@ internal fun TripCard(
                 Spacer(Modifier.height(8.dp))
                 Text(it, style = MaterialTheme.typography.titleMedium)
             }
-            totalText(route, unit, separator)?.let {
+            totalText(route)?.let {
                 Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         }
@@ -159,13 +159,9 @@ private fun TripStat(
 
 /** "Trip total: 11.4 mi · 26m": the whole route's length and time, of which the big figures are what is left. */
 @Composable
-private fun totalText(
-    route: RouteSample,
-    unit: DistanceUnit,
-    separator: Char,
-): String? {
-    val distance = route.tripStartMiles?.let { unit.format(it, decimals = 1, decimalSeparator = separator) }
-    val time = route.tripTotalMillis()?.let { compactDuration(it) ?: stringResource(R.string.trip_under_a_minute) }
+private fun totalText(route: RouteSample): String? {
+    val distance = tripDistanceText(route.tripStartMiles)
+    val time = tripTimeText(route.tripTotalMillis())
     return listOfNotNull(distance, time).takeIf { it.isNotEmpty() }?.joinToString(" · ")?.let { stringResource(R.string.trip_total, it) }
 }
 
