@@ -27,21 +27,19 @@ internal class CursorPin {
 }
 
 /**
- * When the chart's live cursor shows. A finger held or dragged sideways on the
- * chart brings it up after a short delay (so a page scroll that starts on the
- * chart never flashes it) and moves it under the finger; on the lift it is
- * handed to [pin]. Any new touch on the chart clears the pin at once. A
- * drag that turns out mostly vertical is the page being scrolled and never
- * activates the cursor. Move events are not consumed, so the page's own scroll
- * still takes a vertical drag.
+ * When the chart's live cursor shows. A finger dragged sideways on the chart
+ * (past the touch slop, so a jittery tap never counts) or held still for a long
+ * press brings it up and moves it under the finger; on the lift it is handed to
+ * [pin]. Any other touch on the chart clears the pin at once. A drag that turns
+ * out mostly vertical is the page being scrolled and never activates the
+ * cursor. Move events are not consumed, so the page's own scroll still takes a
+ * vertical drag.
  */
 internal class DragCursorController(
     private val pin: CursorPin,
     private val touchSlop: Float,
-    private val nowNanos: () -> Long = System::nanoTime,
 ) : CartesianMarkerController {
     private var pressedAt: Point? = null
-    private var pressedNanos = 0L
     private var scrolling = false
     private var active = false
     private var lastTargets: List<CartesianMarker.Target>? = null
@@ -72,10 +70,9 @@ internal class DragCursorController(
     ): Boolean = active
 
     private fun press(point: Point): Boolean {
-        // A new touch on the chart clears the standing cursor at once, before any delay.
+        // A new touch on the chart clears the standing cursor at once.
         pin.targets = null
         pressedAt = point
-        pressedNanos = nowNanos()
         scrolling = false
         active = false
         return false
@@ -83,8 +80,8 @@ internal class DragCursorController(
 
     private fun move(point: Point): Boolean {
         if (pressedAt == null) return false
-        scrolling = scrolling || isVerticalDrag(point)
-        active = !scrolling && (active || delayPassed())
+        scrolling = scrolling || isDrag(point, vertical = true)
+        active = !scrolling && (active || isDrag(point, vertical = false))
         return active
     }
 
@@ -95,7 +92,6 @@ internal class DragCursorController(
 
     // The live cursor goes with the finger; where it was becomes the standing one.
     private fun release(): Boolean {
-        // A short press that never brought the cursor up also clears on the lift, in case the down was missed.
         pin.targets = if (active) lastTargets else null
         pressedAt = null
         scrolling = false
@@ -103,12 +99,16 @@ internal class DragCursorController(
         return false
     }
 
-    private fun delayPassed(): Boolean = nowNanos() - pressedNanos >= SHOW_DELAY_NANOS
-
-    private fun isVerticalDrag(point: Point): Boolean {
+    /** True once the finger is past the slop and moved mostly along the asked axis. */
+    private fun isDrag(
+        point: Point,
+        vertical: Boolean,
+    ): Boolean {
         val start = pressedAt ?: return false
+        val dx = abs(point.x - start.x)
         val dy = abs(point.y - start.y)
-        return dy > touchSlop && dy > abs(point.x - start.x)
+        val (along, across) = if (vertical) dy to dx else dx to dy
+        return along > touchSlop && along > across
     }
 }
 
@@ -120,8 +120,6 @@ internal fun rememberCursorController(pin: CursorPin): CartesianMarkerController
     val slop = LocalViewConfiguration.current.touchSlop
     return remember(pin, slop) { DragCursorController(pin, slop) }
 }
-
-private const val SHOW_DELAY_NANOS = 25_000_000L
 
 /** Redraws the cursor where the last drag left it: Vico hides its own on every lift. */
 internal class PinnedCursor(

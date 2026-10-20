@@ -12,9 +12,8 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class DragCursorControllerTest {
-    private var now = 0L
     private val pin = CursorPin()
-    private val controller = DragCursorController(pin, touchSlop = 8f, nowNanos = { now })
+    private val controller = DragCursorController(pin, touchSlop = 8f)
     private val targets = listOf<CartesianMarker.Target>(FakeTarget)
 
     private object FakeTarget : CartesianMarker.Target {
@@ -30,10 +29,9 @@ class DragCursorControllerTest {
     ) = accept(Interaction.Move(Point(x, y)))
 
     @Test
-    fun aSidewaysDragShowsTheCursorOnlyAfterTheDelay() {
+    fun aSidewaysDragPastTheSlopShowsTheCursor() {
         accept(Interaction.Press(Point(10f, 100f)))
-        assertFalse(drag(30f))
-        now = 30_000_000L
+        assertFalse(drag(14f))
         assertTrue(drag(60f))
         assertTrue(controller.shouldShowMarker(Interaction.Move(Point(60f, 100f)), targets))
     }
@@ -41,7 +39,6 @@ class DragCursorControllerTest {
     @Test
     fun theCursorStandsAfterTheLiftAndATapClearsIt() {
         accept(Interaction.Press(Point(10f, 100f)))
-        now = 30_000_000L
         drag(60f)
         accept(Interaction.Release(Point(60f, 100f)))
         assertNotNull(pin.targets)
@@ -54,7 +51,6 @@ class DragCursorControllerTest {
     @Test
     fun aNewTouchClearsTheStandingCursorAtOnce() {
         accept(Interaction.Press(Point(10f, 100f)))
-        now = 30_000_000L
         drag(60f)
         accept(Interaction.Release(Point(60f, 100f)))
         assertNotNull(pin.targets)
@@ -66,10 +62,23 @@ class DragCursorControllerTest {
     @Test
     fun aVerticalDragNeverShowsTheCursor() {
         accept(Interaction.Press(Point(10f, 100f)))
-        now = 60_000_000L
         assertFalse(drag(10f, 140f))
         assertFalse(drag(30f, 140f))
         accept(Interaction.Release(Point(30f, 140f)))
+        assertNull(pin.targets)
+    }
+
+    @Test
+    fun aTapWithFingerJitterStillClearsTheStandingCursor() {
+        accept(Interaction.Press(Point(10f, 100f)))
+        drag(60f)
+        accept(Interaction.Release(Point(60f, 100f)))
+        assertNotNull(pin.targets)
+
+        accept(Interaction.Press(Point(10f, 100f)))
+        assertFalse(drag(13f, 103f))
+        assertFalse(drag(12f, 101f))
+        accept(Interaction.Release(Point(12f, 101f)))
         assertNull(pin.targets)
     }
 }
