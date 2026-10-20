@@ -280,7 +280,7 @@ internal fun CarScreen(
                         nowMillis = nowMillis ?: System.currentTimeMillis(),
                         statuses = vehicleStatuses,
                     )
-                                    DriveHistoryCard(vehicleHistory, vehicleDrives, scale = scale, ratedKwhPerMile = health.ratedKwhPerMile)
+                    DriveHistoryCard(vehicleHistory, vehicleDrives, scale = scale, ratedKwhPerMile = health.ratedKwhPerMile)
                     PastTripsCard(
                         trips = vehicle?.let { trips[it.bleName] }.orEmpty().markingLive(liveRoute),
                         samples = vehicleHistory,
