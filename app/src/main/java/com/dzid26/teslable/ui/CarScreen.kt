@@ -159,7 +159,10 @@ internal fun CarScreen(
             statusHistory.filter { it.vehicleId == vehicle.bleName }
         }
     val paired = isPaired(connection, vehicle)
-    val health = remember(vehicleHistory) { healthSummary(vehicleHistory) }
+    val health =
+        remember(vehicleHistory, vehicleDrives, vehicleStatuses) {
+            healthSummary(vehicleHistory, drives = vehicleDrives, statuses = vehicleStatuses)
+        }
     // Fitted once for every card below: the hero, the trip, both history charts.
     val scale = remember(vehicleHistory) { FullRangeScaleEstimator.estimate(vehicleHistory) }
     // What a pull on this screen will do, and the feedback while it runs.

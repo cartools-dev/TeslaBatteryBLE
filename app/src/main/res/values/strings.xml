@@ -151,7 +151,12 @@
     <string name="drive_driven">Driven: %1$s \u00B7</string>
     <string name="drive_used">%1$s%% used</string>
     <string name="drive_rate_joined">\u00B7 %1$s</string>
-    <string name="drive_rough_note">Fewer stats and coarser steps until the car\u2019s full range is learned.</string>
+    <string name="drive_rough_note">Fewer stats and coarser steps until the car\'s full range is learned.</string>
+    <string name="health_deep_sleep_detail">started %1$s</string>
+    <string name="health_deep_sleep_ended">ended %1$s</string>
+    <string name="health_deep_sleep_hint">From before the car falls asleep until it wakes up if odometer has not increased.</string>
+    <string name="health_deep_sleep_term">deep sleep</string>
+    <string name="health_longest">Longest</string>
     <string name="trip_arrival_range">Arrive with %1$d%% (about %2$s left)</string>
     <string name="notification_trip_traffic">(+%1$s traffic)</string>
     <string name="notification_trip_label">"Trip: "</string>

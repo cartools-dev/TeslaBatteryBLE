@@ -38,7 +38,8 @@ internal fun parkedHorizon(horizonMillis: Long): ParkedHorizon =
         ParkedHorizon((horizonMillis / HOUR_MILLIS).toInt(), days = false)
     }
 
-private fun perDay(
+/** The drain in percent per day with one decimal, or null when it is above zero but rounds to 0.0. */
+internal fun perDay(
     percentPerHour: Double,
     locale: Locale,
 ): String? {
