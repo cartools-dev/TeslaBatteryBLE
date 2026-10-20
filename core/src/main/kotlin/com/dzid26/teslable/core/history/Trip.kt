@@ -3,6 +3,7 @@
 package com.dzid26.teslable.core.history
 
 import com.dzid26.teslable.core.health.TripEstimate
+import com.dzid26.teslable.core.health.chargeSessionCost
 import com.dzid26.teslable.core.health.tripEstimate
 
 /**
@@ -44,7 +45,7 @@ data class Trip(
         get() {
             val miles = last.milesToArrival?.takeIf { it.isFinite() && it >= 0f }
             val minutes = last.minutesToArrival?.takeIf { it.isFinite() && it >= 0f }
-            val closeByMiles = miles != null && miles <= maxOf(ARRIVED_MILES, (lengthMiles ?: 0f) * ARRIVED_FRACTION)
+            val closeByMiles = miles != null && reachedDestination(miles, lengthMiles ?: 0f)
             return closeByMiles || (minutes != null && minutes <= ARRIVED_MINUTES)
         }
 
@@ -85,13 +86,17 @@ data class Trip(
  */
 fun segmentTrips(readings: List<RouteSample>): List<Trip> {
     val runs = mutableListOf<MutableList<RouteSample>>()
+    var runMiles = 0f
     for (reading in readings.sortedBy { it.observedAtMillis() }) {
         val run = runs.lastOrNull()
         val previous = run?.last()
-        if (run != null && previous != null && !startsNewTrip(previous, reading)) {
+        val miles = reading.milesToArrival?.takeIf { it.isFinite() && it >= 0f } ?: 0f
+        if (run != null && previous != null && !startsNewTrip(previous, reading, runMiles)) {
             run += reading
+            runMiles = maxOf(runMiles, miles)
         } else {
             runs += mutableListOf(reading)
+            runMiles = miles
         }
     }
     return runs.filter { it.size >= 2 }.map { run ->
@@ -100,27 +105,18 @@ fun segmentTrips(readings: List<RouteSample>): List<Trip> {
     }
 }
 
-private fun startsNewTrip(
-    previous: RouteSample,
-    next: RouteSample,
-): Boolean =
-    next.observedAtMillis() - previous.observedAtMillis() > ROUTE_FRESH_MILLIS ||
-        namesDiffer(previous.destination, next.destination)
-
 /** These trips with the one whose newest reading is [live], the route being navigated now, marked in progress. */
 fun List<Trip>.markingLive(live: RouteSample?): List<Trip> =
     if (live == null) this else map { it.copy(inProgress = it.last.observedAtMillis() == live.observedAtMillis()) }
 
 /**
- * What a trip took: the totals as of its last reading. The percents and the energy come
- * from the fitted full range and the battery readings around the trip; a missing input
- * hides its figure rather than showing a guess.
+ * What a trip took: the totals as of its last reading. The level and the energy come from the
+ * battery readings around the trip, and from the fitted full range only when a reading is
+ * missing; an input that is missing hides its figure rather than showing a guess.
  */
 data class TripSummary(
-    /** The energy, cost and arrival level (see [tripEstimate]) on the trip's full length. */
+    /** The energy, cost and arrival level (see [tripEstimate]) on the trip's distance. */
     val estimate: TripEstimate,
-    /** The battery level just before the trip began, percent. */
-    val startPercent: Float?,
     /** The level the trip ended at: the battery reading just after it, else the car's prediction when it reached its destination. */
     val arrivalPercent: Float?,
     /** The distance shown: driven for a finished trip, the whole route for one in progress. */
@@ -133,7 +129,8 @@ data class TripSummary(
 
 /**
  * The summary of this trip from the battery readings, the full-range scale, the learned rated
- * constant and the home price: the same inputs as the live card, on the trip's full length.
+ * constant and the home price. A finished trip with a battery reading before and after it is
+ * priced from those two rated ranges, so it does not depend on the scale being pinned.
  */
 fun Trip.summary(
     samples: List<BatterySample>,
@@ -143,26 +140,41 @@ fun Trip.summary(
 ): TripSummary {
     val before = sampleBefore(samples, first.timestampMillis)
     val after = if (inProgress) null else sampleAfter(samples, last.timestampMillis + if (arrived) durationLeftMillis() else 0L)
-    // The level the trip ended at: the battery reading just after it, else the car's last prediction
-    // while that still points at where the trip went (in progress, or arrived).
-    val predicted = (last.energyAtArrivalPercent ?: first.energyAtArrivalPercent).takeIf { inProgress || arrived }
-    val estimate =
-        tripEstimate(
-            first.copy(milesToArrival = distanceMiles, energyAtArrivalPercent = after?.soc(scale) ?: predicted),
-            before?.ratedRangeMiles,
-            scale,
-            ratedKwhPerMile,
-            pricePerKwh,
-        )
+    val estimate = estimateFor(before, after, scale, ratedKwhPerMile, pricePerKwh)
     val miles = distanceMiles?.takeIf { it > 0f }
     val hours = durationMillis.takeIf { it >= MILLIS_PER_MINUTE }?.let { it / MILLIS_PER_HOUR }
     return TripSummary(
         estimate = estimate,
-        startPercent = before?.soc(scale),
         arrivalPercent = estimate.arrivalPercent,
         distanceMiles = distanceMiles,
         averageMilesPerHour = if (miles != null && hours != null) miles / hours else null,
         kwhPerMile = if (miles != null && miles >= MIN_RATE_MILES) estimate.energyKwh?.div(miles) else null,
+    )
+}
+
+private fun Trip.estimateFor(
+    before: BatterySample?,
+    after: BatterySample?,
+    scale: FullRangeScale?,
+    ratedKwhPerMile: Float?,
+    pricePerKwh: Float?,
+): TripEstimate {
+    val beforeMiles = before?.ratedRangeMiles
+    val afterMiles = after?.ratedRangeMiles
+    if (after != null && beforeMiles != null && afterMiles != null) {
+        val usedMiles = beforeMiles - afterMiles
+        val constant = ratedKwhPerMile?.takeIf { it.isFinite() && it > 0f }
+        val energyKwh = constant?.let { usedMiles * it }?.takeIf { it > 0f }
+        return TripEstimate(distanceMiles, after.soc(scale), afterMiles, energyKwh, chargeSessionCost(energyKwh, pricePerKwh))
+    }
+    // The car's last prediction, while it still points at where the trip went (in progress, or arrived).
+    val predicted = (last.energyAtArrivalPercent ?: first.energyAtArrivalPercent).takeIf { inProgress || arrived }
+    return tripEstimate(
+        first.copy(milesToArrival = distanceMiles, energyAtArrivalPercent = after?.soc(scale) ?: predicted),
+        beforeMiles,
+        scale,
+        ratedKwhPerMile,
+        pricePerKwh,
     )
 }
 
@@ -191,16 +203,9 @@ private fun sampleAfter(
         .minByOrNull { it.timestampMillis }
         ?.takeIf { it.timestampMillis - atMillis <= SAMPLE_MAX_AGE_MILLIS }
 
-private fun namesDiffer(
-    a: String?,
-    b: String?,
-): Boolean = a != null && b != null && a != b
-
 private const val MILLIS_PER_MINUTE = 60_000L
 private const val MILLIS_PER_HOUR = 3_600_000f
 private const val HUNDREDTHS_PER_MILE = 100f
-private const val ARRIVED_MILES = 2f
-private const val ARRIVED_FRACTION = 0.15f
 private const val ARRIVED_MINUTES = 3f
 private const val SAMPLE_MAX_AGE_MILLIS = 30 * MILLIS_PER_MINUTE
 

@@ -41,12 +41,19 @@ class TripEstimateTest {
     }
 
     @Test
-    fun `an unpinned scale shows the percent but no miles energy or cost`() {
-        val estimate = tripEstimate(route(), 200f, scale.copy(pinned = false), ratedKwhPerMile = 0.25f, pricePerKwh = 0.2f)
+    fun `a scale with a large error shows the percent but no miles energy or cost`() {
+        val estimate = tripEstimate(route(), 200f, scale.copy(standardErrorMiles = 20f), ratedKwhPerMile = 0.25f, pricePerKwh = 0.2f)
         assertEquals(50f, estimate.arrivalPercent)
         assertNull(estimate.arrivalRatedMiles)
         assertNull(estimate.energyKwh)
         assertNull(estimate.costAtHomePrice)
+    }
+
+    @Test
+    fun `a tight scale gives miles and cost whether or not it is pinned`() {
+        val estimate = tripEstimate(route(), 200f, scale.copy(pinned = false), ratedKwhPerMile = 0.25f, pricePerKwh = 0.2f)
+        assertEquals(12f, estimate.energyKwh!!, 0.001f)
+        assertEquals(2.4f, estimate.costAtHomePrice!!, 0.001f)
     }
 
     @Test
