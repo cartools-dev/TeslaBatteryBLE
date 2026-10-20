@@ -13,6 +13,8 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.input.pointer.AwaitPointerEventScope
 import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalViewConfiguration
@@ -38,8 +40,14 @@ internal class CursorPin {
     /** Whether a cursor may be on screen: the standing one, or a live one Vico has not hidden. */
     var shown = false
 
-    /** Set by the chart when the current touch landed on it, so the screen-wide clear skips it. */
-    var touchedInside = false
+    /** The screen gesture that last landed on this chart, so the screen-wide clear skips it. */
+    var insideGesture = -1
+
+    /**
+     * Where a lift that did not drag the cursor would put it. The chart cannot tell a tap from a
+     * page scroll (it moves with the finger), so the screen-wide tap check decides whether it lands.
+     */
+    var tapTargets: List<CartesianMarker.Target>? = null
 }
 
 /**
@@ -86,9 +94,8 @@ internal class DragCursorController(
     ): Boolean = active
 
     private fun press(point: Point): Boolean {
-        // A new touch on the chart clears the standing cursor at once.
-        pin.targets = null
         pressedAt = point
+        pin.tapTargets = null
         scrolling = false
         active = false
         return false
@@ -108,16 +115,21 @@ internal class DragCursorController(
         return active
     }
 
-    // The live cursor goes with the finger; where it was becomes the standing one. A short press
-    // is accepted so Vico re-asks shouldShowMarker and hides any live cursor it still shows.
+    // A drag leaves the cursor where it ended. Anything else may be a tap or a page scroll, which
+    // the screen-wide check tells apart; it puts the cursor at [CursorPin.tapTargets] on a tap.
+    // Accepting the lift makes Vico re-ask shouldShowMarker, which hides its live cursor now that
+    // the standing one takes over.
     private fun release(): Boolean {
-        val tap = !active
-        pin.targets = if (active) lastTargets else null
-        if (tap) pin.shown = false
+        if (active) {
+            pin.targets = lastTargets
+            pin.shown = true
+        } else if (!scrolling) {
+            pin.tapTargets = lastTargets
+        }
         pressedAt = null
         scrolling = false
         active = false
-        return tap
+        return true
     }
 
     /** True once the finger is past the slop and moved mostly along the asked axis. */
@@ -136,16 +148,21 @@ internal class DragCursorController(
 @Composable
 internal fun rememberCursorPin(): CursorPin {
     val pin = remember { CursorPin() }
-    val touches = CursorDismiss.count
-    LaunchedEffect(touches) {
-        // A touch on the chart is the controller's to handle; a touch anywhere else clears both cursors.
-        if (pin.touchedInside) {
-            pin.touchedInside = false
+    val taps = CursorDismiss.count
+    LaunchedEffect(taps) {
+        if (pin.insideGesture == CursorDismiss.gesture) {
+            // A tap on this chart puts the cursor where the finger was.
+            pin.tapTargets?.let {
+                pin.targets = it
+                pin.shown = true
+            }
         } else if (pin.shown) {
+            // A tap anywhere else clears both cursors; the rebuild drops a live one Vico still shows.
             pin.targets = null
             pin.shown = false
             pin.reset++
         }
+        pin.tapTargets = null
     }
     return pin
 }
@@ -167,28 +184,42 @@ internal class PinnedCursor(
 }
 
 /**
- * Counts touches anywhere on the screen, so a standing cursor can go when the
- * finger lands outside its chart too.
+ * Counts taps anywhere on the screen, so a standing cursor goes when the finger
+ * taps outside its chart too. Drags (a page scroll) do not count.
  */
 @Stable
 internal object CursorDismiss {
     var count by mutableIntStateOf(0)
+
+    /** Bumped at every touch down; a chart notes the one that landed on it. */
+    var gesture = 0
 }
 
-/** Counts every touch down on this subtree without consuming it. */
+/** Counts every tap on this subtree without consuming anything. */
 internal fun Modifier.countingTouches(): Modifier =
     pointerInput(Unit) {
         awaitEachGesture {
-            awaitFirstDown(requireUnconsumed = false, pass = PointerEventPass.Initial)
-            CursorDismiss.count++
+            val down = awaitFirstDown(requireUnconsumed = false, pass = PointerEventPass.Initial)
+            CursorDismiss.gesture++
+            if (isTap(down.position)) CursorDismiss.count++
         }
     }
 
-/** Marks touches that land on the chart, so the screen-wide clear leaves them to the controller. */
+/** Follows the gesture to its lift: true when the finger never left the touch slop. */
+private suspend fun AwaitPointerEventScope.isTap(start: Offset): Boolean {
+    val slop = viewConfiguration.touchSlop
+    var change = awaitPointerEvent(PointerEventPass.Initial).changes.firstOrNull()
+    while (change != null && change.pressed && (change.position - start).getDistance() <= slop) {
+        change = awaitPointerEvent(PointerEventPass.Initial).changes.firstOrNull()
+    }
+    return change != null && !change.pressed && (change.position - start).getDistance() <= slop
+}
+
+/** Notes the screen gesture that landed on the chart, so the screen-wide clear leaves it to the controller. */
 internal fun Modifier.markingTouches(pin: CursorPin): Modifier =
     pointerInput(pin) {
         awaitEachGesture {
             awaitFirstDown(requireUnconsumed = false, pass = PointerEventPass.Initial)
-            pin.touchedInside = true
+            pin.insideGesture = CursorDismiss.gesture
         }
     }

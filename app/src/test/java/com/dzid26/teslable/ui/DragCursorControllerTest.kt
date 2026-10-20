@@ -5,8 +5,8 @@ package com.dzid26.teslable.ui
 import com.patrykandpatrick.vico.compose.cartesian.marker.CartesianMarker
 import com.patrykandpatrick.vico.compose.cartesian.marker.Interaction
 import com.patrykandpatrick.vico.compose.common.Point
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
-import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -14,71 +14,62 @@ import org.junit.Test
 class DragCursorControllerTest {
     private val pin = CursorPin()
     private val controller = DragCursorController(pin, touchSlop = 8f)
-    private val targets = listOf<CartesianMarker.Target>(FakeTarget)
 
-    private object FakeTarget : CartesianMarker.Target {
-        override val x = 3.0
-        override val canvasX = 30f
+    private class FakeTarget(
+        override val x: Double,
+    ) : CartesianMarker.Target {
+        override val canvasX = x.toFloat()
     }
 
-    private fun accept(interaction: Interaction) = controller.shouldAcceptInteraction(interaction, targets)
+    private fun accept(
+        interaction: Interaction,
+        x: Double = 1.0,
+    ) = controller.shouldAcceptInteraction(interaction, listOf(FakeTarget(x)))
 
     private fun drag(
         x: Float,
         y: Float = 100f,
-    ) = accept(Interaction.Move(Point(x, y)))
+    ) = accept(Interaction.Move(Point(x, y)), x.toDouble())
+
+    private fun List<CartesianMarker.Target>?.x() = this?.single()?.x
 
     @Test
-    fun aSidewaysDragPastTheSlopShowsTheCursor() {
+    fun aSidewaysDragPastTheSlopShowsTheLiveCursor() {
         accept(Interaction.Press(Point(10f, 100f)))
         assertFalse(drag(14f))
         assertTrue(drag(60f))
-        assertTrue(controller.shouldShowMarker(Interaction.Move(Point(60f, 100f)), targets))
+        assertTrue(controller.shouldShowMarker(Interaction.Move(Point(60f, 100f)), emptyList()))
     }
 
     @Test
-    fun theCursorStandsAfterTheLiftAndATapClearsIt() {
+    fun aDragLeavesTheCursorWhereItEnded() {
         accept(Interaction.Press(Point(10f, 100f)))
         drag(60f)
-        accept(Interaction.Release(Point(60f, 100f)))
-        assertNotNull(pin.targets)
-
-        accept(Interaction.Press(Point(10f, 100f)))
-        assertTrue(accept(Interaction.Release(Point(10f, 100f))))
-        assertNull(pin.targets)
+        assertTrue(accept(Interaction.Release(Point(60f, 100f)), x = 60.0))
+        assertEquals(60.0, pin.targets.x()!!, 0.0)
+        assertNull(pin.tapTargets)
     }
 
     @Test
-    fun aNewTouchClearsTheStandingCursorAtOnce() {
+    fun aJitteryTapOffersWhereTheFingerWasWithoutMovingTheStandingCursor() {
         accept(Interaction.Press(Point(10f, 100f)))
         drag(60f)
-        accept(Interaction.Release(Point(60f, 100f)))
-        assertNotNull(pin.targets)
+        accept(Interaction.Release(Point(60f, 100f)), x = 60.0)
 
-        accept(Interaction.Press(Point(10f, 100f)))
-        assertNull(pin.targets)
+        accept(Interaction.Press(Point(20f, 100f)), x = 20.0)
+        assertFalse(drag(23f, 102f))
+        assertTrue(accept(Interaction.Release(Point(23f, 102f)), x = 23.0))
+        assertEquals(23.0, pin.tapTargets.x()!!, 0.0)
+        assertEquals(60.0, pin.targets.x()!!, 0.0)
     }
 
     @Test
-    fun aVerticalDragNeverShowsTheCursor() {
-        accept(Interaction.Press(Point(10f, 100f)))
-        assertFalse(drag(10f, 140f))
-        assertFalse(drag(30f, 140f))
-        accept(Interaction.Release(Point(30f, 140f)))
-        assertNull(pin.targets)
-    }
-
-    @Test
-    fun aTapWithFingerJitterStillClearsTheStandingCursor() {
-        accept(Interaction.Press(Point(10f, 100f)))
-        drag(60f)
-        accept(Interaction.Release(Point(60f, 100f)))
-        assertNotNull(pin.targets)
-
-        accept(Interaction.Press(Point(10f, 100f)))
-        assertFalse(drag(13f, 103f))
-        assertFalse(drag(12f, 101f))
-        accept(Interaction.Release(Point(12f, 101f)))
+    fun aVerticalDragOnTheChartOffersNothing() {
+        accept(Interaction.Press(Point(40f, 100f)), x = 40.0)
+        assertFalse(drag(40f, 140f))
+        assertFalse(drag(60f, 180f))
+        accept(Interaction.Release(Point(60f, 180f)), x = 60.0)
+        assertNull(pin.tapTargets)
         assertNull(pin.targets)
     }
 }
