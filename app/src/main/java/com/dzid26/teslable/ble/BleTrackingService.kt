@@ -63,7 +63,7 @@ class BleTrackingService : Service() {
     private val postedCarIds = mutableMapOf<String, Int>()
     private var startLogged = false
 
-    private val tripSource by lazy { TripNoticeSource(this) }
+    private val tripSource by lazy { TripNoticeSource() }
 
     /** Screen on and off only reach a receiver registered at run time; the app-state log keeps them (ADR-0008). */
     private val screenReceiver =

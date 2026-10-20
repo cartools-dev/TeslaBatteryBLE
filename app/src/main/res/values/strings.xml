@@ -155,6 +155,4 @@
     <string name="trip_arrival_range">Arrive with %1$d%% (about %2$s left)</string>
     <string name="notification_trip_traffic">(+%1$s traffic)</string>
     <string name="notification_trip_left">%1$s left</string>
-    <string name="notification_trip_energy">about %1$s kWh</string>
-    <string name="notification_trip_energy_cost">about %1$s kWh \u00B7 %2$s at home price</string>
 </resources>
