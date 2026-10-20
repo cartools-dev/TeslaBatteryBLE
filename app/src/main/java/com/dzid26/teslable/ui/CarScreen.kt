@@ -274,13 +274,6 @@ internal fun CarScreen(
                         ratedKwhPerMile = health.ratedKwhPerMile,
                         pricePerKwh = pricePerKwh,
                     )
-                    PastTripsCard(
-                        trips = vehicle?.let { trips[it.bleName] }.orEmpty().excludingLive(liveRoute),
-                        samples = vehicleHistory,
-                        scale = scale,
-                        ratedKwhPerMile = health.ratedKwhPerMile,
-                        pricePerKwh = pricePerKwh,
-                    )
                     BatteryHistoryCard(
                         vehicleHistory,
                         vehicleDrives,
@@ -288,6 +281,13 @@ internal fun CarScreen(
                         statuses = vehicleStatuses,
                     )
                     DriveHistoryCard(vehicleHistory, vehicleDrives, scale = scale, ratedKwhPerMile = health.ratedKwhPerMile)
+                                    PastTripsCard(
+                        trips = vehicle?.let { trips[it.bleName] }.orEmpty().excludingLive(liveRoute),
+                        samples = vehicleHistory,
+                        scale = scale,
+                        ratedKwhPerMile = health.ratedKwhPerMile,
+                        pricePerKwh = pricePerKwh,
+                    )
                     BatteryHealthCard(health)
                 }
             }
