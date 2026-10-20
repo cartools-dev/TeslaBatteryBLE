@@ -141,7 +141,7 @@ internal class TripTextContext(
                 ?.let { compactDuration(it * MILLIS_PER_MINUTE) }
                 ?.let { context.getString(R.string.notification_trip_traffic, it) }
         val parts = listOfNotNull(distance, time).takeIf { it.isNotEmpty() } ?: return null
-        val left = context.getString(R.string.trip_left, parts.joinToString(" · "))
+        val left = context.getString(R.string.notification_trip_left, parts.joinToString(" · "))
         return if (traffic == null) left else "$left $traffic"
     }
 
@@ -162,8 +162,8 @@ internal class TripTextContext(
     /** "about 5.4 kWh · $1.62 at home price", or the energy alone without a price. */
     fun energy(notice: TripNotice): String? {
         val kwh = formatKwh((notice.energyTenthsKwh ?: return null) / TENTHS)
-        val cost = notice.costCents ?: return context.getString(R.string.trip_energy, kwh)
-        return context.getString(R.string.trip_energy_cost, kwh, formatMoney(cost / CENTS, currencyCode))
+        val cost = notice.costCents ?: return context.getString(R.string.notification_trip_energy, kwh)
+        return context.getString(R.string.notification_trip_energy_cost, kwh, formatMoney(cost / CENTS, currencyCode))
     }
 }
 
