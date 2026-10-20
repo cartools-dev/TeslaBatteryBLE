@@ -20,8 +20,44 @@ fun activeRoute(
 ): RouteSample? =
     latestRoute?.takeIf { route ->
         route.milesToArrival != null &&
-            nowMillis - (route.readAtMillis ?: route.timestampMillis) <= ROUTE_FRESH_MILLIS
+            nowMillis - route.readTime() <= ROUTE_FRESH_MILLIS
     }
+
+/**
+ * This reading as the next one of a navigation whose previous reading was [previous] (null when
+ * none, or when the previous reply carried no route): it keeps the longest remaining distance
+ * seen so far as the trip's length, so a re-route that lengthens the trip stretches the bar
+ * instead of running it backwards. A reading more than [ROUTE_FRESH_MILLIS] after the previous
+ * one starts a new trip.
+ */
+fun RouteSample.continuing(previous: RouteSample?): RouteSample {
+    val miles = milesToArrival?.takeIf { it.isFinite() && it >= 0f }
+    val sameTrip = previous != null && readTime() - previous.readTime() <= ROUTE_FRESH_MILLIS
+    val start = listOfNotNull(if (sameTrip) previous.tripStartMiles else null, miles).maxOrNull()
+    val startedAt = if (sameTrip) previous.tripStartedAtMillis ?: previous.readTime() else readTime()
+    return copy(tripStartMiles = start, tripStartedAtMillis = startedAt)
+}
+
+/**
+ * The whole trip's time as the car sees it now: what has passed since the navigation began plus
+ * the time it still gives. Null without a start or a time left.
+ */
+fun RouteSample.tripTotalMillis(): Long? {
+    val started = tripStartedAtMillis
+    val left = minutesToArrival?.takeIf { it.isFinite() && it >= 0f }
+    return if (started != null && left != null) readTime() - started + (left * MILLIS_PER_MINUTE).toLong() else null
+}
+
+/** How far along the trip is, 0 to 1, or null when the length or the remaining distance is unknown or zero. */
+fun RouteSample.tripProgress(): Float? {
+    val start = tripStartMiles?.takeIf { it > 0f }
+    val left = milesToArrival?.takeIf { it.isFinite() && it >= 0f }
+    return if (start != null && left != null) (1f - left / start).coerceIn(0f, 1f) else null
+}
+
+private fun RouteSample.readTime(): Long = readAtMillis ?: timestampMillis
 
 /** A route reading older than this is a finished trip: the car answers a drive read every few minutes while it navigates. */
 private const val ROUTE_FRESH_MILLIS = 10 * 60_000L
+
+private const val MILLIS_PER_MINUTE = 60_000L

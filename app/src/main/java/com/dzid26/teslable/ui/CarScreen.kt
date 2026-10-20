@@ -129,6 +129,8 @@ internal fun CarScreen(
     // Injectable for the Paparazzi snapshots; production call sites use the
     // default, which keeps the same ticking clocks as before.
     nowMillis: Long? = null,
+    // Injectable for the Paparazzi snapshots; null reads the owner's saved home price.
+    homePrice: Float? = null,
 ) {
     BackHandler { onBack() }
     val connection = state.connections[address]
@@ -233,7 +235,7 @@ internal fun CarScreen(
                 verticalArrangement = Arrangement.spacedBy(16.dp),
             ) {
                 val context = LocalContext.current
-                val pricePerKwh = remember { EnergyPriceStore(context).pricePerKwh() }
+                val pricePerKwh = remember { homePrice ?: EnergyPriceStore(context).pricePerKwh() }
                 val currencyCode = remember { EnergyPriceStore(context).currencyCode() }
                 val unitStore = remember { UnitStore(context) }
                 val distanceUnit = remember { unitStore.preference().resolve() }

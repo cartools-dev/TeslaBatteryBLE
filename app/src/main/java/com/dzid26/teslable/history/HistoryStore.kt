@@ -12,6 +12,7 @@ import com.dzid26.teslable.core.history.ConnectionEvent
 import com.dzid26.teslable.core.history.DriveSample
 import com.dzid26.teslable.core.history.RouteSample
 import com.dzid26.teslable.core.history.StatusSample
+import com.dzid26.teslable.core.history.continuing
 import com.dzid26.teslable.core.history.shouldLogStatus
 import com.dzid26.teslable.core.history.toBatterySample
 import com.dzid26.teslable.core.history.toDriveSample
@@ -193,7 +194,12 @@ class HistoryStore(
                 driveLogs.append(vehicleId, record)
                 if (sample != null) _driveSamples.value = (_driveSamples.value + sample).takeLast(MAX_SAMPLES)
                 // A reply without a route ends the trip: the card never outlives the navigation.
-                _latestRoutes.value = if (route != null) _latestRoutes.value + (vehicleId to route) else _latestRoutes.value - vehicleId
+                _latestRoutes.value =
+                    if (route != null) {
+                        _latestRoutes.value + (vehicleId to route.continuing(_latestRoutes.value[vehicleId]))
+                    } else {
+                        _latestRoutes.value - vehicleId
+                    }
             }
         }
     }
@@ -345,8 +351,15 @@ class HistoryStore(
             val routes =
                 logs
                     .mapNotNull { (vehicleId, records) ->
-                        val newest = records.maxByOrNull { it.drive_state?.timestamp?.toEpochMilli() ?: Long.MIN_VALUE }
-                        newest?.toRouteSample(vehicleId)?.let { vehicleId to it }
+                        // Oldest first: a reply without a route ends the trip, so the fold
+                        // ends on the live route, or null once navigation stopped.
+                        val live =
+                            records
+                                .sortedBy { it.drive_state?.timestamp?.toEpochMilli() ?: Long.MIN_VALUE }
+                                .fold<BleRecord, RouteSample?>(null) { previous, record ->
+                                    record.toRouteSample(vehicleId)?.continuing(previous)
+                                }
+                        live?.let { vehicleId to it }
                     }.toMap()
             samples to routes
         }.getOrDefault(emptyList<DriveSample>() to emptyMap())
