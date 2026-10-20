@@ -84,10 +84,12 @@ import com.dzid26.teslable.core.history.ProjectionContext
 import com.dzid26.teslable.core.history.RouteSample
 import com.dzid26.teslable.core.history.StatusSample
 import com.dzid26.teslable.core.history.TENTHS_PER_PERCENT
+import com.dzid26.teslable.core.history.Trip
 import com.dzid26.teslable.core.history.activeRoute
 import com.dzid26.teslable.core.history.chargeProjection
 import com.dzid26.teslable.core.history.compactDuration
 import com.dzid26.teslable.core.history.dischargeProjection
+import com.dzid26.teslable.core.history.markingLive
 import com.dzid26.teslable.core.history.projectionHorizonMillis
 import com.dzid26.teslable.core.history.socTenths
 import com.dzid26.teslable.core.history.statusDurations
@@ -121,6 +123,8 @@ internal fun CarScreen(
     statusHistory: List<StatusSample>,
     // The newest route-bearing drive reading per car, for the live trip card.
     routes: Map<String, RouteSample> = emptyMap(),
+    // The finished navigations per car, for the past-trips card.
+    trips: Map<String, List<Trip>> = emptyMap(),
     onBack: () -> Unit,
     onPair: () -> Unit,
     onRefresh: () -> Unit,
@@ -262,8 +266,9 @@ internal fun CarScreen(
                     if (!paired) {
                         KeyCard(connection, vehicle, onPair)
                     }
+                    val liveRoute = activeRoute(vehicle?.let { routes[it.bleName] }, nowMillis ?: rememberNowMillis())
                     TripSection(
-                        route = activeRoute(vehicle?.let { routes[it.bleName] }, nowMillis ?: rememberNowMillis()),
+                        route = liveRoute,
                         currentRatedMiles = vehicleHistory.lastOrNull()?.ratedRangeMiles,
                         scale = scale,
                         ratedKwhPerMile = health.ratedKwhPerMile,
@@ -276,6 +281,13 @@ internal fun CarScreen(
                         statuses = vehicleStatuses,
                     )
                     DriveHistoryCard(vehicleHistory, vehicleDrives, scale = scale, ratedKwhPerMile = health.ratedKwhPerMile)
+                    PastTripsCard(
+                        trips = vehicle?.let { trips[it.bleName] }.orEmpty().markingLive(liveRoute),
+                        samples = vehicleHistory,
+                        scale = scale,
+                        ratedKwhPerMile = health.ratedKwhPerMile,
+                        pricePerKwh = pricePerKwh,
+                    )
                     BatteryHealthCard(health)
                 }
             }

@@ -60,6 +60,7 @@ Light and dark themes, side by side.
   fractions of a percent, and each carries a faint beam for how far the fit could
   be off (for a charge also the supply-voltage swings seen in the session)
 - **Trip card** while the car navigates: a progress bar of the trip, the distance and time left and the trip's cost at your home price in big type, then the car's predicted arrival level (with the rated range it stands for once the full range is learned), with the trip's energy in place of the price when none is set. The destination is not kept in any history view; the raw drive log on the phone still holds what the car sent (see ADR-0012 for what happens to it on export).
+- **Past trips** just above Battery health: pick a navigation by name and start time (the one in progress is listed too) to see its total distance and duration and its price in big type, then "Arrived with 56% (about 152 mi left)" (the battery reading after the trip, else the car's last prediction), the battery before and after, the energy per distance in your efficiency unit and the average speed. Kept in memory from the drive log, so the destination names appear only here.
 - **Local activity log** — the commands the app sends to the car (and why) and whether the screen was on and the
   app in the foreground are kept on the phone only, so a wake or a read in the car's own history can be told
   apart from yours

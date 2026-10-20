@@ -45,6 +45,8 @@ data class RouteSample(
     val tripStartMiles: Float? = null,
     /** The phone clock at this navigation's first reading, so the trip's total time is known; set by [continuing]. */
     val tripStartedAtMillis: Long? = null,
+    /** The car's odometer in this reading (`odometer_in_hundredths_of_a_mile`), for the distance actually driven. */
+    val odometerInHundredthsOfAMile: Int? = null,
 ) {
     override fun toString(): String {
         val shownDestination = if (destination != null) "<redacted>" else "null"

@@ -20,7 +20,7 @@ fun activeRoute(
 ): RouteSample? =
     latestRoute?.takeIf { route ->
         route.milesToArrival != null &&
-            nowMillis - route.readTime() <= ROUTE_FRESH_MILLIS
+            nowMillis - route.observedAtMillis() <= ROUTE_FRESH_MILLIS
     }
 
 /**
@@ -32,9 +32,9 @@ fun activeRoute(
  */
 fun RouteSample.continuing(previous: RouteSample?): RouteSample {
     val miles = milesToArrival?.takeIf { it.isFinite() && it >= 0f }
-    val sameTrip = previous != null && readTime() - previous.readTime() <= ROUTE_FRESH_MILLIS
+    val sameTrip = previous != null && observedAtMillis() - previous.observedAtMillis() <= ROUTE_FRESH_MILLIS
     val start = listOfNotNull(if (sameTrip) previous.tripStartMiles else null, miles).maxOrNull()
-    val startedAt = if (sameTrip) previous.tripStartedAtMillis ?: previous.readTime() else readTime()
+    val startedAt = if (sameTrip) previous.tripStartedAtMillis ?: previous.observedAtMillis() else observedAtMillis()
     return copy(tripStartMiles = start, tripStartedAtMillis = startedAt)
 }
 
@@ -45,7 +45,7 @@ fun RouteSample.continuing(previous: RouteSample?): RouteSample {
 fun RouteSample.tripTotalMillis(): Long? {
     val started = tripStartedAtMillis
     val left = minutesToArrival?.takeIf { it.isFinite() && it >= 0f }
-    return if (started != null && left != null) readTime() - started + (left * MILLIS_PER_MINUTE).toLong() else null
+    return if (started != null && left != null) observedAtMillis() - started + (left * MILLIS_PER_MINUTE).toLong() else null
 }
 
 /** How far along the trip is, 0 to 1, or null when the length or the remaining distance is unknown or zero. */
@@ -55,9 +55,10 @@ fun RouteSample.tripProgress(): Float? {
     return if (start != null && left != null) (1f - left / start).coerceIn(0f, 1f) else null
 }
 
-private fun RouteSample.readTime(): Long = readAtMillis ?: timestampMillis
+/** The phone clock when this reading arrived, else the car's own timestamp. */
+fun RouteSample.observedAtMillis(): Long = readAtMillis ?: timestampMillis
 
 /** A route reading older than this is a finished trip: the car answers a drive read every few minutes while it navigates. */
-private const val ROUTE_FRESH_MILLIS = 10 * 60_000L
+internal const val ROUTE_FRESH_MILLIS = 10 * 60_000L
 
 private const val MILLIS_PER_MINUTE = 60_000L

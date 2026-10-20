@@ -2,6 +2,7 @@
 
 package com.dzid26.teslable.ui
 
+import androidx.annotation.StringRes
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
@@ -10,6 +11,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Card
 import androidx.compose.material3.LinearProgressIndicator
@@ -52,7 +54,6 @@ internal fun TripCard(
     modifier: Modifier = Modifier,
 ) {
     val unit = LocalDistanceUnit.current
-    val separator = remember { DecimalFormatSymbols.getInstance().decimalSeparator }
     val currencyCode = LocalCurrencyCode.current
     Card(modifier = modifier.fillMaxWidth()) {
         Column(Modifier.padding(12.dp)) {
@@ -64,7 +65,13 @@ internal fun TripCard(
                 overflow = TextOverflow.Ellipsis,
             )
             Spacer(Modifier.height(8.dp))
-            TripStats(route, estimate, unit, separator, currencyCode)
+            TripStats(
+                distance = tripDistanceText(estimate.milesRemaining),
+                time = tripTimeText(route.minutesToArrival?.takeIf { it.isFinite() }?.let { (it * MILLIS_PER_MINUTE).toLong() }),
+                estimate = estimate,
+                currencyCode = currencyCode,
+                labels = liveTripLabels,
+            )
             route.tripProgress()?.let { progress ->
                 Spacer(Modifier.height(8.dp))
                 val description = stringResource(R.string.trip_progress_description, (progress * PERCENT_FULL).roundToInt())
@@ -82,34 +89,51 @@ internal fun TripCard(
                 Spacer(Modifier.height(8.dp))
                 Text(it, style = MaterialTheme.typography.titleMedium)
             }
-            totalText(route, unit, separator)?.let {
+            totalText(route)?.let {
                 Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         }
     }
 }
 
-/** The three figures worth a glance, big: distance to go, time to arrive and the price (the energy without one). */
+/** The string ids naming the distance and time figures: what is left of a live trip, what a past one took. */
+internal class TripLabels(
+    @StringRes val distance: Int,
+    @StringRes val time: Int,
+)
+
+internal val liveTripLabels = TripLabels(R.string.trip_distance_label, R.string.trip_time_label)
+internal val pastTripLabels = TripLabels(R.string.trip_past_distance_label, R.string.trip_past_time_label)
+
+/** "4.7 mi" from miles, or null when there are none. */
+@Composable
+internal fun tripDistanceText(miles: Float?): String? {
+    val unit = LocalDistanceUnit.current
+    val separator = remember { DecimalFormatSymbols.getInstance().decimalSeparator }
+    return miles?.let { unit.format(it, decimals = 1, decimalSeparator = separator) }
+}
+
+/** "12m" from a duration in millis, "under a minute" below one, null for none or a negative one. */
+@Composable
+internal fun tripTimeText(millis: Long?): String? =
+    millis?.takeIf { it >= 0L }?.let { compactDuration(it) ?: stringResource(R.string.trip_under_a_minute) }
+
+/** The three figures worth a glance, big: distance, time and the price (the energy without one). */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-private fun TripStats(
-    route: RouteSample,
+internal fun TripStats(
+    distance: String?,
+    time: String?,
     estimate: TripEstimate,
-    unit: DistanceUnit,
-    separator: Char,
     currencyCode: String?,
+    labels: TripLabels,
 ) {
-    val distance = estimate.milesRemaining?.let { unit.format(it, decimals = 1, decimalSeparator = separator) }
-    val time =
-        route.minutesToArrival?.takeIf { it.isFinite() && it >= 0f }?.let { minutes ->
-            compactDuration((minutes * MILLIS_PER_MINUTE).toLong()) ?: stringResource(R.string.trip_under_a_minute)
-        }
     val kwh = estimate.energyKwh?.let(::formatKwh)
     val cost = estimate.costAtHomePrice?.let { formatMoney(it, currencyCode) }
     // The stats wrap whole on a narrow phone instead of squeezing the digits.
-    FlowRow(horizontalArrangement = Arrangement.spacedBy(20.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-        distance?.let { TripStat(it, stringResource(R.string.trip_distance_label)) }
-        time?.let { TripStat(it, stringResource(R.string.trip_time_label)) }
+    FlowRow(horizontalArrangement = Arrangement.spacedBy(STAT_GAP), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        distance?.let { TripStat(it, stringResource(labels.distance)) }
+        time?.let { TripStat(it, stringResource(labels.time)) }
         when {
             cost != null && kwh != null -> TripStat(cost, stringResource(R.string.trip_cost_label, kwh))
             kwh != null -> TripStat("$kwh kWh", stringResource(R.string.trip_energy_label))
@@ -130,25 +154,30 @@ private fun TripStat(
             color = MaterialTheme.colorScheme.primary,
             maxLines = 1,
         )
-        Text(text = label, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        // A long label wraps under its figure instead of widening the column and pushing the next figure down a row.
+        Text(
+            text = label,
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.widthIn(max = STAT_LABEL_MAX_WIDTH),
+        )
     }
 }
 
+private val STAT_GAP = 16.dp
+private val STAT_LABEL_MAX_WIDTH = 112.dp
+
 /** "Trip total: 11.4 mi · 26m": the whole route's length and time, of which the big figures are what is left. */
 @Composable
-private fun totalText(
-    route: RouteSample,
-    unit: DistanceUnit,
-    separator: Char,
-): String? {
-    val distance = route.tripStartMiles?.let { unit.format(it, decimals = 1, decimalSeparator = separator) }
-    val time = route.tripTotalMillis()?.let { compactDuration(it) ?: stringResource(R.string.trip_under_a_minute) }
+private fun totalText(route: RouteSample): String? {
+    val distance = tripDistanceText(route.tripStartMiles)
+    val time = tripTimeText(route.tripTotalMillis())
     return listOfNotNull(distance, time).takeIf { it.isNotEmpty() }?.joinToString(" · ")?.let { stringResource(R.string.trip_total, it) }
 }
 
 /** "Arrive with 44% (about 118 mi)": the car's predicted level, with the rated range it stands for once the full range is known. */
 @Composable
-private fun arrivalText(
+internal fun arrivalText(
     estimate: TripEstimate,
     unit: DistanceUnit,
 ): String? {

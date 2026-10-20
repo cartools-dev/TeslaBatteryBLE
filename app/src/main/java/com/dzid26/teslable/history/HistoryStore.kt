@@ -12,7 +12,9 @@ import com.dzid26.teslable.core.history.ConnectionEvent
 import com.dzid26.teslable.core.history.DriveSample
 import com.dzid26.teslable.core.history.RouteSample
 import com.dzid26.teslable.core.history.StatusSample
+import com.dzid26.teslable.core.history.Trip
 import com.dzid26.teslable.core.history.continuing
+import com.dzid26.teslable.core.history.segmentTrips
 import com.dzid26.teslable.core.history.shouldLogStatus
 import com.dzid26.teslable.core.history.toBatterySample
 import com.dzid26.teslable.core.history.toDriveSample
@@ -98,6 +100,16 @@ class HistoryStore(
      */
     val latestRoutes: StateFlow<Map<String, RouteSample>> = _latestRoutes.asStateFlow()
 
+    private val routeReadings = mutableMapOf<String, List<RouteSample>>()
+    private val _trips = MutableStateFlow<Map<String, List<Trip>>>(emptyMap())
+
+    /**
+     * The finished navigations per car, oldest first, for the past-trips card. Segmented from
+     * the route readings of the drive log and kept in memory only, like [latestRoutes]: the
+     * destination names stay out of every other read model.
+     */
+    val trips: StateFlow<Map<String, List<Trip>>> = _trips.asStateFlow()
+
     /** The newest status record logged per vehicle, which [shouldLogStatus] compares the next reading against. */
     private val lastLoggedStatus = mutableMapOf<String, BleRecord>()
 
@@ -109,6 +121,7 @@ class HistoryStore(
                 val (driveSamples, latestRoutes) = readDrive()
                 _driveSamples.value = driveSamples
                 _latestRoutes.value = latestRoutes
+                _trips.value = routeReadings.mapValues { (_, readings) -> segmentTrips(readings).takeLast(MAX_TRIPS) }
                 // Closures, climate and connection records have no read model
                 // yet. Reading the files only refreshes the record counts the
                 // cap trims by, so it holds across restarts.
@@ -193,6 +206,11 @@ class HistoryStore(
             mutex.withLock {
                 driveLogs.append(vehicleId, record)
                 if (sample != null) _driveSamples.value = (_driveSamples.value + sample).takeLast(MAX_SAMPLES)
+                if (route != null) {
+                    val readings = (routeReadings[vehicleId].orEmpty() + route).takeLast(MAX_ROUTE_READINGS)
+                    routeReadings[vehicleId] = readings
+                    _trips.value = _trips.value + (vehicleId to segmentTrips(readings).takeLast(MAX_TRIPS))
+                }
                 // A reply without a route ends the trip: the card never outlives the navigation.
                 _latestRoutes.value =
                     if (route != null) {
@@ -351,6 +369,8 @@ class HistoryStore(
             val routes =
                 logs
                     .mapNotNull { (vehicleId, records) ->
+                        routeReadings[vehicleId] =
+                            records.mapNotNull { it.toRouteSample(vehicleId) }.takeLast(MAX_ROUTE_READINGS)
                         // Oldest first: a reply without a route ends the trip, so the fold
                         // ends on the live route, or null once navigation stopped.
                         val live =
@@ -388,6 +408,12 @@ class HistoryStore(
         /** `<vehicleId>.command.pblog`: commands sent and refused in [BleRecord]s, timed by `device_timestamp` (ADR-0008). */
         const val COMMAND_LOG_SUFFIX = ".command.pblog"
         const val MAX_SAMPLES = 20_000
+
+        /** Route readings kept per car for the past trips: a navigation sends one every few minutes. */
+        const val MAX_ROUTE_READINGS = 5_000
+
+        /** The past trips the selector offers per car. */
+        const val MAX_TRIPS = 30
     }
 }
 
@@ -398,4 +424,6 @@ data class HistorySamples(
     val status: List<StatusSample> = emptyList(),
     /** The newest route-bearing drive reading per car, by vehicle id. */
     val routes: Map<String, RouteSample> = emptyMap(),
+    /** The finished navigations per car, by vehicle id, oldest first. */
+    val trips: Map<String, List<Trip>> = emptyMap(),
 )

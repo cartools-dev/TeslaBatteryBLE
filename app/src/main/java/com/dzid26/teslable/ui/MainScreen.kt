@@ -144,6 +144,7 @@ fun MainScreen(
             driveHistory = history.drive,
             statusHistory = history.status,
             routes = history.routes,
+            trips = history.trips,
             onBack = { viewingBleName = null },
             onPair = { onPairKey(address) },
             onRefresh = {

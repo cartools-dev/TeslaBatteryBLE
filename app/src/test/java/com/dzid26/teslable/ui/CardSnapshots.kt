@@ -24,11 +24,9 @@ import com.dzid26.teslable.ble.PairingKeyStore
 import com.dzid26.teslable.ble.TeslaAdvert
 import com.dzid26.teslable.ble.TeslaConnection
 import com.dzid26.teslable.ble.Vehicle
-import com.dzid26.teslable.core.health.tripEstimate
 import com.dzid26.teslable.core.history.BatterySample
 import com.dzid26.teslable.core.history.DriveSample
 import com.dzid26.teslable.core.history.DriveWindow
-import com.dzid26.teslable.core.history.FullRangeScale
 import com.dzid26.teslable.core.history.HistoryRange
 import com.dzid26.teslable.core.history.RouteSample
 import com.dzid26.teslable.core.history.StatusSample
@@ -517,7 +515,7 @@ class CardSnapshots {
                     samples = driveSamples(),
                     drives = driveReadings(),
                     initialWindow = DriveWindow.SINCE_CHARGE,
-                    scale = TRIP_SCALE,
+                    scale = demoTripScale,
                     ratedKwhPerMile = 0.25f,
                 )
             }
@@ -533,49 +531,6 @@ class CardSnapshots {
                 drives = driveReadings(),
                 initialWindow = DriveWindow.SINCE_CHARGE,
                 scale = null,
-            )
-        }
-    }
-
-    @Test
-    fun tripCardNavigating() = snapTrip("trip-card_navigating")
-
-    @Test
-    fun tripCardNoPrice() = snapTrip("trip-card_no-price", pricePerKwh = null)
-
-    @Test
-    fun tripCardUnpinnedScale() = snapTrip("trip-card_unpinned", scale = null)
-
-    @Test
-    fun tripCardNoDestination() = snapTrip("trip-card_no-destination", destination = null)
-
-    @Test
-    fun tripCardLongDestination() =
-        snapTrip("trip-card_long-destination", destination = "Hotel Restaurant Zur Alten Post am Marktplatz, Obere Hauptstrasse")
-
-    private fun snapTrip(
-        name: String,
-        destination: String? = "Home",
-        pricePerKwh: Float? = 0.30f,
-        scale: FullRangeScale? = TRIP_SCALE,
-    ) {
-        val route =
-            RouteSample(
-                NOW,
-                BLE_NAME,
-                destination,
-                4.7f,
-                12.2f,
-                0f,
-                44f,
-                tripStartMiles = 11.4f,
-                tripStartedAtMillis =
-                    NOW - TRIP_ELAPSED_MILLIS,
-            )
-        snapCard(name) {
-            TripCard(
-                route,
-                tripEstimate(route, currentRatedMiles = 125f, fullRange = scale, ratedKwhPerMile = 0.25f, pricePerKwh = pricePerKwh),
             )
         }
     }
@@ -647,6 +602,7 @@ class CardSnapshots {
                 driveHistory = DemoScreenFixtures.drives(NOW),
                 statusHistory = emptyList(),
                 routes = mapOf(DemoScreenFixtures.vehicle.bleName to route),
+                trips = mapOf(DemoScreenFixtures.vehicle.bleName to demoPastTrips(NOW)),
                 onBack = {},
                 onPair = {},
                 onRefresh = {},
@@ -682,29 +638,7 @@ class CardSnapshots {
     private fun snapCard(
         name: String,
         content: @Composable () -> Unit,
-    ) {
-        paparazzi.unsafeUpdateConfig(
-            // Narrowest phone Paparazzi ships (360dp): the width under test.
-            deviceConfig = DeviceConfig.NEXUS_5,
-            renderingMode = SessionParams.RenderingMode.SHRINK,
-        )
-        paparazzi.snapshot(name + "_light") {
-            CardFrame(darkTheme = false, content = content)
-        }
-        paparazzi.snapshot(name + "_dark") {
-            CardFrame(darkTheme = true, content = content)
-        }
-        // The Jelly Star (3-inch, 480x854 @320dpi → 240dp) is narrower than
-        // anything Paparazzi ships, so hand-built via copy(); light only,
-        // collapsed in the PR comment next to dark.
-        paparazzi.unsafeUpdateConfig(
-            deviceConfig = jellyStar,
-            renderingMode = SessionParams.RenderingMode.SHRINK,
-        )
-        paparazzi.snapshot(name + "_jelly_light") {
-            CardFrame(darkTheme = false, content = content)
-        }
-    }
+    ) = paparazzi.snapCard(name, content)
 
     @Test
     fun screenCarDetailLearnt() {
@@ -761,8 +695,6 @@ class CardSnapshots {
         /** A little under the demo car's 78%: a short trip leaves a plausible level. */
         private const val ARRIVAL_PERCENT = 76f
 
-        private val TRIP_SCALE =
-            FullRangeScale(fullRangeMiles = 270f, offsetMiles = 0f, standardErrorMiles = 0.1f, samples = 40, pinned = true)
         private const val NOW = 1_760_000_000_000L
         private const val MINUTE = 60_000L
         private const val HOUR = 3_600_000L
@@ -1010,19 +942,6 @@ class CardSnapshots {
 
         private val advert = TeslaAdvert(name = BLE_NAME, address = ADDRESS, rssi = -70)
 
-        /**
-         * The narrow-width render: Jelly Star dimensions (3-inch, 480x854
-         * @320dpi → 240dp), hand-built because no preset goes that narrow.
-         * Light only; the PR comment keeps it collapsed next to dark.
-         */
-        private val jellyStar =
-            DeviceConfig.NEXUS_5.copy(
-                screenWidth = 480,
-                screenHeight = 854,
-                xdpi = 327,
-                ydpi = 327,
-                density = Density.XHIGH,
-            )
         private val screenPhone =
             DeviceConfig.NEXUS_5.copy(
                 screenWidth = 1080,
@@ -1206,7 +1125,7 @@ class CardSnapshots {
  * render exactly as they would on a matching phone screen.
  */
 @Composable
-private fun CardFrame(
+internal fun CardFrame(
     darkTheme: Boolean,
     content: @Composable () -> Unit,
 ) {
