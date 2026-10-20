@@ -117,7 +117,10 @@ private fun DriveChips(
     }
 }
 
-/** "Driven: N km \u00B7 N% used"; while the percent is only whole levels, the used figure carries a hint saying so. */
+/**
+ * "Driven: N km \u00B7 N% used \u00B7 0.8% per km": the percent rate joins the first line once known. While the percent is only
+ * whole levels, the used figure carries a hint saying so.
+ */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun DriveFooter(
@@ -139,21 +142,33 @@ private fun DriveFooter(
         } else {
             Text(usedText, style = MaterialTheme.typography.bodySmall)
         }
+        stats?.percentPerMile?.let { rate ->
+            Text(
+                text = stringResource(R.string.drive_rate_joined, percentPerDistance(rate, unit)),
+                style = MaterialTheme.typography.bodySmall,
+            )
+        }
     }
     if (stats != null) {
-        driveStatsLines(stats, unit).forEach { Text(it, style = MaterialTheme.typography.bodySmall) }
+        driveEnergyLine(stats, unit)?.let { Text(it, style = MaterialTheme.typography.bodySmall) }
     }
 }
 
+@Composable
+private fun percentPerDistance(
+    percentPerMile: Float,
+    unit: DistanceUnit,
+): String = stringResource(R.string.drive_percent_per_distance, formatPercentHundredths(unit.ratePerUnit(percentPerMile)), unit.symbol)
+
 /**
- * The lines under the footer: "312 Wh/mi \u00B7 6.4 kWh \u00B7 $1.02 at home price" (the energy ones need the
- * learned full range and rated constant) and "0.8% per mi". A part the data cannot supply is left out.
+ * The line under the footer: "312 Wh/mi \u00B7 6.4 kWh \u00B7 $1.02 at home price" (these need the learned full range
+ * and rated constant). A part the data cannot supply is left out; null when none is known.
  */
 @Composable
-private fun driveStatsLines(
+private fun driveEnergyLine(
     stats: DriveStats,
     unit: DistanceUnit,
-): List<String> {
+): String? {
     val efficiency = LocalEfficiencyUnit.current
     val separator = remember { DecimalFormatSymbols.getInstance().decimalSeparator }
     val currencyCode = LocalCurrencyCode.current
@@ -163,12 +178,7 @@ private fun driveStatsLines(
             stats.energyKwh?.let { stringResource(R.string.drive_energy, formatKwh(it)) },
             stats.costAtHomePrice?.let { stringResource(R.string.drive_cost, formatMoney(it, currencyCode)) },
         )
-    return listOfNotNull(
-        energy.takeIf { it.isNotEmpty() }?.joinToString(" \u00B7 "),
-        stats.percentPerMile?.let {
-            stringResource(R.string.drive_percent_per_distance, formatPercentHundredths(unit.ratePerUnit(it)), unit.symbol)
-        },
-    )
+    return energy.takeIf { it.isNotEmpty() }?.joinToString(" \u00B7 ")
 }
 
 @Composable
