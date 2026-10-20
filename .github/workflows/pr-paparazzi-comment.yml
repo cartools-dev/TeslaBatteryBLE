@@ -226,10 +226,7 @@ jobs:
           # change keeps the head of the report and says what was cut.
           if [ "$(wc -m < "$MSG")" -gt 60000 ]; then
             head -c 60000 "$MSG" > "$MSG.cut"
-            printf '
-
-_The comment was cut at GitHub'"'"'s size limit; record the snapshots locally with `.github/scripts/paparazzi-diff.sh` for the rest._
-' >> "$MSG.cut"
+            printf '\n\n_The comment was cut at the size limit GitHub puts on comments; record the snapshots locally with `.github/scripts/paparazzi-diff.sh` for the rest._\n' >> "$MSG.cut"
             mv "$MSG.cut" "$MSG"
           fi
           {
