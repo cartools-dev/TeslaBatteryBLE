@@ -72,11 +72,14 @@ internal fun PastTripsCard(
                 currencyCode = LocalCurrencyCode.current,
                 labels = pastTripLabels,
             )
-            arrivalLine(trip, summary, scale)?.let {
-                Spacer(Modifier.height(8.dp))
-                Text(it, style = MaterialTheme.typography.titleMedium)
+            // The live trip card already says where it will arrive; the arrival and battery lines are for trips that ended.
+            if (!trip.inProgress) {
+                arrivalLine(trip, summary, scale)?.let {
+                    Spacer(Modifier.height(8.dp))
+                    Text(it, style = MaterialTheme.typography.titleMedium)
+                }
+                batteryLine(summary)?.let { Text(it, style = MaterialTheme.typography.bodyMedium) }
             }
-            batteryLine(summary)?.let { Text(it, style = MaterialTheme.typography.bodyMedium) }
             rateLine(
                 summary,
             )?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant) }
@@ -84,7 +87,7 @@ internal fun PastTripsCard(
     }
 }
 
-/** "Arrived with 44% (about 132 mi left)"; "Arrive with ..." while the trip is going, "Ended with ..." when it stopped short. */
+/** "Arrived with 44% (about 132 mi left)", or "Ended with ..." when the trip stopped short. */
 @Composable
 private fun arrivalLine(
     trip: Trip,
@@ -95,10 +98,9 @@ private fun arrivalLine(
     val percent = level.roundToInt()
     val unit = LocalDistanceUnit.current
     val ratedMiles = scale?.takeIf { it.pinned }?.let { it.offsetMiles + it.milesPerPercent * level }
-    // "Arrive" while going, "Arrived" at the destination, "Ended" when the trip stopped short of it.
+    // "Arrived" at the destination, "Ended" when the trip stopped short of it.
     val ids =
         when {
-            trip.inProgress -> R.string.trip_arrival to R.string.trip_arrival_range
             trip.arrived -> R.string.trip_arrived to R.string.trip_arrived_range
             else -> R.string.trip_ended to R.string.trip_ended_range
         }

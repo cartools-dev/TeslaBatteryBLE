@@ -112,6 +112,14 @@ class TripTest {
     }
 
     @Test
+    fun `the planned length and time stay on a cancelled trip`() {
+        val trip = segmentTrips(listOf(reading(0, 10f, minutesLeft = 20f), reading(10, 6f, minutesLeft = 12f))).single()
+        assertEquals(10f, trip.lengthMiles)
+        assertEquals(20 * MINUTE, trip.plannedMillis)
+        assertEquals(4f, trip.distanceMiles)
+    }
+
+    @Test
     fun `a trip in progress shows the whole route and its predicted time`() {
         val trip =
             segmentTrips(

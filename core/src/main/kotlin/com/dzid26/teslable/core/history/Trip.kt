@@ -16,7 +16,7 @@ data class Trip(
     val first: RouteSample,
     /** The last reading: the car's closest prediction of the arrival. */
     val last: RouteSample,
-    /** The longest remaining distance seen, in miles: the length of the trip. */
+    /** The longest remaining distance seen, in miles: the planned length of the trip, kept even when [distanceMiles] is what was driven. */
     val lengthMiles: Float?,
     /** True while this is the route being navigated now: its totals are the car's prediction so far. */
     val inProgress: Boolean = false,
@@ -26,6 +26,13 @@ data class Trip(
 
     /** The destination the car named, or null when it sent none. */
     val destination: String? get() = (last.destination ?: first.destination)?.takeIf { it.isNotBlank() }
+
+    /**
+     * The trip's planned time, from the first reading: the car's estimate before any driving.
+     * Not shown today; kept so a plan-versus-actual comparison needs no new data.
+     */
+    val plannedMillis: Long?
+        get() = first.minutesToArrival?.takeIf { it.isFinite() && it >= 0f }?.let { (it * MILLIS_PER_MINUTE).toLong() }
 
     /**
      * True when the last reading was already close to the destination (within two miles or
