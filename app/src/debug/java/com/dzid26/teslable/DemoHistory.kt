@@ -89,13 +89,13 @@ internal object DemoHistory {
                 addAll(segment(1920, 1560, 54, 52, 60, ChargingStateKind.Disconnected))
                 // Third charge: the five-hour AC session to the limit.
                 addAll(segment(1560, 1260, 52, 85, 10, ChargingStateKind.Charging))
-                // Complete at the limit, then the slow parked drain to 79%.
+                // Complete at the limit, then the slow parked drain to 83%.
                 add(Point(1260, 85, ChargingStateKind.Complete))
-                addAll(segment(1200, 400, 84, 79, 60, ChargingStateKind.Disconnected))
+                addAll(segment(1200, 400, 84, 83, 60, ChargingStateKind.Disconnected))
                 // A drive after the last charge, so the drive card has stats and
                 // the live reads continue from where it ends.
-                addAll(segment(400, 280, 79, 71, 15, ChargingStateKind.Disconnected, driving = true))
-                addAll(segment(280, 10, 71, 70, 60, ChargingStateKind.Disconnected))
+                addAll(segment(400, 280, 83, 79, 15, ChargingStateKind.Disconnected, driving = true))
+                addAll(segment(280, 10, 79, 78, 60, ChargingStateKind.Disconnected))
             }
         // A segment's end and the next segment's start share a timestamp; keep
         // the newer one so a charge session starts on its own first sample.

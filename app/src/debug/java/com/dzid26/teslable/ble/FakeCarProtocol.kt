@@ -67,7 +67,7 @@ class FakeCarProtocol(
     var locked: Boolean = true
         private set
 
-    var batteryLevel: Int = 70
+    var batteryLevel: Int = 78
         private set
 
     /** The demo scenario: plugged in and charging until the limit is reached. */
