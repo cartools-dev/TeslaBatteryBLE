@@ -87,22 +87,39 @@ data class Trip(
 fun segmentTrips(readings: List<RouteSample>): List<Trip> {
     val runs = mutableListOf<MutableList<RouteSample>>()
     var runMiles = 0f
+    var open = false
     for (reading in readings.sortedBy { it.observedAtMillis() }) {
-        val run = runs.lastOrNull()
-        val previous = run?.last()
-        val miles = reading.milesToArrival?.takeIf { it.isFinite() && it >= 0f } ?: 0f
-        if (run != null && previous != null && !startsNewTrip(previous, reading, runMiles)) {
-            run += reading
-            runMiles = maxOf(runMiles, miles)
-        } else {
-            runs += mutableListOf(reading)
-            runMiles = miles
+        val miles = reading.milesToArrival?.takeIf { it.isFinite() && it >= 0f }
+        val previous = runs.lastOrNull()?.last()
+        when {
+            // A reading with no distance left is the route ending (the car still names it for a moment): it closes the trip.
+            miles == null -> open = false
+            open && previous != null && !startsNewTrip(previous, reading, runMiles) -> {
+                runs.last() += reading
+                runMiles = maxOf(runMiles, miles)
+            }
+            else -> {
+                runs += mutableListOf(reading)
+                runMiles = miles
+                open = true
+            }
         }
     }
-    return runs.filter { it.size >= 2 }.map { run ->
-        val miles = run.mapNotNull { it.milesToArrival?.takeIf { m -> m.isFinite() && m >= 0f } }.maxOrNull()
-        Trip(run.first(), run.last(), miles)
-    }
+    return runs
+        .filter { it.size >= 2 }
+        .map { run ->
+            Trip(run.first(), run.last(), run.mapNotNull { it.milesToArrival }.maxOrNull())
+        }.filter { it.moved() }
+}
+
+/**
+ * False for a navigation the car sat through without moving (a route left active while parked): the
+ * odometer at its first and last readings is the same. A trip without odometer readings counts as moved.
+ */
+private fun Trip.moved(): Boolean {
+    val start = first.odometerInHundredthsOfAMile
+    val end = last.odometerInHundredthsOfAMile
+    return start == null || end == null || (end - start) / HUNDREDTHS_PER_MILE >= MIN_TRIP_MILES
 }
 
 /** These trips with the one whose newest reading is [live], the route being navigated now, marked in progress. */
@@ -206,6 +223,9 @@ private fun sampleAfter(
 private const val MILLIS_PER_MINUTE = 60_000L
 private const val MILLIS_PER_HOUR = 3_600_000f
 private const val HUNDREDTHS_PER_MILE = 100f
+
+/** A navigation that moved the car less than this is not a trip. */
+private const val MIN_TRIP_MILES = 0.1f
 private const val ARRIVED_MINUTES = 3f
 private const val SAMPLE_MAX_AGE_MILLIS = 30 * MILLIS_PER_MINUTE
 

@@ -82,6 +82,14 @@ class ActiveRouteTest {
     }
 
     @Test
+    fun `a reading after one with no distance starts a new live trip`() {
+        val ended = route(carMinutes = 100, miles = null).copy(tripStartMiles = 10f, tripStartedAtMillis = 90 * MINUTE)
+        val next = route(carMinutes = 104, miles = 5f).continuing(ended)
+        assertEquals(5f, next.tripStartMiles)
+        assertEquals(104 * MINUTE, next.tripStartedAtMillis)
+    }
+
+    @Test
     fun `a long gap starts a new trip`() {
         val first = route(carMinutes = 100, miles = 10f).continuing(null)
         val later = route(carMinutes = 130, miles = 3f).continuing(first)
