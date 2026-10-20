@@ -162,7 +162,9 @@ private fun driveStatsLines(
         )
     return listOfNotNull(
         energy.takeIf { it.isNotEmpty() }?.joinToString(" \u00B7 "),
-        stats.percentPerMile?.let { stringResource(R.string.drive_percent_per_distance, formatPercentHundredths(unit.ratePerUnit(it)), unit.symbol) },
+        stats.percentPerMile?.let {
+            stringResource(R.string.drive_percent_per_distance, formatPercentHundredths(unit.ratePerUnit(it)), unit.symbol)
+        },
     )
 }
 

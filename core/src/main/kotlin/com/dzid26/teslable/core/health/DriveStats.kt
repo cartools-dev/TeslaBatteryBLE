@@ -49,7 +49,12 @@ fun driveStats(
     val milesPerPercent = scale?.takeIf { it.pinned }?.milesPerPercent?.takeIf { it.isFinite() && it > 0f }
     val constant = ratedKwhPerMile?.takeIf { it.isFinite() && it > 0f }
     val enough = miles >= MIN_STATS_MILES
-    val energyKwh = if (enough && milesPerPercent != null && constant != null) (used * milesPerPercent * constant).takeIf { it > 0f } else null
+    val energyKwh =
+        if (enough && milesPerPercent != null && constant != null) {
+            (used * milesPerPercent * constant).takeIf { it > 0f }
+        } else {
+            null
+        }
     return DriveStats(
         milesDriven = miles,
         usedPercent = used,
