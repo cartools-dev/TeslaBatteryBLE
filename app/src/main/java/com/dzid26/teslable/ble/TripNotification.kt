@@ -161,9 +161,13 @@ internal class TripTextContext(
 
     /** "about 5.4 kWh · $1.62 at home price", or the energy alone without a price. */
     fun energy(notice: TripNotice): String? {
-        val kwh = formatKwh((notice.energyTenthsKwh ?: return null) / TENTHS)
-        val cost = notice.costCents ?: return context.getString(R.string.notification_trip_energy, kwh)
-        return context.getString(R.string.notification_trip_energy_cost, kwh, formatMoney(cost / CENTS, currencyCode))
+        val kwh = notice.energyTenthsKwh?.let { formatKwh(it / TENTHS) } ?: return null
+        val cost = notice.costCents
+        return if (cost == null) {
+            context.getString(R.string.notification_trip_energy, kwh)
+        } else {
+            context.getString(R.string.notification_trip_energy_cost, kwh, formatMoney(cost / CENTS, currencyCode))
+        }
     }
 }
 
