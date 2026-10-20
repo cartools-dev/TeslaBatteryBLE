@@ -25,15 +25,31 @@ internal fun currencyOrNull(code: String?): Currency? =
 internal fun localeCurrencyOrNull(): Currency? =
     runCatching { Currency.getInstance(Locale.getDefault()) }.getOrNull()?.takeIf { it.defaultFractionDigits >= 0 }
 
-/** A money formatter for [code]; blank or invalid follows the phone's currency, and USD when it has none. */
-internal fun currencyFormat(code: String?): NumberFormat =
-    NumberFormat.getCurrencyInstance().apply {
-        val chosen = currencyOrNull(code) ?: localeCurrencyOrNull() ?: Currency.getInstance(FALLBACK_CODE)
+/**
+ * A money formatter for [code]; blank or invalid follows the phone's currency, and USD when it has none.
+ * A currency the phone's language has no symbol for (PLN on an English phone prints "PLN 1.50") is written
+ * the way its own country does, "1,50 zł".
+ */
+internal fun currencyFormat(code: String?): NumberFormat {
+    val chosen = currencyOrNull(code) ?: localeCurrencyOrNull() ?: Currency.getInstance(FALLBACK_CODE)
+    return NumberFormat.getCurrencyInstance(formatLocale(chosen)).apply {
         currency = chosen
         // Pinned explicitly: not every platform formatter resets its digits when the currency changes.
         minimumFractionDigits = chosen.defaultFractionDigits
         maximumFractionDigits = chosen.defaultFractionDigits
     }
+}
+
+private fun formatLocale(currency: Currency): Locale {
+    val phone = Locale.getDefault()
+    if (currency.getSymbol(phone) != currency.currencyCode) return phone
+    return Locale
+        .getAvailableLocales()
+        .filter { it.country.isNotEmpty() && localeCurrencyOf(it) == currency }
+        .minByOrNull { it.toString() } ?: phone
+}
+
+private fun localeCurrencyOf(locale: Locale): Currency? = runCatching { Currency.getInstance(locale) }.getOrNull()
 
 /** The currencies offered in Settings; the phone's own and any already-saved one are added when missing. */
 private val COMMON_CURRENCY_CODES =
@@ -48,5 +64,5 @@ private val COMMON_CURRENCY_CODES =
 internal fun currencyChoices(selected: Currency?): List<Currency> =
     (COMMON_CURRENCY_CODES.mapNotNull { currencyOrNull(it) } + listOfNotNull(selected)).distinct()
 
-/** "EUR (€)": the code and the symbol the phone's locale gives it. */
-internal fun currencyLabel(currency: Currency): String = "${currency.currencyCode} (${currency.symbol})"
+/** "PLN – Polish Zloty": the code and the name the phone's language gives it. */
+internal fun currencyLabel(currency: Currency): String = "${currency.currencyCode} – ${currency.displayName}"

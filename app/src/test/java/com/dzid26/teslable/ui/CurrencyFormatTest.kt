@@ -68,8 +68,14 @@ class CurrencyFormatTest {
     }
 
     @Test
-    fun `a label is the code and its symbol`() {
-        assertEquals("EUR (€)", currencyLabel(currencyOrNull("EUR")!!))
-        assertEquals("USD ($)", currencyLabel(currencyOrNull("USD")!!))
+    fun `a label is the code and its name`() {
+        assertEquals("EUR – Euro", currencyLabel(currencyOrNull("EUR")!!))
+        assertEquals("USD – US Dollar", currencyLabel(currencyOrNull("USD")!!))
+    }
+
+    @Test
+    fun `a currency the phone has no symbol for is written the way its own country does`() {
+        assertEquals("1,50 zł", currencyFormat("PLN").format(1.5))
+        assertEquals("$1.50", currencyFormat("USD").format(1.5))
     }
 }
