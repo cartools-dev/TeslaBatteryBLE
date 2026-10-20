@@ -510,11 +510,29 @@ class CardSnapshots {
 
     @Test
     fun driveCard() {
+        // A pinned scale, a learned rated constant and a home price: every stat line shows.
         snapCard("drive-card_percent") {
+            CompositionLocalProvider(LocalPricePerKwh provides 0.30f, LocalCurrencyCode provides "USD") {
+                DriveHistoryCard(
+                    samples = driveSamples(),
+                    drives = driveReadings(),
+                    initialWindow = DriveWindow.SINCE_CHARGE,
+                    scale = TRIP_SCALE,
+                    ratedKwhPerMile = 0.25f,
+                )
+            }
+        }
+    }
+
+    @Test
+    fun driveCardUnlearned() {
+        // No scale yet: whole-percent steps, so the used figure carries the hint and only the percent rate shows.
+        snapCard("drive-card_unlearned") {
             DriveHistoryCard(
                 samples = driveSamples(),
                 drives = driveReadings(),
                 initialWindow = DriveWindow.SINCE_CHARGE,
+                scale = null,
             )
         }
     }

@@ -20,6 +20,9 @@ enum class DistanceUnit(
     /** [miles] expressed in this unit. */
     fun fromMiles(miles: Float): Float = miles * perMile
 
+    /** A rate per mile (percent per mile, say) expressed per this unit. */
+    fun ratePerUnit(perMileRate: Float): Float = perMileRate / perMile
+
     /** An energy rate in kWh per mile expressed in kWh per this unit. */
     fun energyPerUnit(kwhPerMile: Float): Float = kwhPerMile / perMile
 

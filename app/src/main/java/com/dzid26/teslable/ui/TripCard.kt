@@ -105,9 +105,9 @@ private fun energyText(
     }
 }
 
-private fun formatKwh(kwh: Float): String = String.format(Locale.getDefault(), "%.1f", kwh)
+internal fun formatKwh(kwh: Float): String = String.format(Locale.getDefault(), "%.1f", kwh)
 
-private fun formatMoney(
+internal fun formatMoney(
     amount: Float,
     currencyCode: String?,
 ): String = currencyFormat(currencyCode).format(amount.toDouble())
