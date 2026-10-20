@@ -3,6 +3,10 @@
 package com.dzid26.teslable.ble
 
 import android.content.Context
+import android.graphics.Typeface
+import android.text.SpannableStringBuilder
+import android.text.Spanned
+import android.text.style.StyleSpan
 import androidx.core.app.NotificationCompat
 import com.dzid26.teslable.R
 import com.dzid26.teslable.UnitStore
@@ -91,8 +95,8 @@ internal class TripNoticeSource {
 
 /**
  * Shows the trip on a car's ongoing notification: the collapsed line leads with the level and the car's predicted
- * arrival level (or the distance and time left without one), and the expanded text adds the usual state line, then the
- * arrival with its range and the distance and time left. Adds to the state text, never replaces it.
+ * arrival level (or the distance and time left without one), and the expanded text adds the usual state line, then
+ * the distance and time left after a bold label and the arrival with its range. Adds to the state text, never replaces it.
  */
 internal fun NotificationCompat.Builder.showTrip(
     text: TripTextContext,
@@ -105,8 +109,22 @@ internal fun NotificationCompat.Builder.showTrip(
         listOfNotNull(percent?.let { "$it%" }, text.arrivalShort(notice) ?: remaining)
             .joinToString(" \u00B7 ")
             .ifEmpty { stateText.toString() }
-    val lines = listOfNotNull(stateText.toString(), text.arrival(notice), remaining)
-    return setContentText(headline).setStyle(NotificationCompat.BigTextStyle().bigText(lines.joinToString("\n")))
+    val body =
+        SpannableStringBuilder(stateText).apply {
+            remaining?.let { appendLine(); appendBold(text.label(), it) }
+            text.arrival(notice)?.let { appendLine().append(it) }
+        }
+    return setContentText(headline).setStyle(NotificationCompat.BigTextStyle().bigText(body))
+}
+
+private fun SpannableStringBuilder.appendBold(
+    label: String,
+    text: String,
+) {
+    val start = length
+    append(label)
+    setSpan(StyleSpan(Typeface.BOLD), start, length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+    append(text)
 }
 
 /** The phone's settings that shape the trip text: read when a notification is built, so a change shows on the next post. */
@@ -115,6 +133,9 @@ internal class TripTextContext(
 ) {
     val unit: DistanceUnit = UnitStore(context).preference().resolve()
     private val separator = DecimalFormatSymbols.getInstance().decimalSeparator
+
+    /** "Trip: ", bold before the distance and time left in the expanded text. */
+    fun label(): String = context.getString(R.string.notification_trip_label)
 
     /** "4.7 mi · 12m left (+3m traffic)", with whichever parts the car sent. */
     fun remaining(notice: TripNotice): String? {
