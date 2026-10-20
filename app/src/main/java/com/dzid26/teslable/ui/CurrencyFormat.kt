@@ -2,6 +2,7 @@
 package com.dzid26.teslable.ui
 
 import androidx.compose.runtime.compositionLocalOf
+import java.text.DecimalFormat
 import java.text.NumberFormat
 import java.util.Currency
 import java.util.Locale
@@ -32,8 +33,13 @@ internal fun localeCurrencyOrNull(): Currency? =
  */
 internal fun currencyFormat(code: String?): NumberFormat {
     val chosen = currencyOrNull(code) ?: localeCurrencyOrNull() ?: Currency.getInstance(FALLBACK_CODE)
-    return NumberFormat.getCurrencyInstance(formatLocale(chosen)).apply {
+    val locale = formatLocale(chosen)
+    return NumberFormat.getCurrencyInstance(locale).apply {
         currency = chosen
+        // Android's formatter takes the symbol from the phone's language, not the format's locale ("PLN" for "zł").
+        (this as? DecimalFormat)?.let { format ->
+            format.decimalFormatSymbols = format.decimalFormatSymbols.apply { currencySymbol = chosen.getSymbol(locale) }
+        }
         // Pinned explicitly: not every platform formatter resets its digits when the currency changes.
         minimumFractionDigits = chosen.defaultFractionDigits
         maximumFractionDigits = chosen.defaultFractionDigits
