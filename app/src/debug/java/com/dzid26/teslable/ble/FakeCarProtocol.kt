@@ -67,7 +67,7 @@ class FakeCarProtocol(
     var locked: Boolean = true
         private set
 
-    var batteryLevel: Int = 78
+    var batteryLevel: Int = 70
         private set
 
     /** The demo scenario: plugged in and charging until the limit is reached. */
@@ -396,6 +396,12 @@ class FakeCarProtocol(
                             speed = 0,
                             power = 0,
                             odometer_in_hundredths_of_a_mile = ODOMETER_HUNDREDTHS_OF_A_MILE,
+                            // A navigation in progress, so the notification shows its trip stats.
+                            active_route_destination = ROUTE_DESTINATION,
+                            active_route_minutes_to_arrival = ROUTE_MINUTES_TO_ARRIVAL,
+                            active_route_miles_to_arrival = ROUTE_MILES_TO_ARRIVAL,
+                            active_route_traffic_minutes_delay = ROUTE_TRAFFIC_MINUTES,
+                            active_route_energy_at_arrival = ROUTE_PERCENT_AT_ARRIVAL,
                             // Like the real car, stamp every sample: history takes its time from here.
                             timestamp = Instant.ofEpochMilli(System.currentTimeMillis()),
                         ),
@@ -526,5 +532,10 @@ class FakeCarProtocol(
 
         /** 12,345.67 miles: constant, because the simulated car never drives. */
         const val ODOMETER_HUNDREDTHS_OF_A_MILE = 1_234_567
+        const val ROUTE_DESTINATION = "Demo destination"
+        const val ROUTE_MILES_TO_ARRIVAL = 9.5f
+        const val ROUTE_MINUTES_TO_ARRIVAL = 18f
+        const val ROUTE_PERCENT_AT_ARRIVAL = 63f
+        const val ROUTE_TRAFFIC_MINUTES = 2f
     }
 }
