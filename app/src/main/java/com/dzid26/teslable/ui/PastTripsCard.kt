@@ -73,13 +73,12 @@ internal fun PastTripsCard(
                 currencyCode = LocalCurrencyCode.current,
                 labels = pastTripLabels,
             )
-            // The live trip card already says where it will arrive; the arrival and battery lines are for trips that ended.
+            // The live trip card already says where it will arrive; the arrival line is for trips that ended.
             if (!trip.inProgress) {
                 arrivalLine(trip, summary, scale)?.let {
                     Spacer(Modifier.height(8.dp))
                     Text(it, style = MaterialTheme.typography.titleMedium)
                 }
-                batteryLine(summary)?.let { Text(it, style = MaterialTheme.typography.bodyMedium) }
             }
             rateLine(
                 summary,
@@ -106,14 +105,6 @@ private fun arrivalLine(
             else -> R.string.trip_ended to R.string.trip_ended_range
         }
     return if (ratedMiles == null) stringResource(ids.first, percent) else stringResource(ids.second, percent, unit.format(ratedMiles))
-}
-
-/** "Battery 62% to 44%": the level before the trip and on arrival, when both are known. */
-@Composable
-private fun batteryLine(summary: TripSummary): String? {
-    val start = summary.startPercent?.roundToInt()
-    val end = summary.arrivalPercent?.roundToInt()
-    return if (start != null && end != null) stringResource(R.string.trip_battery_used, start, end) else null
 }
 
 /** "312 Wh/mi · 34 mi/h average", whichever of the two the trip supports. */

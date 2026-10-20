@@ -32,7 +32,7 @@ fun activeRoute(
  */
 fun RouteSample.continuing(previous: RouteSample?): RouteSample {
     val miles = milesToArrival?.takeIf { it.isFinite() && it >= 0f }
-    val sameTrip = previous != null && observedAtMillis() - previous.observedAtMillis() <= ROUTE_FRESH_MILLIS
+    val sameTrip = previous != null && !startsNewTrip(previous, this, previous.tripStartMiles ?: 0f)
     val start = listOfNotNull(if (sameTrip) previous.tripStartMiles else null, miles).maxOrNull()
     val startedAt = if (sameTrip) previous.tripStartedAtMillis ?: previous.observedAtMillis() else observedAtMillis()
     return copy(tripStartMiles = start, tripStartedAtMillis = startedAt)
@@ -54,6 +54,52 @@ fun RouteSample.tripProgress(): Float? {
     val left = milesToArrival?.takeIf { it.isFinite() && it >= 0f }
     return if (start != null && left != null) (1f - left / start).coerceIn(0f, 1f) else null
 }
+
+/**
+ * Whether [next] begins another navigation than [previous]: a gap over [ROUTE_FRESH_MILLIS], a different
+ * destination name, or a longer route appearing right after the car had reached the last one (a new
+ * trip started within minutes of arriving, the car naming nothing or the same place). [tripMiles] is the
+ * length of the trip [previous] belongs to.
+ */
+internal fun startsNewTrip(
+    previous: RouteSample,
+    next: RouteSample,
+    tripMiles: Float,
+): Boolean =
+    next.observedAtMillis() - previous.observedAtMillis() > ROUTE_FRESH_MILLIS ||
+        namesDiffer(previous.destination, next.destination) ||
+        restartedAfterArrival(previous, next, tripMiles)
+
+private fun restartedAfterArrival(
+    previous: RouteSample,
+    next: RouteSample,
+    tripMiles: Float,
+): Boolean {
+    val left = previous.milesToArrival?.takeIf { it.isFinite() && it >= 0f }
+    val ahead = next.milesToArrival?.takeIf { it.isFinite() && it >= 0f }
+    return left != null && ahead != null && reachedDestination(left, tripMiles) && ahead > left + RESTART_MILES
+}
+
+/**
+ * Whether a last reading [remainingMiles] from the destination on a trip of [tripMiles] was already there:
+ * within two miles or 15% of the route. The car stops sending the route on arrival, so the last reading is
+ * never exactly zero. Inferred from the readings, not reported by the car.
+ */
+internal fun reachedDestination(
+    remainingMiles: Float,
+    tripMiles: Float,
+): Boolean = remainingMiles <= maxOf(ARRIVED_MILES, tripMiles * ARRIVED_FRACTION)
+
+private fun namesDiffer(
+    a: String?,
+    b: String?,
+): Boolean = a != null && b != null && a != b
+
+private const val ARRIVED_MILES = 2f
+private const val ARRIVED_FRACTION = 0.15f
+
+/** A route this much longer than where the last one ended is a new trip, not a re-route. */
+private const val RESTART_MILES = 1f
 
 /** The phone clock when this reading arrived, else the car's own timestamp. */
 fun RouteSample.observedAtMillis(): Long = readAtMillis ?: timestampMillis
