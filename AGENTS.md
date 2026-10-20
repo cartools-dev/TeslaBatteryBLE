@@ -17,6 +17,7 @@ Master plan: `docs/master-plan.md` — read it first and update its checkboxes w
 - `.\gradlew :protocol:test :core:test` — protocol and battery-domain tests. Must pass before any commit touching `protocol` or `core`.
 - `.\gradlew :app:assembleDebug` — debug APK.
 - `.\gradlew :app:lintDebug` — Android lint (once wired into CI).
+- `.\gradlew ktlintCheck :<module>:detektMain` — formatting and static analysis for the module you touched (JDK 21; on a machine with a newer default JDK set `org.gradle.java.home` in `~/.gradle/gradle.properties`). Run it before every push: CI runs the same checks and a red static job costs a round trip. Add `detektTest` when you touched tests.
 - CI (`.github/workflows/android.yml`): core tests, debug build, release smoke test (`assembleSmoke -PdemoCar=true`: the minified release build plus the simulated car, driven on an emulator), Go fixture diff, rolling preview release (tag releases take their screenshots from the Paparazzi full-screen snapshots and require a green smoke test for the tagged commit). `pr-paparazzi.yml` (UI PRs) renders the card snapshots (light + dark) and diffs them against the PR's merge base with main without secrets; `pr-paparazzi-comment.yml` posts the diffs as PR comments from the default branch. `website-preview.yml` (`website/**` PRs) captures without secrets; `website-preview-comment.yml` posts the results as PR comments from the default branch.
 - `actionlint.yml` (Workflow lint): actionlint, with shellcheck on `run:` steps, plus shellcheck on `.github/scripts/*.sh`, whenever `.github/workflows/**` or `.github/scripts/**` changes. It never builds the app.
 
@@ -38,6 +39,15 @@ Master plan: `docs/master-plan.md` — read it first and update its checkboxes w
 - Post agent comments as `github-actions[bot]` through the `Agent comment` workflow instead of the maintainer account:
   `body_b64="$(printf '%s' "comment" | base64 -w0)"; gh workflow run agent-comment.yml -f pr=<n> -f body_b64="$body_b64"`
 - Pushes, merges, and commits stay on the maintainer account.
+
+## Keep code inside the static-analysis limits
+
+detekt runs at its default thresholds (`config/detekt/detekt.yml` only sets `MaxLineLength` to 140). The limits that keep failing are cyclomatic complexity per function, function length, functions per class, parameters per function, return count and magic numbers. Design to stay under them instead of fixing after a red CI run:
+
+- Extract a helper or a small class as soon as a function grows branches; do not wait for the limit.
+- Group related parameters into a data class; name numeric constants.
+- Never baseline a new finding (`detekt-baseline-*.xml` only shrinks).
+- Two PRs that are each green can still break `main` together when both grow the same function; after rebasing on a merged PR that touched your files, re-run the checks.
 
 ## Do not
 
