@@ -27,6 +27,7 @@ import com.dzid26.teslable.MainActivity
 import com.dzid26.teslable.R
 import com.dzid26.teslable.core.history.AppState
 import com.dzid26.teslable.core.history.BatterySample
+import com.dzid26.teslable.core.history.RouteSample
 import com.dzid26.teslable.core.history.StatusSample
 import com.dzid26.teslable.core.history.statusDurations
 import com.dzid26.teslable.protocol.asleep
@@ -61,6 +62,8 @@ class BleTrackingService : Service() {
     private val lastCarModels = mutableMapOf<String, NotificationModel>()
     private val postedCarIds = mutableMapOf<String, Int>()
     private var startLogged = false
+
+    private val tripSource by lazy { TripNoticeSource() }
 
     /** Screen on and off only reach a receiver registered at run time; the app-state log keeps them (ADR-0008). */
     private val screenReceiver =
@@ -112,8 +115,13 @@ class BleTrackingService : Service() {
         )
         val controller = BleControllerHolder.get(this)
         scope.launch {
-            combine(controller.state, controller.batteryHistory, controller.statusHistory) { state, history, statuses ->
-                modelsFor(state, history, statuses)
+            combine(
+                controller.state,
+                controller.batteryHistory,
+                controller.statusHistory,
+                controller.latestRoutes,
+            ) { state, history, statuses, routes ->
+                modelsFor(state, history, statuses, routes)
             }.collect { models ->
                 publish(models)
             }
@@ -133,7 +141,7 @@ class BleTrackingService : Service() {
                     // A newer read restarts this loop, so the timing follows the latest reading.
                     while (true) {
                         delay(stalenessTickDelayMs(newestRead, System.currentTimeMillis()))
-                        publish(modelsFor(controller.state.value, controller.batteryHistory.value, controller.statusHistory.value))
+                        publish(currentModels(controller))
                     }
                 }
         }
@@ -164,7 +172,7 @@ class BleTrackingService : Service() {
         if (intent?.action == ACTION_WAKE) {
             controller.wakeVehicle(intent.getStringExtra(EXTRA_BLE_NAME))
         }
-        publish(modelsFor(controller.state.value, controller.batteryHistory.value, controller.statusHistory.value))
+        publish(currentModels(controller))
         // START_STICKY may restart us after a process kill; find the cars again.
         controller.ensureConnected()
         return START_STICKY
@@ -192,6 +200,7 @@ class BleTrackingService : Service() {
         state: BleUiState,
         history: List<BatterySample>,
         statuses: List<StatusSample>,
+        routes: Map<String, RouteSample>,
     ): List<NotificationModel> =
         state.vehicles.mapNotNull { vehicle ->
             val connection = state.connections[vehicle.address] ?: return@mapNotNull null
@@ -216,8 +225,12 @@ class BleTrackingService : Service() {
                 showWake =
                     connection.status?.asleep == true &&
                         connection.sessions.contains("DOMAIN_VEHICLE_SECURITY"),
+                trip = tripSource.noticeFor(vehicle.bleName, history, routes, now),
             )
         }
+
+    private fun currentModels(controller: TeslaBleController): List<NotificationModel> =
+        modelsFor(controller.state.value, controller.batteryHistory.value, controller.statusHistory.value, controller.latestRoutes.value)
 
     private fun publish(models: List<NotificationModel>) {
         val summary = summaryModel(models)
@@ -335,6 +348,7 @@ class BleTrackingService : Service() {
         }
         if (previous.percentAgeLabel != current.percentAgeLabel) return true
         if (previous.showWake != current.showWake) return true
+        if (previous.trip != current.trip) return true
         val oldRssi = previous.rssi
         val newRssi = current.rssi
         if (oldRssi == null || newRssi == null) return oldRssi != newRssi
@@ -361,6 +375,9 @@ class BleTrackingService : Service() {
                 .setGroup(GROUP_KEY)
         if (groupSummary) {
             builder.setGroupSummary(true)
+        }
+        model.trip?.let { trip ->
+            builder.showTrip(TripTextContext(this), trip, notificationText(model), model.percent.takeIf { !model.percentStale })
         }
         if (model.showWake && model.bleName != null) {
             builder.addAction(
@@ -462,6 +479,7 @@ class BleTrackingService : Service() {
         val percentStale: Boolean,
         val percentAgeLabel: String?,
         val showWake: Boolean,
+        val trip: TripNotice? = null,
     )
 
     private fun carNotificationId(bleName: String): Int = CAR_NOTIFICATION_BASE + (bleName.hashCode() and 0xFFFF)
