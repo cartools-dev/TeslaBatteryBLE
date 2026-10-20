@@ -96,5 +96,6 @@ class BatteryChartShapeTest {
     fun cursorTextMarksProjectedPoints() {
         assertEquals("Projected 83.2% · 14:00", cursorText(83.2f, true, "14:00"))
         assertEquals("64% · 09:15", cursorText(64f, false, "09:15"))
+        assertEquals("Projected 80% (200 mi) · 14:00", cursorText(80f, true, "14:00", "200 mi"))
     }
 }

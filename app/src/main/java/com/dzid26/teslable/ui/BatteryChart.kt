@@ -26,16 +26,12 @@ import com.patrykandpatrick.vico.compose.cartesian.data.LineCartesianLayerModel
 import com.patrykandpatrick.vico.compose.cartesian.decoration.Decoration
 import com.patrykandpatrick.vico.compose.cartesian.layer.LineCartesianLayer
 import com.patrykandpatrick.vico.compose.cartesian.layer.rememberLineCartesianLayer
-import com.patrykandpatrick.vico.compose.cartesian.marker.CartesianMarker
 import com.patrykandpatrick.vico.compose.cartesian.marker.CartesianMarkerController
 import com.patrykandpatrick.vico.compose.cartesian.marker.DefaultCartesianMarker
-import com.patrykandpatrick.vico.compose.cartesian.marker.LineCartesianLayerMarkerTarget
-import com.patrykandpatrick.vico.compose.cartesian.marker.rememberDefaultCartesianMarker
 import com.patrykandpatrick.vico.compose.cartesian.rememberCartesianChart
 import com.patrykandpatrick.vico.compose.cartesian.rememberVicoScrollState
 import com.patrykandpatrick.vico.compose.cartesian.rememberVicoZoomState
 import com.patrykandpatrick.vico.compose.common.ProvideVicoTheme
-import com.patrykandpatrick.vico.compose.common.component.rememberTextComponent
 import com.patrykandpatrick.vico.compose.m3.common.rememberM3VicoTheme
 import kotlin.math.roundToLong
 
@@ -138,7 +134,7 @@ internal fun BatteryChart(
                 ),
                 startAxis = rememberPercentAxis(),
                 bottomAxis = rememberTimeAxis(timeFormatter),
-                marker = rememberCursorMarker(window, showDate, is24Hour, lastMeasuredMillis),
+                marker = rememberCursorMarker(window, axis, lastMeasuredMillis, scale),
                 markerController = CartesianMarkerController.rememberToggleOnTap(),
                 decorations = remember(shape.beams) { listOf(Beams(shape.beams)) },
                 getXStep = { _, _, _ -> xStep },
@@ -167,16 +163,22 @@ private fun rememberTimeFormatter(
 @Composable
 private fun rememberCursorMarker(
     window: Window,
-    showDate: Boolean,
-    is24Hour: Boolean,
+    axis: TimeAxis,
     lastMeasuredMillis: Long,
-) = rememberDefaultCartesianMarker(
-    label = rememberTextComponent(style = MaterialTheme.typography.labelSmall),
-    valueFormatter =
-        remember(window, showDate, is24Hour, lastMeasuredMillis) {
-            CursorFormatter(window.start, showDate, is24Hour, lastMeasuredMillis)
-        },
-)
+    scale: FullRangeScale?,
+): DefaultCartesianMarker {
+    val unit = LocalDistanceUnit.current
+    val describer =
+        remember(window, axis, lastMeasuredMillis, scale, unit) {
+            PointDescriber { x, y ->
+                val millis = window.start + (x * MILLIS_PER_HOUR).roundToLong()
+                // The rated range at that level, from the fitted full range; unknown until it is learned.
+                val range = scale?.takeIf { it.pinned }?.let { unit.format(y.toFloat() / PERCENT_FULL * it.fullRangeMiles) }
+                cursorText(y.toFloat(), millis > lastMeasuredMillis, formatTime(millis, axis.showDate, axis.is24Hour), range)
+            }
+        }
+    return rememberChartCursor(describer)
+}
 
 /** What TalkBack reads for the chart: the span of the measured levels. */
 private fun chartDescription(
@@ -294,38 +296,6 @@ private fun batteryModel(specs: List<SeriesSpec>): CartesianChartModel =
         },
     )
 
-/** The cursor's text: the percent at the pressed point and when it was (or is projected to be) reached. */
-private class CursorFormatter(
-    private val windowStart: Long,
-    private val showDate: Boolean,
-    private val is24Hour: Boolean,
-    private val lastMeasuredMillis: Long,
-) : DefaultCartesianMarker.ValueFormatter {
-    override fun format(
-        context: CartesianDrawingContext,
-        targets: List<CartesianMarker.Target>,
-    ): CharSequence {
-        val point =
-            targets
-                .filterIsInstance<LineCartesianLayerMarkerTarget>()
-                .firstOrNull()
-                ?.points
-                ?.firstOrNull()
-        return point
-            ?.let { shown ->
-                val millis = windowStart + (shown.entry.x * MILLIS_PER_HOUR).roundToLong()
-                cursorText(shown.entry.y.toFloat(), millis > lastMeasuredMillis, formatTime(millis, showDate, is24Hour))
-            }.orEmpty()
-    }
-}
-
-/** The cursor label: "Projected " only past the last measurement, then the percent and the time. */
-internal fun cursorText(
-    percent: Float,
-    projected: Boolean,
-    time: String,
-): String = "${if (projected) "Projected " else ""}${formatPercent(percent)}% · $time"
-
 /** The projection beams: translucent wedges under the lines. */
 private class Beams(
     private val beams: List<Beam>,
@@ -354,3 +324,14 @@ private const val MILLIS_PER_MINUTE = 60_000L
 private const val PERCENT_FULL = 100f
 private const val Y_MARGIN = 2
 private const val AXIS_ROUND = 5
+
+/** The cursor label: "Projected " only past the last measurement, then the percent, the range at that percent when known, and the time. */
+internal fun cursorText(
+    percent: Float,
+    projected: Boolean,
+    time: String,
+    range: String? = null,
+): String {
+    val level = "${formatPercent(percent)}%" + range?.let { " ($it)" }.orEmpty()
+    return "${if (projected) "Projected " else ""}$level · $time"
+}
