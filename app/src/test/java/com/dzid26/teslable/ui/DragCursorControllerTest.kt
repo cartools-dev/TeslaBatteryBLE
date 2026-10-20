@@ -44,7 +44,7 @@ class DragCursorControllerTest {
         assertNotNull(pin.targets)
 
         accept(Interaction.Press(Point(10f, 100f)))
-        accept(Interaction.Release(Point(10f, 100f)))
+        assertTrue(accept(Interaction.Release(Point(10f, 100f))))
         assertNull(pin.targets)
     }
 

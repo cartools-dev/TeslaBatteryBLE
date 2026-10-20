@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
@@ -128,40 +129,43 @@ internal fun RangeChart(
 
     val pin = rememberCursorPin()
 
-    ProvideVicoTheme(rememberM3VicoTheme()) {
-        val cursor = rememberChartCursor(cursorDescriber)
-        val chart =
-            rememberCartesianChart(
-                rememberLineCartesianLayer(
-                    lineProvider = rememberDriveLines(trips.size, regenPoints.isNotEmpty(), axes.yMin),
-                    rangeProvider =
-                        remember(axes) {
-                            CartesianLayerRangeProvider.fixed(minX = 0.0, maxX = axes.xMax, minY = axes.yMin, maxY = axes.yMax)
-                        },
-                ),
-                startAxis =
-                    VerticalAxis.rememberStart(
-                        valueFormatter = yFormatter,
-                        itemPlacer = remember(axes.yStep) { VerticalAxis.ItemPlacer.step({ axes.yStep }) },
+    // A clear from a touch elsewhere rebuilds the chart, dropping a live cursor Vico still shows.
+    key(pin.reset) {
+        ProvideVicoTheme(rememberM3VicoTheme()) {
+            val cursor = rememberChartCursor(cursorDescriber)
+            val chart =
+                rememberCartesianChart(
+                    rememberLineCartesianLayer(
+                        lineProvider = rememberDriveLines(trips.size, regenPoints.isNotEmpty(), axes.yMin),
+                        rangeProvider =
+                            remember(axes) {
+                                CartesianLayerRangeProvider.fixed(minX = 0.0, maxX = axes.xMax, minY = axes.yMin, maxY = axes.yMax)
+                            },
                     ),
-                bottomAxis = HorizontalAxis.rememberBottom(valueFormatter = distanceFormatter),
-                marker = cursor,
-                markerController = rememberCursorController(pin),
-                decorations =
-                    remember(
-                        regenBands,
-                        pin,
-                        cursor,
-                    ) { listOf(RegenBands(regenBands, chargingChartColor), PinnedCursor(pin, cursor)) },
-                getXStep = { _, _, _ -> axes.xStep },
+                    startAxis =
+                        VerticalAxis.rememberStart(
+                            valueFormatter = yFormatter,
+                            itemPlacer = remember(axes.yStep) { VerticalAxis.ItemPlacer.step({ axes.yStep }) },
+                        ),
+                    bottomAxis = HorizontalAxis.rememberBottom(valueFormatter = distanceFormatter),
+                    marker = cursor,
+                    markerController = rememberCursorController(pin),
+                    decorations =
+                        remember(
+                            regenBands,
+                            pin,
+                            cursor,
+                        ) { listOf(RegenBands(regenBands, chargingChartColor), PinnedCursor(pin, cursor)) },
+                    getXStep = { _, _, _ -> axes.xStep },
+                )
+            CartesianChartHost(
+                chart = chart,
+                model = remember(trips, regenPoints) { rangeModel(trips, regenPoints) },
+                modifier = modifier.markingTouches(pin),
+                scrollState = rememberVicoScrollState(scrollEnabled = false),
+                zoomState = rememberVicoZoomState(zoomEnabled = false, initialZoom = Zoom.Content),
             )
-        CartesianChartHost(
-            chart = chart,
-            model = remember(trips, regenPoints) { rangeModel(trips, regenPoints) },
-            modifier = modifier,
-            scrollState = rememberVicoScrollState(scrollEnabled = false),
-            zoomState = rememberVicoZoomState(zoomEnabled = false, initialZoom = Zoom.Content),
-        )
+        }
     }
 }
 

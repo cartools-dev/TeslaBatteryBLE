@@ -31,6 +31,15 @@ import kotlin.math.abs
 @Stable
 internal class CursorPin {
     var targets by mutableStateOf<List<CartesianMarker.Target>?>(null)
+
+    /** Bumped to rebuild the chart, which drops a live Vico cursor that no interaction will hide. */
+    var reset by mutableIntStateOf(0)
+
+    /** Whether a cursor may be on screen: the standing one, or a live one Vico has not hidden. */
+    var shown = false
+
+    /** Set by the chart when the current touch landed on it, so the screen-wide clear skips it. */
+    var touchedInside = false
 }
 
 /**
@@ -89,21 +98,26 @@ internal class DragCursorController(
         if (pressedAt == null) return false
         scrolling = scrolling || isDrag(point, vertical = true)
         active = !scrolling && (active || isDrag(point, vertical = false))
+        pin.shown = pin.shown || active
         return active
     }
 
     private fun activate(): Boolean {
         active = pressedAt != null && !scrolling
+        pin.shown = pin.shown || active
         return active
     }
 
-    // The live cursor goes with the finger; where it was becomes the standing one.
+    // The live cursor goes with the finger; where it was becomes the standing one. A short press
+    // is accepted so Vico re-asks shouldShowMarker and hides any live cursor it still shows.
     private fun release(): Boolean {
+        val tap = !active
         pin.targets = if (active) lastTargets else null
+        if (tap) pin.shown = false
         pressedAt = null
         scrolling = false
         active = false
-        return false
+        return tap
     }
 
     /** True once the finger is past the slop and moved mostly along the asked axis. */
@@ -123,7 +137,16 @@ internal class DragCursorController(
 internal fun rememberCursorPin(): CursorPin {
     val pin = remember { CursorPin() }
     val touches = CursorDismiss.count
-    LaunchedEffect(touches) { pin.targets = null }
+    LaunchedEffect(touches) {
+        // A touch on the chart is the controller's to handle; a touch anywhere else clears both cursors.
+        if (pin.touchedInside) {
+            pin.touchedInside = false
+        } else if (pin.shown) {
+            pin.targets = null
+            pin.shown = false
+            pin.reset++
+        }
+    }
     return pin
 }
 
@@ -158,5 +181,14 @@ internal fun Modifier.countingTouches(): Modifier =
         awaitEachGesture {
             awaitFirstDown(requireUnconsumed = false, pass = PointerEventPass.Initial)
             CursorDismiss.count++
+        }
+    }
+
+/** Marks touches that land on the chart, so the screen-wide clear leaves them to the controller. */
+internal fun Modifier.markingTouches(pin: CursorPin): Modifier =
+    pointerInput(pin) {
+        awaitEachGesture {
+            awaitFirstDown(requireUnconsumed = false, pass = PointerEventPass.Initial)
+            pin.touchedInside = true
         }
     }
