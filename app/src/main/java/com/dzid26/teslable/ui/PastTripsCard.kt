@@ -51,7 +51,10 @@ internal fun PastTripsCard(
     if (trips.isEmpty()) return
     var selectedStart by rememberSaveable { mutableStateOf<Long?>(null) }
     val trip = trips.firstOrNull { it.startMillis == selectedStart } ?: trips.last()
-    val estimate = remember(trip, samples, scale, ratedKwhPerMile, pricePerKwh) { trip.estimate(samples, scale, ratedKwhPerMile, pricePerKwh) }
+    val estimate =
+        remember(trip, samples, scale, ratedKwhPerMile, pricePerKwh) {
+            trip.estimate(samples, scale, ratedKwhPerMile, pricePerKwh)
+        }
     val unit = LocalDistanceUnit.current
     Card(modifier = Modifier.fillMaxWidth()) {
         Column(Modifier.padding(12.dp)) {
