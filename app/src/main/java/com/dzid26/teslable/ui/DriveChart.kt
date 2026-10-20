@@ -126,7 +126,10 @@ internal fun RangeChart(
     val yFormatter = remember { CartesianValueFormatter { _, value, _ -> formatWholePercent(value.toFloat()) } }
     val cursorDescriber = remember(unit) { PointDescriber { x, y -> "${formatPercent(y.toFloat())}% · ${formatDistance(x, unit)}" } }
 
+    val pin = rememberCursorPin()
+
     ProvideVicoTheme(rememberM3VicoTheme()) {
+        val cursor = rememberChartCursor(cursorDescriber)
         val chart =
             rememberCartesianChart(
                 rememberLineCartesianLayer(
@@ -142,9 +145,14 @@ internal fun RangeChart(
                         itemPlacer = remember(axes.yStep) { VerticalAxis.ItemPlacer.step({ axes.yStep }) },
                     ),
                 bottomAxis = HorizontalAxis.rememberBottom(valueFormatter = distanceFormatter),
-                marker = rememberChartCursor(cursorDescriber),
-                markerController = rememberCursorController(),
-                decorations = remember(regenBands) { listOf(RegenBands(regenBands, chargingChartColor)) },
+                marker = cursor,
+                markerController = rememberCursorController(pin),
+                decorations =
+                    remember(
+                        regenBands,
+                        pin,
+                        cursor,
+                    ) { listOf(RegenBands(regenBands, chargingChartColor), PinnedCursor(pin, cursor)) },
                 getXStep = { _, _, _ -> axes.xStep },
             )
         CartesianChartHost(

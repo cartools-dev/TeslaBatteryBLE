@@ -117,7 +117,10 @@ internal fun BatteryChart(
     val lastMeasuredMillis = samples.last().timestampMillis
     val description = remember(samples, scale) { chartDescription(samples, scale) }
 
+    val pin = rememberCursorPin()
+
     ProvideVicoTheme(rememberM3VicoTheme()) {
+        val cursor = rememberCursorMarker(window, axis, lastMeasuredMillis, scale)
         val chart =
             rememberCartesianChart(
                 rememberLineCartesianLayer(
@@ -133,9 +136,9 @@ internal fun BatteryChart(
                 ),
                 startAxis = rememberPercentAxis(),
                 bottomAxis = rememberTimeAxis(timeFormatter),
-                marker = rememberCursorMarker(window, axis, lastMeasuredMillis, scale),
-                markerController = rememberCursorController(),
-                decorations = remember(shape.beams) { listOf(Beams(shape.beams)) },
+                marker = cursor,
+                markerController = rememberCursorController(pin),
+                decorations = remember(shape.beams, pin, cursor) { listOf(Beams(shape.beams), PinnedCursor(pin, cursor)) },
                 getXStep = { _, _, _ -> xStep },
             )
         CartesianChartHost(
