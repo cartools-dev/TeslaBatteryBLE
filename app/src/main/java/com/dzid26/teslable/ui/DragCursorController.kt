@@ -28,7 +28,7 @@ internal class CursorPin {
 
 /**
  * When the chart's live cursor shows. A finger dragged sideways on the chart
- * (past the touch slop, so a jittery tap never counts) or held still for a long
+ * (past the touch slop and a 50 ms delay, so a jittery tap never counts) or held still for a long
  * press brings it up and moves it under the finger; on the lift it is handed to
  * [pin]. Any other touch on the chart clears the pin at once. A drag that turns
  * out mostly vertical is the page being scrolled and never activates the
@@ -38,8 +38,10 @@ internal class CursorPin {
 internal class DragCursorController(
     private val pin: CursorPin,
     private val touchSlop: Float,
+    private val nowNanos: () -> Long = System::nanoTime,
 ) : CartesianMarkerController {
     private var pressedAt: Point? = null
+    private var pressedNanos = 0L
     private var scrolling = false
     private var active = false
     private var lastTargets: List<CartesianMarker.Target>? = null
@@ -73,6 +75,7 @@ internal class DragCursorController(
         // A new touch on the chart clears the standing cursor at once.
         pin.targets = null
         pressedAt = point
+        pressedNanos = nowNanos()
         scrolling = false
         active = false
         return false
@@ -81,7 +84,7 @@ internal class DragCursorController(
     private fun move(point: Point): Boolean {
         if (pressedAt == null) return false
         scrolling = scrolling || isDrag(point, vertical = true)
-        active = !scrolling && (active || isDrag(point, vertical = false))
+        active = !scrolling && (active || (isDrag(point, vertical = false) && delayPassed()))
         return active
     }
 
@@ -98,6 +101,8 @@ internal class DragCursorController(
         active = false
         return false
     }
+
+    private fun delayPassed(): Boolean = nowNanos() - pressedNanos >= SHOW_DELAY_NANOS
 
     /** True once the finger is past the slop and moved mostly along the asked axis. */
     private fun isDrag(
@@ -130,3 +135,5 @@ internal class PinnedCursor(
         pin.targets?.let { marker.drawOverLayers(context, it) }
     }
 }
+
+private const val SHOW_DELAY_NANOS = 50_000_000L
