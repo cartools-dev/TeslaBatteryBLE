@@ -32,6 +32,7 @@ import com.dzid26.teslable.core.history.FullRangeScale
 import com.dzid26.teslable.core.history.HistoryRange
 import com.dzid26.teslable.core.history.RouteSample
 import com.dzid26.teslable.core.history.StatusSample
+import com.dzid26.teslable.core.history.segmentTrips
 import com.dzid26.teslable.core.units.DistanceUnit
 import com.dzid26.teslable.core.units.EfficiencyUnit
 import com.dzid26.teslable.health.HealthConfidence
@@ -581,6 +582,35 @@ class CardSnapshots {
     }
 
     @Test
+    fun pastTripsCardTwoTrips() = snapPastTrips("past-trips-card_two-trips")
+
+    @Test
+    fun pastTripsCardNoPrice() = snapPastTrips("past-trips-card_no-price", pricePerKwh = null)
+
+    private fun snapPastTrips(
+        name: String,
+        pricePerKwh: Float? = 0.30f,
+    ) {
+        val trips = pastTrips()
+        val samples = listOf(BatterySample(NOW - TRIP_AGO_MILLIS - 5 * 60_000L, 60, null, null, ratedRangeMiles = 125f))
+        snapCard(name) {
+            PastTripsCard(trips, samples, TRIP_SCALE, ratedKwhPerMile = 0.25f, pricePerKwh = pricePerKwh)
+        }
+    }
+
+    /** Two finished navigations, the newer one 40 minutes long. */
+    private fun pastTrips() =
+        segmentTrips(
+            listOf(
+                RouteSample(NOW - TRIP_AGO_MILLIS, BLE_NAME, "Home", 11.4f, 26f, 0f, 44f),
+                RouteSample(NOW - TRIP_AGO_MILLIS + 6 * 60_000L, BLE_NAME, "Home", 7.2f, 17f, 0f, 44f),
+                RouteSample(NOW - TRIP_AGO_MILLIS + 12 * 60_000L, BLE_NAME, "Home", 2.1f, 6f, 0f, 45f),
+                RouteSample(NOW - 2 * TRIP_AGO_MILLIS, BLE_NAME, "Work", 18.3f, 40f, 0f, 38f),
+                RouteSample(NOW - 2 * TRIP_AGO_MILLIS + 8 * 60_000L, BLE_NAME, "Work", 12.0f, 28f, 0f, 38f),
+            ),
+        )
+
+    @Test
     fun screenCarsList() {
         snapScreen("screen-cars-list") {
             ConnectionsScreen(
@@ -647,6 +677,7 @@ class CardSnapshots {
                 driveHistory = DemoScreenFixtures.drives(NOW),
                 statusHistory = emptyList(),
                 routes = mapOf(DemoScreenFixtures.vehicle.bleName to route),
+                trips = mapOf(DemoScreenFixtures.vehicle.bleName to pastTrips()),
                 onBack = {},
                 onPair = {},
                 onRefresh = {},
@@ -760,6 +791,8 @@ class CardSnapshots {
 
         /** A little under the demo car's 78%: a short trip leaves a plausible level. */
         private const val ARRIVAL_PERCENT = 76f
+
+        private const val TRIP_AGO_MILLIS = 26 * 3_600_000L
 
         private val TRIP_SCALE =
             FullRangeScale(fullRangeMiles = 270f, offsetMiles = 0f, standardErrorMiles = 0.1f, samples = 40, pinned = true)

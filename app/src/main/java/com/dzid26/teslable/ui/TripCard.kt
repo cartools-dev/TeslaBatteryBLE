@@ -2,6 +2,7 @@
 
 package com.dzid26.teslable.ui
 
+import androidx.annotation.StringRes
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
@@ -52,7 +53,6 @@ internal fun TripCard(
     modifier: Modifier = Modifier,
 ) {
     val unit = LocalDistanceUnit.current
-    val separator = remember { DecimalFormatSymbols.getInstance().decimalSeparator }
     val currencyCode = LocalCurrencyCode.current
     Card(modifier = modifier.fillMaxWidth()) {
         Column(Modifier.padding(12.dp)) {
@@ -64,7 +64,13 @@ internal fun TripCard(
                 overflow = TextOverflow.Ellipsis,
             )
             Spacer(Modifier.height(8.dp))
-            TripStats(route, estimate, unit, separator, currencyCode)
+            TripStats(
+                distance = tripDistanceText(estimate.milesRemaining),
+                time = tripTimeText(route.minutesToArrival?.takeIf { it.isFinite() }?.let { (it * MILLIS_PER_MINUTE).toLong() }),
+                estimate = estimate,
+                currencyCode = currencyCode,
+                labels = liveTripLabels,
+            )
             route.tripProgress()?.let { progress ->
                 Spacer(Modifier.height(8.dp))
                 val description = stringResource(R.string.trip_progress_description, (progress * PERCENT_FULL).roundToInt())
@@ -89,27 +95,44 @@ internal fun TripCard(
     }
 }
 
-/** The three figures worth a glance, big: distance to go, time to arrive and the price (the energy without one). */
+/** The string ids naming the distance and time figures: what is left of a live trip, what a past one took. */
+internal class TripLabels(
+    @StringRes val distance: Int,
+    @StringRes val time: Int,
+)
+
+internal val liveTripLabels = TripLabels(R.string.trip_distance_label, R.string.trip_time_label)
+internal val pastTripLabels = TripLabels(R.string.trip_past_distance_label, R.string.trip_past_time_label)
+
+/** "4.7 mi" from miles, or null when there are none. */
+@Composable
+internal fun tripDistanceText(miles: Float?): String? {
+    val unit = LocalDistanceUnit.current
+    val separator = remember { DecimalFormatSymbols.getInstance().decimalSeparator }
+    return miles?.let { unit.format(it, decimals = 1, decimalSeparator = separator) }
+}
+
+/** "12m" from a duration in millis, "under a minute" below one, null for none or a negative one. */
+@Composable
+internal fun tripTimeText(millis: Long?): String? =
+    millis?.takeIf { it >= 0L }?.let { compactDuration(it) ?: stringResource(R.string.trip_under_a_minute) }
+
+/** The three figures worth a glance, big: distance, time and the price (the energy without one). */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-private fun TripStats(
-    route: RouteSample,
+internal fun TripStats(
+    distance: String?,
+    time: String?,
     estimate: TripEstimate,
-    unit: DistanceUnit,
-    separator: Char,
     currencyCode: String?,
+    labels: TripLabels,
 ) {
-    val distance = estimate.milesRemaining?.let { unit.format(it, decimals = 1, decimalSeparator = separator) }
-    val time =
-        route.minutesToArrival?.takeIf { it.isFinite() && it >= 0f }?.let { minutes ->
-            compactDuration((minutes * MILLIS_PER_MINUTE).toLong()) ?: stringResource(R.string.trip_under_a_minute)
-        }
     val kwh = estimate.energyKwh?.let(::formatKwh)
     val cost = estimate.costAtHomePrice?.let { formatMoney(it, currencyCode) }
     // The stats wrap whole on a narrow phone instead of squeezing the digits.
     FlowRow(horizontalArrangement = Arrangement.spacedBy(20.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-        distance?.let { TripStat(it, stringResource(R.string.trip_distance_label)) }
-        time?.let { TripStat(it, stringResource(R.string.trip_time_label)) }
+        distance?.let { TripStat(it, stringResource(labels.distance)) }
+        time?.let { TripStat(it, stringResource(labels.time)) }
         when {
             cost != null && kwh != null -> TripStat(cost, stringResource(R.string.trip_cost_label, kwh))
             kwh != null -> TripStat("$kwh kWh", stringResource(R.string.trip_energy_label))
@@ -148,7 +171,7 @@ private fun totalText(
 
 /** "Arrive with 44% (about 118 mi)": the car's predicted level, with the rated range it stands for once the full range is known. */
 @Composable
-private fun arrivalText(
+internal fun arrivalText(
     estimate: TripEstimate,
     unit: DistanceUnit,
 ): String? {
@@ -168,7 +191,7 @@ internal fun formatMoney(
     currencyCode: String?,
 ): String = currencyFormat(currencyCode).format(amount.toDouble())
 
-private const val MILLIS_PER_MINUTE = 60_000L
+internal const val MILLIS_PER_MINUTE = 60_000L
 private const val PERCENT_FULL = 100f
 
 /**

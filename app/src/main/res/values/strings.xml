@@ -125,6 +125,11 @@
     <string name="trip_total">Trip total: %1$s</string>
     <string name="trip_distance_label">to go</string>
     <string name="trip_time_label">to arrive</string>
+    <string name="trip_past_distance_label">distance</string>
+    <string name="trip_past_time_label">duration</string>
+    <string name="trip_past_option">%1$s · %2$s</string>
+    <string name="trip_past_title">Past trips</string>
+    <string name="trip_past_selector_description">Choose a past trip</string>
     <string name="trip_energy_label">energy</string>
     <string name="trip_cost_label">%1$s kWh at home price</string>
     <string name="trip_progress_description">Trip %1$d%% done</string>
