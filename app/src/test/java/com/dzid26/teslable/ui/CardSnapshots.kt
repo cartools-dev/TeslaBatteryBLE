@@ -559,7 +559,7 @@ class CardSnapshots {
         pricePerKwh: Float? = 0.30f,
         scale: FullRangeScale? = TRIP_SCALE,
     ) {
-        val route = RouteSample(NOW, BLE_NAME, destination, 4.7f, 12.2f, 0f, 44f)
+        val route = RouteSample(NOW, BLE_NAME, destination, 4.7f, 12.2f, 0f, 44f, tripStartMiles = 11.4f)
         snapCard(name) {
             TripCard(
                 route,
@@ -622,6 +622,7 @@ class CardSnapshots {
                 trafficDelayMinutes = 0f,
                 energyAtArrivalPercent = 44f,
                 readAtMillis = NOW,
+                tripStartMiles = 11.4f,
             )
         snapScreen("screen-car-detail-navigating") {
             CarScreen(

@@ -59,7 +59,7 @@ Light and dark themes, side by side.
   are fitted on the rated range once the scale is learned, so they read in
   fractions of a percent, and each carries a faint beam for how far the fit could
   be off (for a charge also the supply-voltage swings seen in the session)
-- **Trip card** while the car navigates: distance and time left, the car's predicted arrival level (with the rated range it stands for once the full range is learned), and the trip's energy and its cost at your home price when one is set. The destination is not kept in any history view; the raw drive log on the phone still holds what the car sent (see ADR-0012 for what happens to it on export).
+- **Trip card** while the car navigates: a progress bar of the trip, the distance and time left and the trip's cost at your home price in big type, then the car's predicted arrival level (with the rated range it stands for once the full range is learned), with the trip's energy in place of the price when none is set. The destination is not kept in any history view; the raw drive log on the phone still holds what the car sent (see ADR-0012 for what happens to it on export).
 - **Local activity log** — the commands the app sends to the car (and why) and whether the screen was on and the
   app in the foreground are kept on the phone only, so a wake or a read in the car's own history can be told
   apart from yours

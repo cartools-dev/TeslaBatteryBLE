@@ -122,12 +122,14 @@
     <string name="units_imperial">Imperial (mi)</string>
     <string name="trip_title">Trip</string>
     <string name="trip_title_to">Trip to %1$s</string>
-    <string name="trip_left">%1$s left</string>
+    <string name="trip_distance_label">to go</string>
+    <string name="trip_time_label">to arrive</string>
+    <string name="trip_energy_label">energy</string>
+    <string name="trip_cost_label">%1$s kWh at home price</string>
+    <string name="trip_progress_description">Trip %1$d%% done</string>
     <string name="trip_under_a_minute">under a minute</string>
     <string name="trip_arrival">Arrive with %1$d%%</string>
     <string name="trip_arrival_range">Arrive with %1$d%% (about %2$s)</string>
-    <string name="trip_energy">about %1$s kWh</string>
-    <string name="trip_energy_cost">about %1$s kWh · %2$s at home price</string>
     <string name="drive_energy">about %1$s kWh</string>
     <string name="drive_cost">%1$s at home price</string>
     <string name="drive_percent_per_distance">%1$s%% per %2$s</string>
