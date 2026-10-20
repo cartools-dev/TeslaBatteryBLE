@@ -24,15 +24,12 @@ import com.dzid26.teslable.ble.PairingKeyStore
 import com.dzid26.teslable.ble.TeslaAdvert
 import com.dzid26.teslable.ble.TeslaConnection
 import com.dzid26.teslable.ble.Vehicle
-import com.dzid26.teslable.core.health.tripEstimate
 import com.dzid26.teslable.core.history.BatterySample
 import com.dzid26.teslable.core.history.DriveSample
 import com.dzid26.teslable.core.history.DriveWindow
-import com.dzid26.teslable.core.history.FullRangeScale
 import com.dzid26.teslable.core.history.HistoryRange
 import com.dzid26.teslable.core.history.RouteSample
 import com.dzid26.teslable.core.history.StatusSample
-import com.dzid26.teslable.core.history.segmentTrips
 import com.dzid26.teslable.core.units.DistanceUnit
 import com.dzid26.teslable.core.units.EfficiencyUnit
 import com.dzid26.teslable.health.HealthConfidence
@@ -518,7 +515,7 @@ class CardSnapshots {
                     samples = driveSamples(),
                     drives = driveReadings(),
                     initialWindow = DriveWindow.SINCE_CHARGE,
-                    scale = TRIP_SCALE,
+                    scale = demoTripScale,
                     ratedKwhPerMile = 0.25f,
                 )
             }
@@ -537,86 +534,6 @@ class CardSnapshots {
             )
         }
     }
-
-    @Test
-    fun tripCardNavigating() = snapTrip("trip-card_navigating")
-
-    @Test
-    fun tripCardNoPrice() = snapTrip("trip-card_no-price", pricePerKwh = null)
-
-    @Test
-    fun tripCardUnpinnedScale() = snapTrip("trip-card_unpinned", scale = null)
-
-    @Test
-    fun tripCardNoDestination() = snapTrip("trip-card_no-destination", destination = null)
-
-    @Test
-    fun tripCardLongDestination() =
-        snapTrip("trip-card_long-destination", destination = "Hotel Restaurant Zur Alten Post am Marktplatz, Obere Hauptstrasse")
-
-    private fun snapTrip(
-        name: String,
-        destination: String? = "Home",
-        pricePerKwh: Float? = 0.30f,
-        scale: FullRangeScale? = TRIP_SCALE,
-    ) {
-        val route =
-            RouteSample(
-                NOW,
-                BLE_NAME,
-                destination,
-                4.7f,
-                12.2f,
-                0f,
-                44f,
-                tripStartMiles = 11.4f,
-                tripStartedAtMillis =
-                    NOW - TRIP_ELAPSED_MILLIS,
-            )
-        snapCard(name) {
-            TripCard(
-                route,
-                tripEstimate(route, currentRatedMiles = 125f, fullRange = scale, ratedKwhPerMile = 0.25f, pricePerKwh = pricePerKwh),
-            )
-        }
-    }
-
-    @Test
-    fun pastTripsCardTwoTrips() = snapPastTrips("past-trips-card_two-trips")
-
-    @Test
-    fun pastTripsCardNoPrice() = snapPastTrips("past-trips-card_no-price", pricePerKwh = null)
-
-    @Test
-    fun pastTripsCardInProgress() = snapPastTrips("past-trips-card_in-progress", inProgress = true)
-
-    private fun snapPastTrips(
-        name: String,
-        pricePerKwh: Float? = 0.30f,
-        inProgress: Boolean = false,
-    ) {
-        val trips = pastTrips().let { all -> if (inProgress) all.dropLast(1) + all.last().copy(inProgress = true) else all }
-        val samples =
-            listOf(
-                BatterySample(NOW - TRIP_AGO_MILLIS - 5 * 60_000L, 60, null, null, ratedRangeMiles = 162f),
-                BatterySample(NOW - TRIP_AGO_MILLIS + 20 * 60_000L, 56, null, null, ratedRangeMiles = 152f),
-            )
-        snapCard(name) {
-            PastTripsCard(trips, samples, TRIP_SCALE, ratedKwhPerMile = 0.25f, pricePerKwh = pricePerKwh)
-        }
-    }
-
-    /** Two finished navigations, the newer one 40 minutes long. */
-    private fun pastTrips() =
-        segmentTrips(
-            listOf(
-                RouteSample(NOW - TRIP_AGO_MILLIS, BLE_NAME, "Home", 11.4f, 26f, 0f, 57f),
-                RouteSample(NOW - TRIP_AGO_MILLIS + 6 * 60_000L, BLE_NAME, "Home", 7.2f, 17f, 0f, 57f),
-                RouteSample(NOW - TRIP_AGO_MILLIS + 12 * 60_000L, BLE_NAME, "Home", 2.1f, 6f, 0f, 56f),
-                RouteSample(NOW - 2 * TRIP_AGO_MILLIS, BLE_NAME, "Work", 18.3f, 40f, 0f, 38f),
-                RouteSample(NOW - 2 * TRIP_AGO_MILLIS + 8 * 60_000L, BLE_NAME, "Work", 12.0f, 28f, 0f, 38f),
-            ),
-        )
 
     @Test
     fun screenCarsList() {
@@ -685,7 +602,7 @@ class CardSnapshots {
                 driveHistory = DemoScreenFixtures.drives(NOW),
                 statusHistory = emptyList(),
                 routes = mapOf(DemoScreenFixtures.vehicle.bleName to route),
-                trips = mapOf(DemoScreenFixtures.vehicle.bleName to pastTrips()),
+                trips = mapOf(DemoScreenFixtures.vehicle.bleName to demoPastTrips(NOW)),
                 onBack = {},
                 onPair = {},
                 onRefresh = {},
@@ -721,29 +638,7 @@ class CardSnapshots {
     private fun snapCard(
         name: String,
         content: @Composable () -> Unit,
-    ) {
-        paparazzi.unsafeUpdateConfig(
-            // Narrowest phone Paparazzi ships (360dp): the width under test.
-            deviceConfig = DeviceConfig.NEXUS_5,
-            renderingMode = SessionParams.RenderingMode.SHRINK,
-        )
-        paparazzi.snapshot(name + "_light") {
-            CardFrame(darkTheme = false, content = content)
-        }
-        paparazzi.snapshot(name + "_dark") {
-            CardFrame(darkTheme = true, content = content)
-        }
-        // The Jelly Star (3-inch, 480x854 @320dpi → 240dp) is narrower than
-        // anything Paparazzi ships, so hand-built via copy(); light only,
-        // collapsed in the PR comment next to dark.
-        paparazzi.unsafeUpdateConfig(
-            deviceConfig = jellyStar,
-            renderingMode = SessionParams.RenderingMode.SHRINK,
-        )
-        paparazzi.snapshot(name + "_jelly_light") {
-            CardFrame(darkTheme = false, content = content)
-        }
-    }
+    ) = paparazzi.snapCard(name, content)
 
     @Test
     fun screenCarDetailLearnt() {
@@ -800,10 +695,6 @@ class CardSnapshots {
         /** A little under the demo car's 78%: a short trip leaves a plausible level. */
         private const val ARRIVAL_PERCENT = 76f
 
-        private const val TRIP_AGO_MILLIS = 26 * 3_600_000L
-
-        private val TRIP_SCALE =
-            FullRangeScale(fullRangeMiles = 270f, offsetMiles = 0f, standardErrorMiles = 0.1f, samples = 40, pinned = true)
         private const val NOW = 1_760_000_000_000L
         private const val MINUTE = 60_000L
         private const val HOUR = 3_600_000L
@@ -1051,19 +942,6 @@ class CardSnapshots {
 
         private val advert = TeslaAdvert(name = BLE_NAME, address = ADDRESS, rssi = -70)
 
-        /**
-         * The narrow-width render: Jelly Star dimensions (3-inch, 480x854
-         * @320dpi → 240dp), hand-built because no preset goes that narrow.
-         * Light only; the PR comment keeps it collapsed next to dark.
-         */
-        private val jellyStar =
-            DeviceConfig.NEXUS_5.copy(
-                screenWidth = 480,
-                screenHeight = 854,
-                xdpi = 327,
-                ydpi = 327,
-                density = Density.XHIGH,
-            )
         private val screenPhone =
             DeviceConfig.NEXUS_5.copy(
                 screenWidth = 1080,
@@ -1247,7 +1125,7 @@ class CardSnapshots {
  * render exactly as they would on a matching phone screen.
  */
 @Composable
-private fun CardFrame(
+internal fun CardFrame(
     darkTheme: Boolean,
     content: @Composable () -> Unit,
 ) {
