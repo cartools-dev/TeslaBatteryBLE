@@ -43,6 +43,8 @@ data class RouteSample(
      * the progress bar measures against. Null on a bare reading; set by [continuing].
      */
     val tripStartMiles: Float? = null,
+    /** The phone clock at this navigation's first reading, so the trip's total time is known; set by [continuing]. */
+    val tripStartedAtMillis: Long? = null,
 ) {
     override fun toString(): String {
         val shownDestination = if (destination != null) "<redacted>" else "null"

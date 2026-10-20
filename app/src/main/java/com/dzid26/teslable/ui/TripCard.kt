@@ -32,6 +32,7 @@ import com.dzid26.teslable.core.history.FullRangeScale
 import com.dzid26.teslable.core.history.RouteSample
 import com.dzid26.teslable.core.history.compactDuration
 import com.dzid26.teslable.core.history.tripProgress
+import com.dzid26.teslable.core.history.tripTotalMillis
 import com.dzid26.teslable.core.units.DistanceUnit
 import java.text.DecimalFormatSymbols
 import java.util.Locale
@@ -81,6 +82,9 @@ internal fun TripCard(
                 Spacer(Modifier.height(8.dp))
                 Text(it, style = MaterialTheme.typography.titleMedium)
             }
+            totalText(route, unit, separator)?.let {
+                Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
         }
     }
 }
@@ -128,6 +132,18 @@ private fun TripStat(
         )
         Text(text = label, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
     }
+}
+
+/** "Trip total: 11.4 mi · 26m": the whole route's length and time, of which the big figures are what is left. */
+@Composable
+private fun totalText(
+    route: RouteSample,
+    unit: DistanceUnit,
+    separator: Char,
+): String? {
+    val distance = route.tripStartMiles?.let { unit.format(it, decimals = 1, decimalSeparator = separator) }
+    val time = route.tripTotalMillis()?.let { compactDuration(it) ?: stringResource(R.string.trip_under_a_minute) }
+    return listOfNotNull(distance, time).takeIf { it.isNotEmpty() }?.joinToString(" · ")?.let { stringResource(R.string.trip_total, it) }
 }
 
 /** "Arrive with 44% (about 118 mi)": the car's predicted level, with the rated range it stands for once the full range is known. */

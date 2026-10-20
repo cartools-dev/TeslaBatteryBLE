@@ -559,7 +559,19 @@ class CardSnapshots {
         pricePerKwh: Float? = 0.30f,
         scale: FullRangeScale? = TRIP_SCALE,
     ) {
-        val route = RouteSample(NOW, BLE_NAME, destination, 4.7f, 12.2f, 0f, 44f, tripStartMiles = 11.4f)
+        val route =
+            RouteSample(
+                NOW,
+                BLE_NAME,
+                destination,
+                4.7f,
+                12.2f,
+                0f,
+                44f,
+                tripStartMiles = 11.4f,
+                tripStartedAtMillis =
+                    NOW - TRIP_ELAPSED_MILLIS,
+            )
         snapCard(name) {
             TripCard(
                 route,
@@ -623,6 +635,7 @@ class CardSnapshots {
                 energyAtArrivalPercent = ARRIVAL_PERCENT,
                 readAtMillis = NOW,
                 tripStartMiles = 11.4f,
+                tripStartedAtMillis = NOW - TRIP_ELAPSED_MILLIS,
             )
         snapScreen("screen-car-detail-navigating") {
             CarScreen(
@@ -741,6 +754,9 @@ class CardSnapshots {
 
     companion object {
         private const val HOME_PRICE = 0.30f
+
+        /** The live trip began fourteen minutes before the render. */
+        private const val TRIP_ELAPSED_MILLIS = 14 * 60_000L
 
         /** A little under the demo car's 78%: a short trip leaves a plausible level. */
         private const val ARRIVAL_PERCENT = 76f
