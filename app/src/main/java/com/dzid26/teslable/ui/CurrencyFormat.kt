@@ -37,11 +37,9 @@ internal fun currencyFormat(code: String?): NumberFormat =
 
 /** The currencies offered in Settings; the phone's own and any already-saved one are added when missing. */
 private val COMMON_CURRENCY_CODES =
-    listOf(
-        "USD", "EUR", "GBP", "CAD", "AUD", "NZD", "CHF", "SEK", "NOK", "DKK", "PLN", "CZK",
-        "HUF", "RON", "BGN", "UAH", "TRY", "ILS", "AED", "SAR", "ZAR", "INR", "CNY", "HKD",
-        "TWD", "JPY", "KRW", "SGD", "THB", "MYR", "IDR", "PHP", "MXN", "BRL", "ARS", "CLP", "COP",
-    )
+    (
+        "USD EUR GBP CAD AUD NZD CHF SEK NOK DKK PLN CZK HUF RON BGN UAH TRY ILS AED SAR ZAR INR CNY HKD TWD JPY KRW SGD THB MYR IDR PHP MXN BRL ARS CLP COP"
+    ).split(' ')
 
 /**
  * The picker's choices: the common currencies, then the [selected] one (a saved or phone currency outside

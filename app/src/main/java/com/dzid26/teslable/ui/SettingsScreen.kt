@@ -21,11 +21,7 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
-import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.ExposedDropdownMenuAnchorType
-import androidx.compose.material3.ExposedDropdownMenuBox
-import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -61,7 +57,6 @@ import com.dzid26.teslable.core.units.EfficiencyUnit
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import java.util.Currency
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -336,39 +331,6 @@ private fun EnergyPriceCard(priceStore: EnergyPriceStore) {
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
-        }
-    }
-}
-
-/** A read-only dropdown of [currencyChoices]; [selected] is shown even when it is not one of the common ones. */
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-private fun CurrencyDropdown(
-    selected: Currency?,
-    onSelect: (Currency) -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    var expanded by remember { mutableStateOf(false) }
-    ExposedDropdownMenuBox(expanded = expanded, onExpandedChange = { expanded = it }, modifier = modifier) {
-        OutlinedTextField(
-            value = selected?.currencyCode.orEmpty(),
-            onValueChange = {},
-            readOnly = true,
-            singleLine = true,
-            label = { Text(stringResource(R.string.settings_currency)) },
-            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
-            modifier = Modifier.menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable),
-        )
-        ExposedDropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
-            currencyChoices(selected).forEach { currency ->
-                DropdownMenuItem(
-                    text = { Text(currencyLabel(currency)) },
-                    onClick = {
-                        onSelect(currency)
-                        expanded = false
-                    },
-                )
-            }
         }
     }
 }
