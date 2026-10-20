@@ -63,7 +63,7 @@ internal fun PastTripsCard(
         }
     Card(modifier = Modifier.fillMaxWidth()) {
         Column(Modifier.padding(12.dp)) {
-            Text(stringResource(R.string.trip_past_title), style = MaterialTheme.typography.titleSmall)
+            Text(stringResource(R.string.trip_past_title_count, trips.size), style = MaterialTheme.typography.titleSmall)
             Spacer(Modifier.height(8.dp))
             TripSelector(trips.asReversed(), trip) { selectedStart = it.startMillis }
             Spacer(Modifier.height(8.dp))
