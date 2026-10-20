@@ -3,6 +3,7 @@
 package com.dzid26.teslable.ble
 
 import android.content.Context
+import androidx.core.app.NotificationCompat
 import com.dzid26.teslable.EnergyPriceStore
 import com.dzid26.teslable.R
 import com.dzid26.teslable.UnitStore
@@ -17,7 +18,6 @@ import com.dzid26.teslable.core.history.compactDuration
 import com.dzid26.teslable.core.units.DistanceUnit
 import com.dzid26.teslable.ui.formatKwh
 import com.dzid26.teslable.ui.formatMoney
-import androidx.core.app.NotificationCompat
 import java.text.DecimalFormatSymbols
 import kotlin.math.roundToInt
 
@@ -62,7 +62,11 @@ internal fun tripNotice(
         TripNotice(
             milesLeftTenths = estimate.milesRemaining?.let { (it * TENTHS).roundToInt() },
             minutesLeft = route.minutesToArrival?.takeIf { it.isFinite() && it >= 0f }?.roundToInt(),
-            trafficMinutes = route.trafficDelayMinutes?.takeIf { it.isFinite() }?.roundToInt()?.takeIf { it > 0 },
+            trafficMinutes =
+                route.trafficDelayMinutes
+                    ?.takeIf { it.isFinite() }
+                    ?.roundToInt()
+                    ?.takeIf { it > 0 },
             arrivalPercent = estimate.arrivalPercent?.roundToInt(),
             arrivalRatedMiles = estimate.arrivalRatedMiles?.roundToInt(),
             energyTenthsKwh = estimate.energyKwh?.let { (it * TENTHS).roundToInt() },
