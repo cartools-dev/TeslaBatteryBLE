@@ -95,7 +95,8 @@ internal class DragCursorController(
 
     // The live cursor goes with the finger; where it was becomes the standing one.
     private fun release(): Boolean {
-        if (active) pin.targets = lastTargets
+        // A short press that never brought the cursor up also clears on the lift, in case the down was missed.
+        pin.targets = if (active) lastTargets else null
         pressedAt = null
         scrolling = false
         active = false
@@ -120,7 +121,7 @@ internal fun rememberCursorController(pin: CursorPin): CartesianMarkerController
     return remember(pin, slop) { DragCursorController(pin, slop) }
 }
 
-private const val SHOW_DELAY_NANOS = 50_000_000L
+private const val SHOW_DELAY_NANOS = 25_000_000L
 
 /** Redraws the cursor where the last drag left it: Vico hides its own on every lift. */
 internal class PinnedCursor(
