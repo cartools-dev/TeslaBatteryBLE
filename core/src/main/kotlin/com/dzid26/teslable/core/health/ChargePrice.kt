@@ -19,17 +19,20 @@ fun recordPriceChange(
         .takeLast(MAX_CHANGES)
 
 /**
- * The price a charge that ended at [chargeEndMillis] was billed at. A price change takes effect from the end
- * of the last charge that had finished when it was made, so one made mid-charge covers that whole charge,
- * and one made while parked starts with the next charge and leaves the finished ones alone. The newest
- * change in effect by [chargeEndMillis] wins; null when none is, or it cleared the price.
+ * The price a charge that ended at [chargeEndMillis] was billed at. A price change takes effect from the
+ * start of the latest charge when it was made: the current one while charging, else the last finished one.
+ * So a price set mid-charge covers that whole charge, and one set while parked also re-prices the charge
+ * just finished. The newest change in effect by the charge's start wins; null when none is, or it cleared
+ * the price.
  */
 fun priceForCharge(
     changes: List<PriceChange>,
     samples: List<BatterySample>,
     chargeEndMillis: Long,
-): Float? =
-    changes
-        .filter { change -> (chargeEndsBy(samples, change.atMillis).lastOrNull() ?: Long.MIN_VALUE) < chargeEndMillis }
+): Float? {
+    val chargeStart = chargeStartOf(samples, chargeEndMillis)
+    return changes
+        .filter { change -> (chargeStartsBy(samples, change.atMillis).lastOrNull() ?: Long.MIN_VALUE) <= chargeStart }
         .maxByOrNull { it.atMillis }
         ?.pricePerKwh
+}

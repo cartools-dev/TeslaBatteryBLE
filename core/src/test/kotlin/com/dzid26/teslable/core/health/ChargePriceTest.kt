@@ -31,27 +31,23 @@ class ChargePriceTest {
         )
 
     @Test
-    fun `a price set while parked leaves the finished charge alone and starts with the next`() {
+    fun `a price set while parked also prices the charge just finished`() {
         val changes = listOf(PriceChange(at(120), 0.30f))
-        assertNull(priceForCharge(changes, samples, chargeEndMillis = at(60)))
-        assertEquals(0.30f, priceForCharge(changes, samples, chargeEndMillis = at(660)))
+        assertEquals(0.30f, priceForCharge(changes, samples, chargeEndMillis = at(60)))
     }
 
     @Test
     fun `a price set mid-charge covers that whole charge but not the one before`() {
         val changes = listOf(PriceChange(at(0), 0.20f), PriceChange(at(630), 0.40f))
         assertEquals(0.20f, priceForCharge(changes, samples, chargeEndMillis = at(60)))
-        // Charge B has not ended; its end is taken as now.
-        assertEquals(0.40f, priceForCharge(changes, samples, chargeEndMillis = at(700)))
+        assertEquals(0.40f, priceForCharge(changes, samples, chargeEndMillis = at(660)))
     }
 
     @Test
-    fun `a price set after a later charge ended leaves the earlier charge alone`() {
-        val finished = samples + sample(700, ChargingStateKind.Disconnected)
+    fun `a price set after a later charge began leaves the earlier charge alone`() {
         val changes = listOf(PriceChange(at(0), 0.20f), PriceChange(at(800), 0.50f))
-        assertEquals(0.20f, priceForCharge(changes, finished, chargeEndMillis = at(60)))
-        assertEquals(0.20f, priceForCharge(changes, finished, chargeEndMillis = at(660)))
-        assertEquals(0.50f, priceForCharge(changes, finished, chargeEndMillis = at(900)))
+        assertEquals(0.20f, priceForCharge(changes, samples, chargeEndMillis = at(60)))
+        assertEquals(0.50f, priceForCharge(changes, samples, chargeEndMillis = at(660)))
     }
 
     @Test
