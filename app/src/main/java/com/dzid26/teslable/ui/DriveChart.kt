@@ -4,7 +4,6 @@ package com.dzid26.teslable.ui
 
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
@@ -31,14 +30,13 @@ import com.patrykandpatrick.vico.compose.cartesian.decoration.Decoration
 import com.patrykandpatrick.vico.compose.cartesian.layer.LineCartesianLayer
 import com.patrykandpatrick.vico.compose.cartesian.layer.rememberLine
 import com.patrykandpatrick.vico.compose.cartesian.layer.rememberLineCartesianLayer
-import com.patrykandpatrick.vico.compose.cartesian.marker.rememberDefaultCartesianMarker
+import com.patrykandpatrick.vico.compose.cartesian.marker.CartesianMarkerController
 import com.patrykandpatrick.vico.compose.cartesian.rememberCartesianChart
 import com.patrykandpatrick.vico.compose.cartesian.rememberVicoScrollState
 import com.patrykandpatrick.vico.compose.cartesian.rememberVicoZoomState
 import com.patrykandpatrick.vico.compose.common.Fill
 import com.patrykandpatrick.vico.compose.common.ProvideVicoTheme
 import com.patrykandpatrick.vico.compose.common.component.rememberShapeComponent
-import com.patrykandpatrick.vico.compose.common.component.rememberTextComponent
 import com.patrykandpatrick.vico.compose.m3.common.rememberM3VicoTheme
 import kotlin.math.ceil
 import kotlin.math.floor
@@ -127,6 +125,7 @@ internal fun RangeChart(
     val unit = LocalDistanceUnit.current
     val distanceFormatter = remember(unit) { CartesianValueFormatter { _, value, _ -> formatDistance(value, unit) } }
     val yFormatter = remember { CartesianValueFormatter { _, value, _ -> formatWholePercent(value.toFloat()) } }
+    val cursorDescriber = remember(unit) { PointDescriber { x, y -> "${formatPercent(y.toFloat())}% · ${formatDistance(x, unit)}" } }
 
     ProvideVicoTheme(rememberM3VicoTheme()) {
         val chart =
@@ -144,7 +143,8 @@ internal fun RangeChart(
                         itemPlacer = remember(axes.yStep) { VerticalAxis.ItemPlacer.step({ axes.yStep }) },
                     ),
                 bottomAxis = HorizontalAxis.rememberBottom(valueFormatter = distanceFormatter),
-                marker = rememberDefaultCartesianMarker(label = rememberTextComponent(style = MaterialTheme.typography.labelSmall)),
+                marker = rememberChartCursor(cursorDescriber),
+                markerController = CartesianMarkerController.rememberToggleOnTap(),
                 decorations = remember(regenBands) { listOf(RegenBands(regenBands, chargingChartColor)) },
                 getXStep = { _, _, _ -> axes.xStep },
             )
