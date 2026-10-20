@@ -31,13 +31,17 @@ import com.dzid26.teslable.R
 import com.dzid26.teslable.core.history.BatterySample
 import com.dzid26.teslable.core.history.FullRangeScale
 import com.dzid26.teslable.core.history.Trip
-import com.dzid26.teslable.core.history.estimate
+import com.dzid26.teslable.core.history.TripSummary
+import com.dzid26.teslable.core.history.summary
+import java.text.DecimalFormatSymbols
+import kotlin.math.roundToInt
 
 /**
  * The finished navigations (#207), one at a time: a selector by name and start time,
  * and for the chosen trip the same figures as the live trip card, its distance,
  * duration and price in big type and the level the car predicted for the arrival.
- * Shows nothing until there is a past trip. [trips] are oldest first; the newest
+ * The route being navigated now is the newest entry, marked in progress, so its totals
+ * show too. Shows nothing until there is a trip. [trips] are oldest first; the newest
  * is open by default.
  */
 @Composable
@@ -51,11 +55,10 @@ internal fun PastTripsCard(
     if (trips.isEmpty()) return
     var selectedStart by rememberSaveable { mutableStateOf<Long?>(null) }
     val trip = trips.firstOrNull { it.startMillis == selectedStart } ?: trips.last()
-    val estimate =
+    val summary =
         remember(trip, samples, scale, ratedKwhPerMile, pricePerKwh) {
-            trip.estimate(samples, scale, ratedKwhPerMile, pricePerKwh)
+            trip.summary(samples, scale, ratedKwhPerMile, pricePerKwh)
         }
-    val unit = LocalDistanceUnit.current
     Card(modifier = Modifier.fillMaxWidth()) {
         Column(Modifier.padding(12.dp)) {
             Text(stringResource(R.string.trip_past_title), style = MaterialTheme.typography.titleSmall)
@@ -63,17 +66,61 @@ internal fun PastTripsCard(
             TripSelector(trips.asReversed(), trip) { selectedStart = it.startMillis }
             Spacer(Modifier.height(8.dp))
             TripStats(
-                distance = tripDistanceText(estimate.milesRemaining),
+                distance = tripDistanceText(summary.estimate.milesRemaining),
                 time = tripTimeText(trip.durationMillis),
-                estimate = estimate,
+                estimate = summary.estimate,
                 currencyCode = LocalCurrencyCode.current,
                 labels = pastTripLabels,
             )
-            arrivalText(estimate, unit)?.let {
+            arrivalLine(trip, summary, scale)?.let {
                 Spacer(Modifier.height(8.dp))
                 Text(it, style = MaterialTheme.typography.titleMedium)
             }
+            batteryLine(summary)?.let { Text(it, style = MaterialTheme.typography.bodyMedium) }
+            rateLine(
+                summary,
+            )?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant) }
         }
+    }
+}
+
+/** "Arrived with 44% (about 132 mi left)", or "Arrive with ..." while the trip is still going. */
+@Composable
+private fun arrivalLine(
+    trip: Trip,
+    summary: TripSummary,
+    scale: FullRangeScale?,
+): String? {
+    val level = summary.arrivalPercent ?: return null
+    val percent = level.roundToInt()
+    val unit = LocalDistanceUnit.current
+    val ratedMiles = scale?.takeIf { it.pinned }?.let { it.offsetMiles + it.milesPerPercent * level }
+    return when {
+        ratedMiles == null && trip.inProgress -> stringResource(R.string.trip_arrival, percent)
+        ratedMiles == null -> stringResource(R.string.trip_arrived, percent)
+        trip.inProgress -> stringResource(R.string.trip_arrival_range, percent, unit.format(ratedMiles))
+        else -> stringResource(R.string.trip_arrived_range, percent, unit.format(ratedMiles))
+    }
+}
+
+/** "Battery 62% to 44%": the level before the trip and on arrival, when both are known. */
+@Composable
+private fun batteryLine(summary: TripSummary): String? {
+    val start = summary.startPercent?.roundToInt()
+    val end = summary.arrivalPercent?.roundToInt()
+    return if (start != null && end != null) stringResource(R.string.trip_battery_used, start, end) else null
+}
+
+/** "312 Wh/mi · 34 mi/h average", whichever of the two the trip supports. */
+@Composable
+private fun rateLine(summary: TripSummary): String? {
+    val unit = LocalDistanceUnit.current
+    val separator = remember { DecimalFormatSymbols.getInstance().decimalSeparator }
+    val efficiency = summary.kwhPerMile?.let { LocalEfficiencyUnit.current.format(it, unit, separator) }
+    val speed = summary.averageMilesPerHour?.let { stringResource(R.string.trip_per_hour, unit.format(it)) }
+    return when {
+        efficiency != null && speed != null -> stringResource(R.string.trip_rate_speed, efficiency, speed)
+        else -> efficiency ?: speed?.let { stringResource(R.string.trip_average_alone, it) }
     }
 }
 
@@ -105,14 +152,16 @@ private fun TripSelector(
     }
 }
 
-/** "Home · Oct 19, 2:05 PM": the destination, or "Trip" without one, and when it began. */
+/** "Home · Oct 19, 2:05 PM": the destination, or "Trip" without one, and when it began; "in progress" for the live trip. */
 @Composable
 private fun tripLabel(
     trip: Trip,
     is24Hour: Boolean,
-): String =
-    stringResource(
-        R.string.trip_past_option,
-        trip.destination ?: stringResource(R.string.trip_title),
-        formatTime(trip.startMillis, showDate = true, is24Hour = is24Hour),
-    )
+): String {
+    val name = trip.destination ?: stringResource(R.string.trip_title)
+    return if (trip.inProgress) {
+        stringResource(R.string.trip_past_option_live, name)
+    } else {
+        stringResource(R.string.trip_past_option, name, formatTime(trip.startMillis, showDate = true, is24Hour = is24Hour))
+    }
+}

@@ -587,12 +587,20 @@ class CardSnapshots {
     @Test
     fun pastTripsCardNoPrice() = snapPastTrips("past-trips-card_no-price", pricePerKwh = null)
 
+    @Test
+    fun pastTripsCardInProgress() = snapPastTrips("past-trips-card_in-progress", inProgress = true)
+
     private fun snapPastTrips(
         name: String,
         pricePerKwh: Float? = 0.30f,
+        inProgress: Boolean = false,
     ) {
-        val trips = pastTrips()
-        val samples = listOf(BatterySample(NOW - TRIP_AGO_MILLIS - 5 * 60_000L, 60, null, null, ratedRangeMiles = 125f))
+        val trips = pastTrips().let { all -> if (inProgress) all.dropLast(1) + all.last().copy(inProgress = true) else all }
+        val samples =
+            listOf(
+                BatterySample(NOW - TRIP_AGO_MILLIS - 5 * 60_000L, 60, null, null, ratedRangeMiles = 162f),
+                BatterySample(NOW - TRIP_AGO_MILLIS + 20 * 60_000L, 56, null, null, ratedRangeMiles = 152f),
+            )
         snapCard(name) {
             PastTripsCard(trips, samples, TRIP_SCALE, ratedKwhPerMile = 0.25f, pricePerKwh = pricePerKwh)
         }
@@ -602,9 +610,9 @@ class CardSnapshots {
     private fun pastTrips() =
         segmentTrips(
             listOf(
-                RouteSample(NOW - TRIP_AGO_MILLIS, BLE_NAME, "Home", 11.4f, 26f, 0f, 44f),
-                RouteSample(NOW - TRIP_AGO_MILLIS + 6 * 60_000L, BLE_NAME, "Home", 7.2f, 17f, 0f, 44f),
-                RouteSample(NOW - TRIP_AGO_MILLIS + 12 * 60_000L, BLE_NAME, "Home", 2.1f, 6f, 0f, 45f),
+                RouteSample(NOW - TRIP_AGO_MILLIS, BLE_NAME, "Home", 11.4f, 26f, 0f, 57f),
+                RouteSample(NOW - TRIP_AGO_MILLIS + 6 * 60_000L, BLE_NAME, "Home", 7.2f, 17f, 0f, 57f),
+                RouteSample(NOW - TRIP_AGO_MILLIS + 12 * 60_000L, BLE_NAME, "Home", 2.1f, 6f, 0f, 56f),
                 RouteSample(NOW - 2 * TRIP_AGO_MILLIS, BLE_NAME, "Work", 18.3f, 40f, 0f, 38f),
                 RouteSample(NOW - 2 * TRIP_AGO_MILLIS + 8 * 60_000L, BLE_NAME, "Work", 12.0f, 28f, 0f, 38f),
             ),

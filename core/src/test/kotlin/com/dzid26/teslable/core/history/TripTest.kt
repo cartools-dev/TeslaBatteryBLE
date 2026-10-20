@@ -53,26 +53,52 @@ class TripTest {
     }
 
     @Test
-    fun `the live route is not a past trip`() {
+    fun `the trip whose newest reading is the live route is marked in progress`() {
         val readings = listOf(reading(0, 10f), reading(3, 7f), reading(60, 5f), reading(63, 3f))
         val trips = segmentTrips(readings)
-        assertEquals(1, trips.excludingLive(readings.last()).size)
-        assertEquals(2, trips.excludingLive(null).size)
+        assertEquals(listOf(false, true), trips.markingLive(readings.last()).map { it.inProgress })
+        assertEquals(listOf(false, false), trips.markingLive(null).map { it.inProgress })
     }
 
     @Test
-    fun `the rated range before the trip must be recent`() {
+    fun `a finished trip arrives at the battery reading after it, else the car's prediction`() {
+        val trip =
+            segmentTrips(
+                listOf(reading(0, 10f, minutesLeft = 20f), reading(10, 5f, minutesLeft = 10f), reading(20, 0f, minutesLeft = 0f)),
+            ).single()
         val samples =
             listOf(
-                BatterySample(0, 80, null, null, ratedRangeMiles = 200f),
-                BatterySample(40 * MINUTE, 70, null, null, ratedRangeMiles = 180f),
+                BatterySample(-5 * MINUTE, 60, null, null, ratedRangeMiles = 180f),
+                BatterySample(22 * MINUTE, 50, null, null, ratedRangeMiles = 150f),
             )
-        assertEquals(200f, ratedMilesBefore(samples, 20 * MINUTE))
-        assertNull(ratedMilesBefore(samples.take(1), 31 * MINUTE))
-        assertEquals(180f, ratedMilesBefore(samples, 45 * MINUTE))
+        val summary = trip.summary(samples, scale, ratedKwhPerMile = 0.25f, pricePerKwh = 0.30f)
+        assertEquals(60f, summary.startPercent)
+        assertEquals(50f, summary.arrivalPercent)
+        // 10 mi in 20 minutes.
+        assertEquals(30f, summary.averageMilesPerHour!!, 0.01f)
+        assertEquals(44f, trip.summary(emptyList(), scale, null, null).arrivalPercent)
+        assertNull(trip.summary(emptyList(), scale, null, null).startPercent)
+    }
+
+    @Test
+    fun `energy rates need a distance worth dividing by`() {
+        val short = segmentTrips(listOf(reading(0, 0.4f, minutesLeft = 2f), reading(2, 0f, minutesLeft = 0f))).single()
+        val samples = listOf(BatterySample(-5 * MINUTE, 60, null, null, ratedRangeMiles = 180f))
+        assertNull(short.summary(samples, scale, 0.25f, 0.30f).kwhPerMile)
+    }
+
+    @Test
+    fun `an in-progress trip has no battery reading after it yet`() {
+        val trip =
+            segmentTrips(
+                listOf(reading(0, 10f, minutesLeft = 20f), reading(5, 7f, minutesLeft = 14f)),
+            ).single().copy(inProgress = true)
+        val samples = listOf(BatterySample(30 * MINUTE, 40, null, null, ratedRangeMiles = 120f))
+        assertEquals(44f, trip.summary(samples, scale, null, null).arrivalPercent)
     }
 
     private companion object {
         const val MINUTE = 60_000L
+        val scale = FullRangeScale(fullRangeMiles = 300f, offsetMiles = 0f, standardErrorMiles = 0.1f, samples = 40, pinned = true)
     }
 }

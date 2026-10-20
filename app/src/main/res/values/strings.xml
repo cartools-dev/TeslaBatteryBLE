@@ -128,6 +128,13 @@
     <string name="trip_past_distance_label">distance</string>
     <string name="trip_past_time_label">duration</string>
     <string name="trip_past_option">%1$s · %2$s</string>
+    <string name="trip_past_option_live">%1$s · in progress</string>
+    <string name="trip_arrived">Arrived with %1$d%%</string>
+    <string name="trip_arrived_range">Arrived with %1$d%% (about %2$s left)</string>
+    <string name="trip_battery_used">Battery %1$d%% to %2$d%%</string>
+    <string name="trip_rate_speed">%1$s · %2$s average</string>
+    <string name="trip_average_alone">%1$s average</string>
+    <string name="trip_per_hour">%1$s/h</string>
     <string name="trip_past_title">Past trips</string>
     <string name="trip_past_selector_description">Choose a past trip</string>
     <string name="trip_energy_label">energy</string>

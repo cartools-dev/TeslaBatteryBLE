@@ -89,7 +89,7 @@ import com.dzid26.teslable.core.history.activeRoute
 import com.dzid26.teslable.core.history.chargeProjection
 import com.dzid26.teslable.core.history.compactDuration
 import com.dzid26.teslable.core.history.dischargeProjection
-import com.dzid26.teslable.core.history.excludingLive
+import com.dzid26.teslable.core.history.markingLive
 import com.dzid26.teslable.core.history.projectionHorizonMillis
 import com.dzid26.teslable.core.history.socTenths
 import com.dzid26.teslable.core.history.statusDurations
@@ -280,9 +280,9 @@ internal fun CarScreen(
                         nowMillis = nowMillis ?: System.currentTimeMillis(),
                         statuses = vehicleStatuses,
                     )
-                    DriveHistoryCard(vehicleHistory, vehicleDrives, scale = scale, ratedKwhPerMile = health.ratedKwhPerMile)
-                                    PastTripsCard(
-                        trips = vehicle?.let { trips[it.bleName] }.orEmpty().excludingLive(liveRoute),
+                                    DriveHistoryCard(vehicleHistory, vehicleDrives, scale = scale, ratedKwhPerMile = health.ratedKwhPerMile)
+                    PastTripsCard(
+                        trips = vehicle?.let { trips[it.bleName] }.orEmpty().markingLive(liveRoute),
                         samples = vehicleHistory,
                         scale = scale,
                         ratedKwhPerMile = health.ratedKwhPerMile,
