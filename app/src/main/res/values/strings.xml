@@ -137,7 +137,7 @@
     <string name="trip_average_alone">%1$s average</string>
     <string name="trip_speed_mph">%1$d mph</string>
     <string name="trip_speed_kmh">%1$d km/h</string>
-    <string name="trip_past_title">Past trips</string>
+    <string name="trip_past_title_count">Past trips (%1$d)</string>
     <string name="trip_past_selector_description">Choose a past trip</string>
     <string name="trip_energy_label">energy</string>
     <string name="trip_cost_label">%1$s kWh energy</string>
