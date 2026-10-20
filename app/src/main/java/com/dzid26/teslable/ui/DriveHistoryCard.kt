@@ -117,7 +117,8 @@ private fun DriveChips(
     }
 }
 
-/** "Driven: N km \u00B7 N% used", plus a note while the percent is only whole levels. */
+/** "Driven: N km \u00B7 N% used"; while the percent is only whole levels, the used figure carries a hint saying so. */
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun DriveFooter(
     driven: Double,
@@ -126,19 +127,21 @@ private fun DriveFooter(
     wholeStepsOnly: Boolean,
     stats: DriveStats?,
 ) {
-    Text(
-        text = "Driven: ${formatDistance(driven, unit)} \u00B7 ${formatPercentTenths(used.coerceAtLeast(0f))}% used",
-        style = MaterialTheme.typography.bodySmall,
-    )
+    val color = MaterialTheme.colorScheme.onSurface
+    val usedText = stringResource(R.string.drive_used, formatPercentTenths(used.coerceAtLeast(0f)))
+    FlowRow(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+        Text(
+            text = stringResource(R.string.drive_driven, formatDistance(driven, unit)),
+            style = MaterialTheme.typography.bodySmall,
+        )
+        if (wholeStepsOnly) {
+            HintText(text = usedText, hint = stringResource(R.string.drive_whole_steps_hint), color = color)
+        } else {
+            Text(usedText, style = MaterialTheme.typography.bodySmall)
+        }
+    }
     if (stats != null) {
         driveStatsLines(stats, unit).forEach { Text(it, style = MaterialTheme.typography.bodySmall) }
-    }
-    if (wholeStepsOnly) {
-        Text(
-            text = "Whole-percent steps until the full range is learned.",
-            style = MaterialTheme.typography.labelSmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
     }
 }
 

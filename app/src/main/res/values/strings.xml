@@ -131,4 +131,7 @@
     <string name="drive_energy">about %1$s kWh</string>
     <string name="drive_cost">%1$s at home price</string>
     <string name="drive_percent_per_distance">%1$s%% per %2$s</string>
+    <string name="drive_driven">Driven: %1$s \u00B7</string>
+    <string name="drive_used">%1$s%% used</string>
+    <string name="drive_whole_steps_hint">Whole-percent steps until the full range is learned.</string>
 </resources>
