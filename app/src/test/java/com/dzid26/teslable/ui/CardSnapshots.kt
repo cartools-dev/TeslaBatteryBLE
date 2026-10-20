@@ -620,7 +620,7 @@ class CardSnapshots {
                 milesToArrival = 4.7f,
                 minutesToArrival = 12.2f,
                 trafficDelayMinutes = 0f,
-                energyAtArrivalPercent = 44f,
+                energyAtArrivalPercent = ARRIVAL_PERCENT,
                 readAtMillis = NOW,
                 tripStartMiles = 11.4f,
             )
@@ -640,6 +640,7 @@ class CardSnapshots {
                 onOpenSettings = {},
                 onToggleTracking = {},
                 nowMillis = NOW,
+                homePrice = HOME_PRICE,
             )
         }
     }
@@ -739,6 +740,11 @@ class CardSnapshots {
     }
 
     companion object {
+        private const val HOME_PRICE = 0.30f
+
+        /** A little under the demo car's 78%: a short trip leaves a plausible level. */
+        private const val ARRIVAL_PERCENT = 76f
+
         private val TRIP_SCALE =
             FullRangeScale(fullRangeMiles = 270f, offsetMiles = 0f, standardErrorMiles = 0.1f, samples = 40, pinned = true)
         private const val NOW = 1_760_000_000_000L
