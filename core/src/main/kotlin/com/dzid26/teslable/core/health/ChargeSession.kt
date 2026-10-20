@@ -152,3 +152,18 @@ const val MIN_SWING_PERCENT = 5f
 
 /** A pause (Stopped or NoPower) shorter than this does not end a session. */
 private const val MAX_PAUSE_MILLIS = 10 * 60_000L
+
+/**
+ * When each charge that had ended by [byMillis] ended, oldest first: the time of its last charging sample.
+ * A charge counts as ended only once a later sample (of any state) exists at or before [byMillis], so a
+ * session that is still running, whose newest sample merely lags, is not mistaken for a finished one.
+ */
+fun chargeEndsBy(
+    samples: List<BatterySample>,
+    byMillis: Long,
+): List<Long> =
+    chargeRuns(samples).mapNotNull { run ->
+        val end = run.last().timestampMillis
+        val next = samples.firstOrNull { it.timestampMillis > end }
+        end.takeIf { next != null && next.timestampMillis <= byMillis }
+    }

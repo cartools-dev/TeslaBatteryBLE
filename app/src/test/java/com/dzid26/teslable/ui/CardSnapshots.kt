@@ -24,6 +24,7 @@ import com.dzid26.teslable.ble.PairingKeyStore
 import com.dzid26.teslable.ble.TeslaAdvert
 import com.dzid26.teslable.ble.TeslaConnection
 import com.dzid26.teslable.ble.Vehicle
+import com.dzid26.teslable.core.health.PriceChange
 import com.dzid26.teslable.core.history.BatterySample
 import com.dzid26.teslable.core.history.DriveSample
 import com.dzid26.teslable.core.history.DriveWindow
@@ -379,7 +380,7 @@ class CardSnapshots {
     @Test
     fun historyCardChargeCost() {
         snapCard("history-card_charge-cost") {
-            CompositionLocalProvider(LocalPricePerKwh provides 0.20f) {
+            CompositionLocalProvider(LocalPriceChanges provides listOf(PriceChange(0L, 0.20f))) {
                 BatteryHistoryCard(
                     samples = screenSamples,
                     drives = emptyList(),
