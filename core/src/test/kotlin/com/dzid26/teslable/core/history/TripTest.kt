@@ -9,7 +9,7 @@ import kotlin.test.assertNull
 class TripTest {
     private fun reading(
         minute: Long,
-        miles: Float,
+        miles: Float?,
         destination: String? = "Home",
         minutesLeft: Float? = null,
         odometer: Int? = null,
@@ -159,6 +159,40 @@ class TripTest {
         assertEquals(2, trips.size)
         assertEquals(10f, trips[0].lengthMiles)
         assertEquals(11f, trips[1].lengthMiles)
+    }
+
+    @Test
+    fun `a reading with no distance ends the trip so the next route is another one`() {
+        // As on the phone: the route to work ends with readings that still name it but carry no distance,
+        // and the route home starts a few minutes later.
+        val trips =
+            segmentTrips(
+                listOf(
+                    reading(0, 4.7f, "Work"),
+                    reading(10, 0.1f, "Work"),
+                    reading(11, null, "Work"),
+                    reading(12, null, null),
+                    reading(18, 4.7f, "Home"),
+                    reading(28, 0.1f, "Home"),
+                ),
+            )
+        assertEquals(2, trips.size)
+        assertEquals("Work", trips[0].destination)
+        assertEquals("Home", trips[1].destination)
+    }
+
+    @Test
+    fun `a navigation left active while parked is not a trip`() {
+        val parked =
+            segmentTrips(
+                listOf(
+                    reading(0, 4.7f, odometer = 7_730_000),
+                    reading(20, 4.7f, odometer = 7_730_001),
+                ),
+            )
+        assertEquals(emptyList(), parked)
+        val driven = segmentTrips(listOf(reading(0, 4.7f, odometer = 7_730_000), reading(10, 1f, odometer = 7_730_400)))
+        assertEquals(1, driven.size)
     }
 
     @Test

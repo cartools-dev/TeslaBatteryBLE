@@ -32,7 +32,7 @@ fun activeRoute(
  */
 fun RouteSample.continuing(previous: RouteSample?): RouteSample {
     val miles = milesToArrival?.takeIf { it.isFinite() && it >= 0f }
-    val sameTrip = previous != null && !startsNewTrip(previous, this, previous.tripStartMiles ?: 0f)
+    val sameTrip = previous?.milesToArrival != null && !startsNewTrip(previous, this, previous.tripStartMiles ?: 0f)
     val start = listOfNotNull(if (sameTrip) previous.tripStartMiles else null, miles).maxOrNull()
     val startedAt = if (sameTrip) previous.tripStartedAtMillis ?: previous.observedAtMillis() else observedAtMillis()
     return copy(tripStartMiles = start, tripStartedAtMillis = startedAt)
