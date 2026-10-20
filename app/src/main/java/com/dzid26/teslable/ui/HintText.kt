@@ -43,7 +43,6 @@ internal fun HintText(
     hint: String,
     color: Color,
     modifier: Modifier = Modifier,
-    style: TextStyle = MaterialTheme.typography.bodySmall,
 ) {
     val state = rememberTooltipState(isPersistent = true)
     val scope = rememberCoroutineScope()
@@ -57,7 +56,7 @@ internal fun HintText(
     ) {
         Text(
             text = text,
-            style = style,
+            style = MaterialTheme.typography.bodySmall,
             color = color,
             modifier =
                 Modifier
@@ -72,6 +71,35 @@ internal fun HintText(
                             pathEffect = PathEffect.dashPathEffect(dash),
                         )
                     }.clickable { scope.launch { state.show() } },
+        )
+    }
+}
+
+/** Text that opens a tooltip on a tap (or a long press), with nothing to mark it: for tips that are a bonus, not the point. */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+internal fun TipText(
+    text: String,
+    tip: String,
+    style: TextStyle,
+    modifier: Modifier = Modifier,
+) {
+    val state = rememberTooltipState(isPersistent = true)
+    val scope = rememberCoroutineScope()
+    val description = stringResource(R.string.history_hint_description, text, tip)
+    TooltipBox(
+        positionProvider = TooltipDefaults.rememberTooltipPositionProvider(),
+        tooltip = { PlainTooltip { Text(tip) } },
+        state = state,
+        modifier = modifier,
+    ) {
+        Text(
+            text = text,
+            style = style,
+            modifier =
+                Modifier
+                    .semantics { contentDescription = description }
+                    .clickable { scope.launch { state.show() } },
         )
     }
 }
