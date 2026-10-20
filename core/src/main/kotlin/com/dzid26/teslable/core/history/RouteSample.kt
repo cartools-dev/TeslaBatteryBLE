@@ -38,6 +38,13 @@ data class RouteSample(
      * route is, against the phone's own clock, is judged on this one.
      */
     val readAtMillis: Long? = null,
+    /**
+     * The longest remaining distance seen since this navigation began: the length of the trip
+     * the progress bar measures against. Null on a bare reading; set by [continuing].
+     */
+    val tripStartMiles: Float? = null,
+    /** The phone clock at this navigation's first reading, so the trip's total time is known; set by [continuing]. */
+    val tripStartedAtMillis: Long? = null,
 ) {
     override fun toString(): String {
         val shownDestination = if (destination != null) "<redacted>" else "null"

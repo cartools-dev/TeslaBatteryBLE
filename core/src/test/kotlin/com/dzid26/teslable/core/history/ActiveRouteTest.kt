@@ -53,6 +53,41 @@ class ActiveRouteTest {
         assertNull(activeRoute(latest, nowMillis = 111 * MINUTE))
     }
 
+    @Test
+    fun `a trip keeps its longest remaining distance as its length`() {
+        val first = route(carMinutes = 100, miles = 10f).continuing(null)
+        val second = route(carMinutes = 103, miles = 6f).continuing(first)
+        val rerouted = route(carMinutes = 106, miles = 8f).continuing(second)
+        assertEquals(10f, first.tripStartMiles)
+        assertEquals(10f, second.tripStartMiles)
+        assertEquals(10f, rerouted.tripStartMiles)
+        assertEquals(0.2f, rerouted.tripProgress()!!, 1e-6f)
+    }
+
+    @Test
+    fun `the total time is what has passed since the first reading plus the time left`() {
+        val first = route(carMinutes = 100, miles = 10f).copy(minutesToArrival = 26f).continuing(null)
+        val later = route(carMinutes = 110, miles = 5f).copy(minutesToArrival = 14f).continuing(first)
+        assertEquals(100 * MINUTE, later.tripStartedAtMillis)
+        assertEquals(24 * MINUTE, later.tripTotalMillis())
+        assertNull(route(carMinutes = 100).tripTotalMillis())
+    }
+
+    @Test
+    fun `a long gap starts a new trip`() {
+        val first = route(carMinutes = 100, miles = 10f).continuing(null)
+        val later = route(carMinutes = 130, miles = 3f).continuing(first)
+        assertEquals(3f, later.tripStartMiles)
+        assertEquals(0f, later.tripProgress())
+    }
+
+    @Test
+    fun `progress is unknown without a length and complete at arrival`() {
+        assertNull(route(carMinutes = 100).tripProgress())
+        val arrived = route(carMinutes = 100, miles = 0f).copy(tripStartMiles = 5f)
+        assertEquals(1f, arrived.tripProgress())
+    }
+
     private companion object {
         const val MINUTE = 60_000L
     }
