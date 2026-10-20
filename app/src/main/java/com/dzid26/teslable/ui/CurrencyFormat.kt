@@ -12,7 +12,7 @@ internal val LocalCurrencyCode = compositionLocalOf<String?> { null }
 /** The owner's price per kWh, for the finished charge's cost on the history card; null shows the kWh alone. */
 internal val LocalPricePerKwh = compositionLocalOf<Float?> { null }
 
-private const val FALLBACK_CODE = "USD"
+internal const val FALLBACK_CODE = "USD"
 
 /**
  * The currency for an ISO 4217 [code] such as "eur" or " usd ", or null when it is blank, not a code, or
@@ -34,3 +34,21 @@ internal fun currencyFormat(code: String?): NumberFormat =
         minimumFractionDigits = chosen.defaultFractionDigits
         maximumFractionDigits = chosen.defaultFractionDigits
     }
+
+/** The currencies offered in Settings; the phone's own and any already-saved one are added when missing. */
+private val COMMON_CURRENCY_CODES =
+    listOf(
+        "USD", "EUR", "GBP", "CAD", "AUD", "NZD", "CHF", "SEK", "NOK", "DKK", "PLN", "CZK",
+        "HUF", "RON", "BGN", "UAH", "TRY", "ILS", "AED", "SAR", "ZAR", "INR", "CNY", "HKD",
+        "TWD", "JPY", "KRW", "SGD", "THB", "MYR", "IDR", "PHP", "MXN", "BRL", "ARS", "CLP", "COP",
+    )
+
+/**
+ * The picker's choices: the common currencies, then the [selected] one (a saved or phone currency outside
+ * the list) so it can still be shown, each once and in that order.
+ */
+internal fun currencyChoices(selected: Currency?): List<Currency> =
+    (COMMON_CURRENCY_CODES.mapNotNull { currencyOrNull(it) } + listOfNotNull(selected)).distinct()
+
+/** "EUR (€)": the code and the symbol the phone's locale gives it. */
+internal fun currencyLabel(currency: Currency): String = "${currency.currencyCode} (${currency.symbol})"

@@ -21,7 +21,11 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExposedDropdownMenuAnchorType
+import androidx.compose.material3.ExposedDropdownMenuBox
+import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -43,7 +47,6 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalInspectionMode
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontFamily
-import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import com.dzid26.teslable.BuildConfig
@@ -58,6 +61,7 @@ import com.dzid26.teslable.core.units.EfficiencyUnit
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import java.util.Currency
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -292,9 +296,10 @@ private fun UnitsCard(unitStore: UnitStore) {
 /** The electricity price that turns a charge session's energy into a cost on the car view. */
 @Composable
 private fun EnergyPriceCard(priceStore: EnergyPriceStore) {
-    // Blank follows the phone; a chosen code is pinned.
-    var currencyText by remember { mutableStateOf(priceStore.currencyCode().orEmpty()) }
-    val symbol = (currencyOrNull(currencyText) ?: localeCurrencyOrNull())?.symbol.orEmpty()
+    // Nothing saved follows the phone, so the picker shows the phone's currency until one is chosen.
+    var chosen by remember { mutableStateOf(currencyOrNull(priceStore.currencyCode())) }
+    val current = chosen ?: localeCurrencyOrNull() ?: currencyOrNull(FALLBACK_CODE)
+    val symbol = current?.symbol.orEmpty()
     var text by remember { mutableStateOf(priceStore.pricePerKwh()?.toString().orEmpty()) }
     Card(modifier = Modifier.fillMaxWidth()) {
         Column(Modifier.padding(16.dp)) {
@@ -316,18 +321,12 @@ private fun EnergyPriceCard(priceStore: EnergyPriceStore) {
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                     modifier = Modifier.weight(1f),
                 )
-                OutlinedTextField(
-                    value = currencyText,
-                    onValueChange = { input ->
-                        currencyText = input.take(CURRENCY_CODE_LENGTH).uppercase()
-                        // Only a real ISO 4217 code is kept; blank or anything else follows the phone's currency.
-                        priceStore.setCurrencyCode(currencyText.trim().takeIf { currencyOrNull(it) != null })
+                CurrencyDropdown(
+                    selected = current,
+                    onSelect = { picked ->
+                        chosen = picked
+                        priceStore.setCurrencyCode(picked.currencyCode)
                     },
-                    label = { Text(stringResource(R.string.settings_currency)) },
-                    placeholder = { Text(localeCurrencyOrNull()?.currencyCode.orEmpty()) },
-                    singleLine = true,
-                    isError = currencyText.isNotBlank() && currencyOrNull(currencyText) == null,
-                    keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Characters, autoCorrectEnabled = false),
                     modifier = Modifier.width(CURRENCY_FIELD_WIDTH),
                 )
             }
@@ -337,6 +336,39 @@ private fun EnergyPriceCard(priceStore: EnergyPriceStore) {
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
+        }
+    }
+}
+
+/** A read-only dropdown of [currencyChoices]; [selected] is shown even when it is not one of the common ones. */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun CurrencyDropdown(
+    selected: Currency?,
+    onSelect: (Currency) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    var expanded by remember { mutableStateOf(false) }
+    ExposedDropdownMenuBox(expanded = expanded, onExpandedChange = { expanded = it }, modifier = modifier) {
+        OutlinedTextField(
+            value = selected?.currencyCode.orEmpty(),
+            onValueChange = {},
+            readOnly = true,
+            singleLine = true,
+            label = { Text(stringResource(R.string.settings_currency)) },
+            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
+            modifier = Modifier.menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable),
+        )
+        ExposedDropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+            currencyChoices(selected).forEach { currency ->
+                DropdownMenuItem(
+                    text = { Text(currencyLabel(currency)) },
+                    onClick = {
+                        onSelect(currency)
+                        expanded = false
+                    },
+                )
+            }
         }
     }
 }
@@ -518,5 +550,4 @@ private fun ClearPairingCacheDialog(
 
 private fun ByteArray.toHex(): String = joinToString("") { byte -> (byte.toInt() and 0xFF).toString(16).padStart(2, '0') }
 
-private const val CURRENCY_CODE_LENGTH = 3
-private val CURRENCY_FIELD_WIDTH = 104.dp
+private val CURRENCY_FIELD_WIDTH = 140.dp

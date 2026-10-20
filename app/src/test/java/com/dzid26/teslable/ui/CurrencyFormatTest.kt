@@ -57,4 +57,19 @@ class CurrencyFormatTest {
         Locale.setDefault(Locale.ENGLISH)
         assertEquals("$6.26", currencyFormat(null).format(6.26))
     }
+
+    @Test
+    fun `choices list the common currencies once and add an uncommon selected one last`() {
+        val common = currencyChoices(null).map { it.currencyCode }
+        assertEquals(common.distinct(), common)
+        assertEquals("USD", common.first())
+        assertEquals(common, currencyChoices(currencyOrNull("eur")).map { it.currencyCode })
+        assertEquals("ISK", currencyChoices(currencyOrNull("ISK")).last().currencyCode)
+    }
+
+    @Test
+    fun `a label is the code and its symbol`() {
+        assertEquals("EUR (€)", currencyLabel(currencyOrNull("EUR")!!))
+        assertEquals("USD ($)", currencyLabel(currencyOrNull("USD")!!))
+    }
 }
