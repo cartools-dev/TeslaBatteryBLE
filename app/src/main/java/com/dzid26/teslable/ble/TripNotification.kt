@@ -111,7 +111,10 @@ internal fun NotificationCompat.Builder.showTrip(
             .ifEmpty { stateText.toString() }
     val body =
         SpannableStringBuilder(stateText).apply {
-            remaining?.let { appendLine(); appendBold(text.label(), it) }
+            if (remaining != null) {
+                appendLine()
+                appendBold(text.label(), remaining)
+            }
             text.arrival(notice)?.let { appendLine().append(it) }
         }
     return setContentText(headline).setStyle(NotificationCompat.BigTextStyle().bigText(body))
