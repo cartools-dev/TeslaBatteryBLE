@@ -91,8 +91,8 @@ internal class TripNoticeSource {
 
 /**
  * Shows the trip on a car's ongoing notification: the collapsed line leads with the level and the car's predicted
- * arrival level (or the distance and time left without one), and the expanded text leads with the arrival and its
- * range, then adds the usual state line and the distance and time left. Adds to the state text, never replaces it.
+ * arrival level (or the distance and time left without one), and the expanded text adds the usual state line, then the
+ * arrival with its range and the distance and time left. Adds to the state text, never replaces it.
  */
 internal fun NotificationCompat.Builder.showTrip(
     text: TripTextContext,
@@ -105,7 +105,7 @@ internal fun NotificationCompat.Builder.showTrip(
         listOfNotNull(percent?.let { "$it%" }, text.arrivalShort(notice) ?: remaining)
             .joinToString(" \u00B7 ")
             .ifEmpty { stateText.toString() }
-    val lines = listOfNotNull(text.arrival(notice), stateText.toString(), remaining)
+    val lines = listOfNotNull(stateText.toString(), text.arrival(notice), remaining)
     return setContentText(headline).setStyle(NotificationCompat.BigTextStyle().bigText(lines.joinToString("\n")))
 }
 
