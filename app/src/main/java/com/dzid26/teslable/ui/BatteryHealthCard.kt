@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 package com.dzid26.teslable.ui
 
+import android.text.format.DateFormat
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -16,8 +17,13 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.dzid26.teslable.R
+import com.dzid26.teslable.core.history.DeepSleep
+import com.dzid26.teslable.core.history.compactDuration
 import com.dzid26.teslable.health.HealthConfidence
 import com.dzid26.teslable.health.HealthSummary
 import java.text.DecimalFormatSymbols
@@ -75,6 +81,7 @@ internal fun BatteryHealthCard(summary: HealthSummary) {
                     detail = "fitted from ${summary.fullRangeSteps} percent steps",
                 )
             }
+            summary.longestSleep?.let { LongestSleepRow(it) }
             if (summary.capacityKwh == null && summary.fullRangeMiles == null && summary.sohPercent == null) {
                 Text(
                     text = "No readings yet. Charge once with the app open, then read the battery.",
@@ -106,6 +113,16 @@ internal fun BatteryHealthCard(summary: HealthSummary) {
             )
         }
     }
+}
+
+@Composable
+private fun LongestSleepRow(sleep: DeepSleep) {
+    val is24Hour = LocalIs24Hour.current ?: DateFormat.is24HourFormat(LocalContext.current)
+    EstimateRow(
+        label = stringResource(R.string.health_deep_sleep_label),
+        value = compactDuration(sleep.durationMillis).orEmpty(),
+        detail = stringResource(R.string.health_deep_sleep_detail, formatTime(sleep.startMillis, showDate = true, is24Hour = is24Hour)),
+    )
 }
 
 @Composable

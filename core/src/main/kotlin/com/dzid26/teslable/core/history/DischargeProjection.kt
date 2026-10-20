@@ -187,13 +187,7 @@ private fun parkedDrain(
         val b = samples[index]
         val readingA = readings[index - 1]
         val readingB = readings[index]
-        val stayed =
-            readingA != null &&
-                readingB != null &&
-                readingA.odometerInHundredthsOfAMile == readingB.odometerInHundredthsOfAMile &&
-                !readingA.inGear &&
-                !readingB.inGear
-        if (stayed && !a.isCharging && !b.isCharging) {
+        if (stayedParked(readingA, readingB) && !a.isCharging && !b.isCharging) {
             drops += (a.soc(scale) - b.soc(scale)).toDouble()
             spans += b.timestampMillis - a.timestampMillis
             slept += sleptThrough(a, b, statuses)
@@ -218,13 +212,24 @@ private fun parkedDrain(
     return ParkedDrain(drop, millis, drops.size, squared, rounding, SleepSpan(sleepDrop, sleepMillis, slept.count { it }))
 }
 
+/** True when two drive readings put the car at one odometer reading and out of gear: it stayed parked between them. */
+internal fun stayedParked(
+    a: DriveSample?,
+    b: DriveSample?,
+): Boolean =
+    a != null &&
+        b != null &&
+        a.odometerInHundredthsOfAMile == b.odometerInHundredthsOfAMile &&
+        !a.inGear &&
+        !b.inGear
+
 /**
  * True when the car slept through the gap between two reads: a status sample
  * inside it says asleep and none says awake. The reads themselves are awake
  * moments (the car answers only when awake), so only the inside counts. Times
  * are the phone's clock, which the status samples share.
  */
-private fun sleptThrough(
+internal fun sleptThrough(
     a: BatterySample,
     b: BatterySample,
     statuses: List<StatusSample>,
@@ -283,3 +288,6 @@ private const val HOUR = 60 * MINUTE
 
 /** Less parked time than this makes the rate too noisy to extrapolate. */
 private const val MIN_RATE_SPAN_MILLIS = 10 * MINUTE
+
+/** The shortest sleep that counts as slept enough: the rate's own minimum span. */
+internal const val MIN_SLEEP_SPAN_MILLIS = MIN_RATE_SPAN_MILLIS

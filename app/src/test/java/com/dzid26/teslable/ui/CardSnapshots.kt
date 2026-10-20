@@ -26,6 +26,7 @@ import com.dzid26.teslable.ble.TeslaConnection
 import com.dzid26.teslable.ble.Vehicle
 import com.dzid26.teslable.core.health.PriceChange
 import com.dzid26.teslable.core.history.BatterySample
+import com.dzid26.teslable.core.history.DeepSleep
 import com.dzid26.teslable.core.history.DriveSample
 import com.dzid26.teslable.core.history.DriveWindow
 import com.dzid26.teslable.core.history.HistoryRange
@@ -939,6 +940,8 @@ class CardSnapshots {
                 fullRangeSteps = 42,
                 confidence = HealthConfidence.MEDIUM,
                 qualityNote = null,
+                // 9 h 25 min, overnight two days back.
+                longestSleep = DeepSleep(startMillis = NOW - 34 * HOUR, endMillis = NOW - 34 * HOUR + 565 * MINUTE),
             )
 
         private val advert = TeslaAdvert(name = BLE_NAME, address = ADDRESS, rssi = -70)

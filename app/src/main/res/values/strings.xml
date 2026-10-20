@@ -152,5 +152,7 @@
     <string name="drive_used">%1$s%% used</string>
     <string name="drive_rate_joined">\u00B7 %1$s</string>
     <string name="drive_rough_note">Fewer stats and coarser steps until the car\u2019s full range is learned.</string>
+    <string name="health_deep_sleep_detail">started %1$s</string>
+    <string name="health_deep_sleep_label">Longest deep sleep</string>
     <string name="trip_arrival_range">Arrive with %1$d%% (about %2$s left)</string>
 </resources>

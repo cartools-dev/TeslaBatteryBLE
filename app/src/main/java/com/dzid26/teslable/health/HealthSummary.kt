@@ -7,7 +7,11 @@ import com.dzid26.teslable.core.health.HealthFusion
 import com.dzid26.teslable.core.health.MIN_SWING_PERCENT
 import com.dzid26.teslable.core.health.chargeSessions
 import com.dzid26.teslable.core.history.BatterySample
+import com.dzid26.teslable.core.history.DeepSleep
+import com.dzid26.teslable.core.history.DriveSample
 import com.dzid26.teslable.core.history.FullRangeScaleEstimator
+import com.dzid26.teslable.core.history.StatusSample
+import com.dzid26.teslable.core.history.longestDeepSleep
 import kotlin.math.roundToInt
 
 // Battery-health glue: turns the recorded raw samples into the numbers the car
@@ -39,6 +43,8 @@ data class HealthSummary(
     val confidence: HealthConfidence,
     /** A plain-language caveat when the inputs are thin, else null. */
     val qualityNote: String?,
+    /** The longest stretch the car slept through in the logs, by the parked projection's definition; null when none. */
+    val longestSleep: DeepSleep? = null,
 )
 
 /**
@@ -50,6 +56,8 @@ fun healthSummary(
     samples: List<BatterySample>,
     epaRatedRangeMiles: Float? = null,
     newCapacityKwh: Float? = null,
+    drives: List<DriveSample> = emptyList(),
+    statuses: List<StatusSample> = emptyList(),
 ): HealthSummary {
     val sessions = chargeSessions(samples)
     val lastSession = sessions.lastOrNull()
@@ -102,6 +110,7 @@ fun healthSummary(
         fullRangeSteps = scale?.samples ?: 0,
         confidence = confidenceFor(sessions.size),
         qualityNote = qualityNote(backboneSession ?: energySession ?: lastSession),
+        longestSleep = longestDeepSleep(samples, drives, statuses),
     )
 }
 
