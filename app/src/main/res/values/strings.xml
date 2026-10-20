@@ -153,6 +153,8 @@
     <string name="drive_rate_joined">\u00B7 %1$s</string>
     <string name="drive_rough_note">Fewer stats and coarser steps until the car\u2019s full range is learned.</string>
     <string name="health_deep_sleep_detail">started %1$s</string>
+    <string name="health_deep_sleep_ended">ended %1$s</string>
+    <string name="health_deep_sleep_hint">The longest stretch between two parked readings that the car slept through. Both readings are awake moments, so the real sleep is a little shorter.</string>
     <string name="health_deep_sleep_label">Longest deep sleep</string>
     <string name="trip_arrival_range">Arrive with %1$d%% (about %2$s left)</string>
 </resources>

@@ -122,6 +122,8 @@ private fun LongestSleepRow(sleep: DeepSleep) {
         label = stringResource(R.string.health_deep_sleep_label),
         value = compactDuration(sleep.durationMillis).orEmpty(),
         detail = stringResource(R.string.health_deep_sleep_detail, formatTime(sleep.startMillis, showDate = true, is24Hour = is24Hour)),
+        labelHint = stringResource(R.string.health_deep_sleep_hint),
+        valueHint = stringResource(R.string.health_deep_sleep_ended, formatTime(sleep.endMillis, showDate = true, is24Hour = is24Hour)),
     )
 }
 
@@ -130,6 +132,8 @@ private fun EstimateRow(
     label: String,
     value: String,
     detail: String,
+    labelHint: String? = null,
+    valueHint: String? = null,
 ) {
     Row(
         verticalAlignment = Alignment.Bottom,
@@ -139,18 +143,31 @@ private fun EstimateRow(
                 .padding(vertical = 2.dp),
     ) {
         Column(Modifier.weight(1f)) {
-            Text(label, style = MaterialTheme.typography.bodySmall)
+            if (labelHint != null) {
+                HintText(label, labelHint, MaterialTheme.colorScheme.onSurface)
+            } else {
+                Text(label, style = MaterialTheme.typography.bodySmall)
+            }
             Text(
                 text = detail,
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
-        Text(
-            text = value,
-            style = MaterialTheme.typography.titleMedium,
-            fontWeight = FontWeight.SemiBold,
-        )
+        if (valueHint != null) {
+            HintText(
+                text = value,
+                hint = valueHint,
+                color = MaterialTheme.colorScheme.onSurface,
+                style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold),
+            )
+        } else {
+            Text(
+                text = value,
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.SemiBold,
+            )
+        }
     }
 }
 

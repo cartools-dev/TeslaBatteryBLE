@@ -24,6 +24,7 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.unit.dp
 import com.dzid26.teslable.R
 import com.dzid26.teslable.core.history.DischargeProjection
@@ -42,6 +43,7 @@ internal fun HintText(
     hint: String,
     color: Color,
     modifier: Modifier = Modifier,
+    style: TextStyle = MaterialTheme.typography.bodySmall,
 ) {
     val state = rememberTooltipState(isPersistent = true)
     val scope = rememberCoroutineScope()
@@ -55,7 +57,7 @@ internal fun HintText(
     ) {
         Text(
             text = text,
-            style = MaterialTheme.typography.bodySmall,
+            style = style,
             color = color,
             modifier =
                 Modifier
