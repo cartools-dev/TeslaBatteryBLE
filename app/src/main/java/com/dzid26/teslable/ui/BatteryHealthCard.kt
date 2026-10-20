@@ -28,6 +28,7 @@ import com.dzid26.teslable.core.history.compactDuration
 import com.dzid26.teslable.health.HealthConfidence
 import com.dzid26.teslable.health.HealthSummary
 import java.text.DecimalFormatSymbols
+import java.util.Locale
 import kotlin.math.roundToInt
 
 /**
@@ -132,10 +133,24 @@ private fun LongestSleepRow(sleep: DeepSleep) {
             }
         },
         value = compactDuration(sleep.durationMillis).orEmpty(),
-        detail = stringResource(R.string.health_deep_sleep_detail, formatTime(sleep.startMillis, showDate = true, is24Hour = is24Hour)),
+        detail = sleepDetail(sleep, formatTime(sleep.startMillis, showDate = true, is24Hour = is24Hour)),
         valueTip = stringResource(R.string.health_deep_sleep_ended, formatTime(sleep.endMillis, showDate = true, is24Hour = is24Hour)),
     )
 }
+
+/** "started Oct 18, 10:05 PM · 0.03%/h": the start and, when the battery lost anything, the drain rate. */
+@Composable
+private fun sleepDetail(
+    sleep: DeepSleep,
+    started: String,
+): String {
+    val rate = sleep.percentPerHour
+    if (rate <= 0.0) return stringResource(R.string.health_deep_sleep_detail, started)
+    val shown = if (rate < MIN_SHOWN_RATE) "<0.01" else "%.2f".format(Locale.getDefault(), rate)
+    return stringResource(R.string.health_deep_sleep_detail_rate, started, shown)
+}
+
+private const val MIN_SHOWN_RATE = 0.005
 
 @Composable
 private fun LabelText(text: String) = Text(text, style = MaterialTheme.typography.bodySmall)

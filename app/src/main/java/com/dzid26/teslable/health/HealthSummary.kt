@@ -110,7 +110,7 @@ fun healthSummary(
         fullRangeSteps = scale?.samples ?: 0,
         confidence = confidenceFor(sessions.size),
         qualityNote = qualityNote(backboneSession ?: energySession ?: lastSession),
-        longestSleep = longestDeepSleep(samples, drives, statuses),
+        longestSleep = longestDeepSleep(samples, drives, statuses, scale),
     )
 }
 

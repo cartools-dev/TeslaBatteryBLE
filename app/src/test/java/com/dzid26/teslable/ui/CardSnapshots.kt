@@ -941,7 +941,7 @@ class CardSnapshots {
                 confidence = HealthConfidence.MEDIUM,
                 qualityNote = null,
                 // 9 h 25 min, overnight two days back.
-                longestSleep = DeepSleep(startMillis = NOW - 34 * HOUR, endMillis = NOW - 34 * HOUR + 565 * MINUTE),
+                longestSleep = DeepSleep(startMillis = NOW - 34 * HOUR, endMillis = NOW - 34 * HOUR + 565 * MINUTE, dropPercent = 0.3),
             )
 
         private val advert = TeslaAdvert(name = BLE_NAME, address = ADDRESS, rssi = -70)

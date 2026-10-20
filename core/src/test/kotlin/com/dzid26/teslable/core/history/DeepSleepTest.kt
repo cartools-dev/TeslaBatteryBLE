@@ -11,10 +11,11 @@ import kotlin.test.assertNull
 class DeepSleepTest {
     private fun sample(
         minutes: Long,
+        percent: Int = 70,
         state: ChargingStateKind? = ChargingStateKind.Disconnected,
     ) = BatterySample(
         timestampMillis = minutes * MINUTE,
-        batteryLevel = 70,
+        batteryLevel = percent,
         chargingState = state,
         chargeLimit = null,
     )
@@ -55,6 +56,14 @@ class DeepSleepTest {
     }
 
     @Test
+    fun `the drain rate is the points lost over the sleep per hour`() {
+        val samples = listOf(sample(0, 70), sample(600, 68))
+        val sleep = assertNotNull(longestDeepSleep(samples, drives(samples), listOf(status(60))))
+        assertEquals(2.0, sleep.dropPercent)
+        assertEquals(0.2, sleep.percentPerHour, 1e-9)
+    }
+
+    @Test
     fun `a gap with an awake status inside was not a deep sleep`() {
         val samples = listOf(sample(0), sample(600))
         val statuses = listOf(status(60), status(90, asleep = false))
@@ -72,7 +81,7 @@ class DeepSleepTest {
         val samples = listOf(sample(0), sample(600))
         val moved = drives(samples) { if (it.timestampMillis == 0L) ODOMETER else ODOMETER + 100 }
         assertNull(longestDeepSleep(samples, moved, listOf(status(60))))
-        val charging = listOf(sample(0), sample(600, ChargingStateKind.Charging))
+        val charging = listOf(sample(0), sample(600, state = ChargingStateKind.Charging))
         assertNull(longestDeepSleep(charging, drives(charging), listOf(status(60))))
     }
 
