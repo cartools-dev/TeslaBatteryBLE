@@ -165,8 +165,6 @@ internal fun CarScreen(
         }
     // Fitted once for every card below: the hero, the trip, both history charts.
     val scale = remember(vehicleHistory) { FullRangeScaleEstimator.estimate(vehicleHistory) }
-    // The trip figures need a pinned scale, which can drop out for a reading when the fit drifts; keep the last pinned one.
-    val tripScale = rememberLastPinned(scale)
     // What a pull on this screen will do, and the feedback while it runs.
     val pullLabel =
         when {
@@ -280,7 +278,7 @@ internal fun CarScreen(
                     TripSection(
                         route = liveRoute,
                         currentRatedMiles = vehicleHistory.lastOrNull()?.ratedRangeMiles,
-                        scale = tripScale,
+                        scale = scale,
                         ratedKwhPerMile = health.ratedKwhPerMile,
                         pricePerKwh = pricePerKwh,
                     )
@@ -294,7 +292,7 @@ internal fun CarScreen(
                     PastTripsCard(
                         trips = vehicle?.let { trips[it.bleName] }.orEmpty().markingLive(liveRoute),
                         samples = vehicleHistory,
-                        scale = tripScale,
+                        scale = scale,
                         ratedKwhPerMile = health.ratedKwhPerMile,
                         pricePerKwh = pricePerKwh,
                     )
