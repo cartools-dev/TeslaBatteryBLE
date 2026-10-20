@@ -12,9 +12,8 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class DragCursorControllerTest {
-    private var now = 0L
     private val pin = CursorPin()
-    private val controller = DragCursorController(pin, touchSlop = 8f, nowNanos = { now })
+    private val controller = DragCursorController(pin, touchSlop = 8f)
     private val targets = listOf<CartesianMarker.Target>(FakeTarget)
 
     private object FakeTarget : CartesianMarker.Target {
@@ -33,7 +32,6 @@ class DragCursorControllerTest {
     fun aSidewaysDragPastTheSlopShowsTheCursor() {
         accept(Interaction.Press(Point(10f, 100f)))
         assertFalse(drag(14f))
-        now += 60_000_000L
         assertTrue(drag(60f))
         assertTrue(controller.shouldShowMarker(Interaction.Move(Point(60f, 100f)), targets))
     }
@@ -41,7 +39,6 @@ class DragCursorControllerTest {
     @Test
     fun theCursorStandsAfterTheLiftAndATapClearsIt() {
         accept(Interaction.Press(Point(10f, 100f)))
-        now += 60_000_000L
         drag(60f)
         accept(Interaction.Release(Point(60f, 100f)))
         assertNotNull(pin.targets)
@@ -54,7 +51,6 @@ class DragCursorControllerTest {
     @Test
     fun aNewTouchClearsTheStandingCursorAtOnce() {
         accept(Interaction.Press(Point(10f, 100f)))
-        now += 60_000_000L
         drag(60f)
         accept(Interaction.Release(Point(60f, 100f)))
         assertNotNull(pin.targets)
@@ -75,7 +71,6 @@ class DragCursorControllerTest {
     @Test
     fun aTapWithFingerJitterStillClearsTheStandingCursor() {
         accept(Interaction.Press(Point(10f, 100f)))
-        now += 60_000_000L
         drag(60f)
         accept(Interaction.Release(Point(60f, 100f)))
         assertNotNull(pin.targets)

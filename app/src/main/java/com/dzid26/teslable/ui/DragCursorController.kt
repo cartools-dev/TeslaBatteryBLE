@@ -2,12 +2,19 @@
 
 package com.dzid26.teslable.ui
 
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.input.pointer.PointerEventPass
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalViewConfiguration
 import com.patrykandpatrick.vico.compose.cartesian.CartesianDrawingContext
 import com.patrykandpatrick.vico.compose.cartesian.decoration.Decoration
@@ -28,7 +35,7 @@ internal class CursorPin {
 
 /**
  * When the chart's live cursor shows. A finger dragged sideways on the chart
- * (past the touch slop and a 50 ms delay, so a jittery tap never counts) or held still for a long
+ * (past the touch slop, so a jittery tap never counts) or held still for a long
  * press brings it up and moves it under the finger; on the lift it is handed to
  * [pin]. Any other touch on the chart clears the pin at once. A drag that turns
  * out mostly vertical is the page being scrolled and never activates the
@@ -38,10 +45,8 @@ internal class CursorPin {
 internal class DragCursorController(
     private val pin: CursorPin,
     private val touchSlop: Float,
-    private val nowNanos: () -> Long = System::nanoTime,
 ) : CartesianMarkerController {
     private var pressedAt: Point? = null
-    private var pressedNanos = 0L
     private var scrolling = false
     private var active = false
     private var lastTargets: List<CartesianMarker.Target>? = null
@@ -75,7 +80,6 @@ internal class DragCursorController(
         // A new touch on the chart clears the standing cursor at once.
         pin.targets = null
         pressedAt = point
-        pressedNanos = nowNanos()
         scrolling = false
         active = false
         return false
@@ -84,7 +88,7 @@ internal class DragCursorController(
     private fun move(point: Point): Boolean {
         if (pressedAt == null) return false
         scrolling = scrolling || isDrag(point, vertical = true)
-        active = !scrolling && (active || (isDrag(point, vertical = false) && delayPassed()))
+        active = !scrolling && (active || isDrag(point, vertical = false))
         return active
     }
 
@@ -102,8 +106,6 @@ internal class DragCursorController(
         return false
     }
 
-    private fun delayPassed(): Boolean = nowNanos() - pressedNanos >= SHOW_DELAY_NANOS
-
     /** True once the finger is past the slop and moved mostly along the asked axis. */
     private fun isDrag(
         point: Point,
@@ -118,7 +120,12 @@ internal class DragCursorController(
 }
 
 @Composable
-internal fun rememberCursorPin(): CursorPin = remember { CursorPin() }
+internal fun rememberCursorPin(): CursorPin {
+    val pin = remember { CursorPin() }
+    val touches = CursorDismiss.count
+    LaunchedEffect(touches) { pin.targets = null }
+    return pin
+}
 
 @Composable
 internal fun rememberCursorController(pin: CursorPin): CartesianMarkerController {
@@ -136,4 +143,20 @@ internal class PinnedCursor(
     }
 }
 
-private const val SHOW_DELAY_NANOS = 50_000_000L
+/**
+ * Counts touches anywhere on the screen, so a standing cursor can go when the
+ * finger lands outside its chart too.
+ */
+@Stable
+internal object CursorDismiss {
+    var count by mutableIntStateOf(0)
+}
+
+/** Counts every touch down on this subtree without consuming it. */
+internal fun Modifier.countingTouches(): Modifier =
+    pointerInput(Unit) {
+        awaitEachGesture {
+            awaitFirstDown(requireUnconsumed = false, pass = PointerEventPass.Initial)
+            CursorDismiss.count++
+        }
+    }
