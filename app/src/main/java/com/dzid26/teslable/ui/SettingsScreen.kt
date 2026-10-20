@@ -43,7 +43,6 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalInspectionMode
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontFamily
-import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import com.dzid26.teslable.BuildConfig
@@ -292,9 +291,10 @@ private fun UnitsCard(unitStore: UnitStore) {
 /** The electricity price that turns a charge session's energy into a cost on the car view. */
 @Composable
 private fun EnergyPriceCard(priceStore: EnergyPriceStore) {
-    // Blank follows the phone; a chosen code is pinned.
-    var currencyText by remember { mutableStateOf(priceStore.currencyCode().orEmpty()) }
-    val symbol = (currencyOrNull(currencyText) ?: localeCurrencyOrNull())?.symbol.orEmpty()
+    // Nothing saved follows the phone, so the picker shows the phone's currency until one is chosen.
+    var chosen by remember { mutableStateOf(currencyOrNull(priceStore.currencyCode())) }
+    val current = chosen ?: localeCurrencyOrNull() ?: currencyOrNull(FALLBACK_CODE)
+    val symbol = current?.symbol.orEmpty()
     var text by remember { mutableStateOf(priceStore.pricePerKwh()?.toString().orEmpty()) }
     Card(modifier = Modifier.fillMaxWidth()) {
         Column(Modifier.padding(16.dp)) {
@@ -316,18 +316,12 @@ private fun EnergyPriceCard(priceStore: EnergyPriceStore) {
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                     modifier = Modifier.weight(1f),
                 )
-                OutlinedTextField(
-                    value = currencyText,
-                    onValueChange = { input ->
-                        currencyText = input.take(CURRENCY_CODE_LENGTH).uppercase()
-                        // Only a real ISO 4217 code is kept; blank or anything else follows the phone's currency.
-                        priceStore.setCurrencyCode(currencyText.trim().takeIf { currencyOrNull(it) != null })
+                CurrencyDropdown(
+                    selected = current,
+                    onSelect = { picked ->
+                        chosen = picked
+                        priceStore.setCurrencyCode(picked.currencyCode)
                     },
-                    label = { Text(stringResource(R.string.settings_currency)) },
-                    placeholder = { Text(localeCurrencyOrNull()?.currencyCode.orEmpty()) },
-                    singleLine = true,
-                    isError = currencyText.isNotBlank() && currencyOrNull(currencyText) == null,
-                    keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Characters, autoCorrectEnabled = false),
                     modifier = Modifier.width(CURRENCY_FIELD_WIDTH),
                 )
             }
@@ -518,5 +512,4 @@ private fun ClearPairingCacheDialog(
 
 private fun ByteArray.toHex(): String = joinToString("") { byte -> (byte.toInt() and 0xFF).toString(16).padStart(2, '0') }
 
-private const val CURRENCY_CODE_LENGTH = 3
-private val CURRENCY_FIELD_WIDTH = 104.dp
+private val CURRENCY_FIELD_WIDTH = 140.dp

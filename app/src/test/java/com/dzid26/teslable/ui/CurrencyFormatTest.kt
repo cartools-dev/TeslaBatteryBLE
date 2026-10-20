@@ -57,4 +57,25 @@ class CurrencyFormatTest {
         Locale.setDefault(Locale.ENGLISH)
         assertEquals("$6.26", currencyFormat(null).format(6.26))
     }
+
+    @Test
+    fun `choices list the common currencies once and add an uncommon selected one last`() {
+        val common = currencyChoices(null).map { it.currencyCode }
+        assertEquals(common.distinct(), common)
+        assertEquals("USD", common.first())
+        assertEquals(common, currencyChoices(currencyOrNull("eur")).map { it.currencyCode })
+        assertEquals("ISK", currencyChoices(currencyOrNull("ISK")).last().currencyCode)
+    }
+
+    @Test
+    fun `a label is the code and its name`() {
+        assertEquals("EUR – Euro", currencyLabel(currencyOrNull("EUR")!!))
+        assertEquals("USD – US Dollar", currencyLabel(currencyOrNull("USD")!!))
+    }
+
+    @Test
+    fun `a currency the phone has no symbol for is written the way its own country does`() {
+        assertEquals("1,50 zł", currencyFormat("PLN").format(1.5))
+        assertEquals("$1.50", currencyFormat("USD").format(1.5))
+    }
 }
