@@ -153,7 +153,6 @@
     <string name="drive_rate_joined">\u00B7 %1$s</string>
     <string name="drive_rough_note">Fewer stats and coarser steps until the car\'s full range is learned.</string>
     <string name="health_deep_sleep_detail">started %1$s</string>
-    <string name="health_deep_sleep_detail_rate">started %1$s · %2$s%%/h</string>
     <string name="health_deep_sleep_ended">ended %1$s</string>
     <string name="health_deep_sleep_hint">From before the car falls asleep until it wakes up if odometer has not increased.</string>
     <string name="health_deep_sleep_term">deep sleep</string>

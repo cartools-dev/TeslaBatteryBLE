@@ -19,8 +19,13 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalLocale
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import com.dzid26.teslable.R
 import com.dzid26.teslable.core.history.DeepSleep
@@ -28,7 +33,6 @@ import com.dzid26.teslable.core.history.compactDuration
 import com.dzid26.teslable.health.HealthConfidence
 import com.dzid26.teslable.health.HealthSummary
 import java.text.DecimalFormatSymbols
-import java.util.Locale
 import kotlin.math.roundToInt
 
 /**
@@ -133,24 +137,32 @@ private fun LongestSleepRow(sleep: DeepSleep) {
             }
         },
         value = compactDuration(sleep.durationMillis).orEmpty(),
-        detail = sleepDetail(sleep, formatTime(sleep.startMillis, showDate = true, is24Hour = is24Hour)),
+        detail = stringResource(R.string.health_deep_sleep_detail, formatTime(sleep.startMillis, showDate = true, is24Hour = is24Hour)),
+        detailBold = sleepRate(sleep),
         valueTip = stringResource(R.string.health_deep_sleep_ended, formatTime(sleep.endMillis, showDate = true, is24Hour = is24Hour)),
     )
 }
 
-/** "started Oct 18, 10:05 PM · 0.03%/h": the start and, when the battery lost anything, the drain rate. */
+/** The drain over the sleep as "0.7%/day"; null when the battery lost nothing measurable. */
 @Composable
-private fun sleepDetail(
-    sleep: DeepSleep,
-    started: String,
-): String {
-    val rate = sleep.percentPerHour
-    if (rate <= 0.0) return stringResource(R.string.health_deep_sleep_detail, started)
-    val shown = if (rate < MIN_SHOWN_RATE) "<0.01" else "%.2f".format(Locale.getDefault(), rate)
-    return stringResource(R.string.health_deep_sleep_detail_rate, started, shown)
+private fun sleepRate(sleep: DeepSleep): String? {
+    if (sleep.percentPerHour <= 0.0) return null
+    val perDay = perDay(sleep.percentPerHour, LocalLocale.current.platformLocale)
+    return perDay?.let { stringResource(R.string.history_parked_rate, it) } ?: stringResource(R.string.history_parked_rate_tiny)
 }
 
-private const val MIN_SHOWN_RATE = 0.005
+/** [detail], with the [bold] part (a figure the line carries) in bold; [detail] alone when there is none. */
+private fun boldPart(
+    detail: String,
+    bold: String?,
+): AnnotatedString =
+    buildAnnotatedString {
+        append(detail)
+        if (bold != null) {
+            append(" · ")
+            withStyle(SpanStyle(fontWeight = FontWeight.Bold)) { append(bold) }
+        }
+    }
 
 @Composable
 private fun LabelText(text: String) = Text(text, style = MaterialTheme.typography.bodySmall)
@@ -160,6 +172,7 @@ private fun EstimateRow(
     label: @Composable () -> Unit,
     value: String,
     detail: String,
+    detailBold: String? = null,
     valueTip: String? = null,
 ) {
     Row(
@@ -172,7 +185,7 @@ private fun EstimateRow(
         Column(Modifier.weight(1f)) {
             label()
             Text(
-                text = detail,
+                text = boldPart(detail, detailBold),
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
