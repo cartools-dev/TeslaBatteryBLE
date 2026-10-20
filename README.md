@@ -53,7 +53,7 @@ Light and dark themes, side by side.
   is on and a car is paired. Some phones (Xiaomi, Huawei, Oppo/Vivo, Samsung "sleeping apps") block this unless
   you allow autostart for the app or set its battery usage to unrestricted. After a force stop, Android keeps
   the app stopped until you open it again.
-- **History graph** (6 h / 24 h / 7 d / 30 d / all) with since-last-charge stats to a tenth of a percent once the full range is learned (tap it for a cursor with the percent, range and time), and a **drive graph** of battery percent over distance driven (last 10 / 50 / 100 km or 10 / 50 / 100 mi, or since the last charge) with regeneration marked in green and, under it, the percent used per mile or km, plus the efficiency, energy and cost at your home price once the full range and the rated constant are learned;
+- **History graph** (6 h / 24 h / 7 d / 30 d / all) with since-last-charge stats to a tenth of a percent once the full range is learned (press and drag across it for a cursor with the percent, range and time), and a **drive graph** of battery percent over distance driven (last 15 / 50 / 150 km or 10 / 30 / 100 mi, or since the last charge) with regeneration marked in green and, under it, the percent used per mile or km, plus the efficiency, energy and cost at your home price once the full range and the rated constant are learned;
   every measurement is a dot (dense samples form a thick band), and dashed
   lines project the charge completion and the parked drain a round figure ahead
   (3 h, 12 h, 3 days, a week for the 30 d range; stretches where the odometer moved, or the car was in gear, are left out). Both

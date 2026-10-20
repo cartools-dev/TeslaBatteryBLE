@@ -30,7 +30,6 @@ import com.patrykandpatrick.vico.compose.cartesian.decoration.Decoration
 import com.patrykandpatrick.vico.compose.cartesian.layer.LineCartesianLayer
 import com.patrykandpatrick.vico.compose.cartesian.layer.rememberLine
 import com.patrykandpatrick.vico.compose.cartesian.layer.rememberLineCartesianLayer
-import com.patrykandpatrick.vico.compose.cartesian.marker.CartesianMarkerController
 import com.patrykandpatrick.vico.compose.cartesian.rememberCartesianChart
 import com.patrykandpatrick.vico.compose.cartesian.rememberVicoScrollState
 import com.patrykandpatrick.vico.compose.cartesian.rememberVicoZoomState
@@ -144,7 +143,7 @@ internal fun RangeChart(
                     ),
                 bottomAxis = HorizontalAxis.rememberBottom(valueFormatter = distanceFormatter),
                 marker = rememberChartCursor(cursorDescriber),
-                markerController = CartesianMarkerController.rememberToggleOnTap(),
+                markerController = rememberCursorController(),
                 decorations = remember(regenBands) { listOf(RegenBands(regenBands, chargingChartColor)) },
                 getXStep = { _, _, _ -> axes.xStep },
             )

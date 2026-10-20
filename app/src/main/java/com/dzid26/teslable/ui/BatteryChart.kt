@@ -26,7 +26,6 @@ import com.patrykandpatrick.vico.compose.cartesian.data.LineCartesianLayerModel
 import com.patrykandpatrick.vico.compose.cartesian.decoration.Decoration
 import com.patrykandpatrick.vico.compose.cartesian.layer.LineCartesianLayer
 import com.patrykandpatrick.vico.compose.cartesian.layer.rememberLineCartesianLayer
-import com.patrykandpatrick.vico.compose.cartesian.marker.CartesianMarkerController
 import com.patrykandpatrick.vico.compose.cartesian.marker.DefaultCartesianMarker
 import com.patrykandpatrick.vico.compose.cartesian.rememberCartesianChart
 import com.patrykandpatrick.vico.compose.cartesian.rememberVicoScrollState
@@ -135,7 +134,7 @@ internal fun BatteryChart(
                 startAxis = rememberPercentAxis(),
                 bottomAxis = rememberTimeAxis(timeFormatter),
                 marker = rememberCursorMarker(window, axis, lastMeasuredMillis, scale),
-                markerController = CartesianMarkerController.rememberToggleOnTap(),
+                markerController = rememberCursorController(),
                 decorations = remember(shape.beams) { listOf(Beams(shape.beams)) },
                 getXStep = { _, _, _ -> xStep },
             )
