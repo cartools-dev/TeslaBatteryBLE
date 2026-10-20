@@ -2,6 +2,7 @@
 package com.dzid26.teslable.ui
 
 import androidx.compose.runtime.compositionLocalOf
+import com.dzid26.teslable.core.health.PriceChange
 import java.text.DecimalFormat
 import java.text.NumberFormat
 import java.util.Currency
@@ -12,6 +13,9 @@ internal val LocalCurrencyCode = compositionLocalOf<String?> { null }
 
 /** The owner's price per kWh, for the finished charge's cost on the history card; null shows the kWh alone. */
 internal val LocalPricePerKwh = compositionLocalOf<Float?> { null }
+
+/** Every price the owner set, for pricing a finished charge by the price in effect when it ended. */
+internal val LocalPriceChanges = compositionLocalOf<List<PriceChange>> { emptyList() }
 
 internal const val FALLBACK_CODE = "USD"
 

@@ -14,8 +14,8 @@
     <string name="settings_backup_state_unencrypted">Currently: vehicle keys are stored without Keystore encryption, and Android 11 and below leave them out of backups.</string>
     <string name="settings_backup_state_off">Currently: vehicle keys are encrypted with this device\'s hardware-backed Keystore (AES). An Android backup can\'t restore them on another phone, so a new phone needs re-pairing with an NFC card tap.</string>
     <string name="settings_backup_schedule">Android decides when to back up (usually daily, while idle and charging). Check or trigger one in system Settings \u2192 Backup. Android restores it during phone setup, a device transfer, or an app install when automatic restore is on; otherwise restore it manually or re-pair.</string>
-    <string name="settings_energy_cost">Energy cost</string>
-    <string name="settings_energy_cost_hint">Shows what a charge session cost beside the car\'s charge details. Leave empty to hide it.</string>
+    <string name="settings_energy_cost">Home charging</string>
+    <string name="settings_energy_cost_hint">Your home electricity price. It shows what a charge session cost beside the car\'s charge details; leave it empty to hide that. A new price applies from the start of the latest charge.</string>
     <string name="settings_pairing">Pairing</string>
     <string name="settings_no_keys">No vehicle keys stored</string>
     <string name="settings_pairing_hint">Each car has its own key, and pairing always enrolls a freshly generated one. Clearing the cache forgets cached key slots and sessions so the pairing flow can be tested again; stored keys are kept, and a car that still has its key is marked paired by the next whitelist check.</string>

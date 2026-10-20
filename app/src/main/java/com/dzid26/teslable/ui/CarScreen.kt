@@ -72,8 +72,10 @@ import com.dzid26.teslable.ble.batteryPercent
 import com.dzid26.teslable.ble.chargingStateText
 import com.dzid26.teslable.ble.connectionDisplay
 import com.dzid26.teslable.ble.vehicleStatusText
+import com.dzid26.teslable.core.health.PriceChange
 import com.dzid26.teslable.core.health.chargeSessionOpen
 import com.dzid26.teslable.core.health.lastFinishedChargeStats
+import com.dzid26.teslable.core.health.priceForCharge
 import com.dzid26.teslable.core.history.BatterySample
 import com.dzid26.teslable.core.history.ChargeProjection
 import com.dzid26.teslable.core.history.DriveSample
@@ -239,7 +241,9 @@ internal fun CarScreen(
                 verticalArrangement = Arrangement.spacedBy(16.dp),
             ) {
                 val context = LocalContext.current
-                val pricePerKwh = remember { homePrice ?: EnergyPriceStore(context).pricePerKwh() }
+                val priceChanges =
+                    remember { homePrice?.let { listOf(PriceChange(0L, it)) } ?: EnergyPriceStore(context).priceChanges() }
+                val pricePerKwh = priceChanges.lastOrNull()?.pricePerKwh
                 val currencyCode = remember { EnergyPriceStore(context).currencyCode() }
                 val unitStore = remember { UnitStore(context) }
                 val distanceUnit = remember { unitStore.preference().resolve() }
@@ -249,6 +253,7 @@ internal fun CarScreen(
                     LocalEfficiencyUnit provides efficiencyUnit,
                     LocalCurrencyCode provides currencyCode,
                     LocalPricePerKwh provides pricePerKwh,
+                    LocalPriceChanges provides priceChanges,
                 ) {
                     HeroCard(
                         pricePerKwh = pricePerKwh,
@@ -789,7 +794,8 @@ internal fun BatteryHistoryCard(
             }
             stats?.let {
                 Spacer(Modifier.height(8.dp))
-                val energy = sessionEnergyText(it.energyKwh, LocalPricePerKwh.current, LocalCurrencyCode.current)
+                val price = priceForCharge(LocalPriceChanges.current, samples, it.sinceMillis)
+                val energy = sessionEnergyText(it.energyKwh, price, LocalCurrencyCode.current)
                 Text(
                     text =
                         "Last charge:\u00A0${formatPercent(

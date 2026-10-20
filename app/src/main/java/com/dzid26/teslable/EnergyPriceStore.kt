@@ -2,6 +2,8 @@
 package com.dzid26.teslable
 
 import android.content.Context
+import com.dzid26.teslable.core.health.PriceChange
+import com.dzid26.teslable.core.health.recordPriceChange
 
 /** The owner's electricity price per kWh and the currency it is in; used to price charge sessions. */
 class EnergyPriceStore(
@@ -9,16 +11,28 @@ class EnergyPriceStore(
 ) {
     private val prefs = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
 
-    /** The price per kWh, or null while none is set. */
-    fun pricePerKwh(): Float? = if (prefs.contains(KEY_PRICE)) prefs.getFloat(KEY_PRICE, 0f).takeIf { it > 0f } else null
+    /** Every price the owner set, oldest first: a charge is priced by the change in effect when it ended. */
+    fun priceChanges(): List<PriceChange> =
+        prefs
+            .getString(KEY_CHANGES, null)
+            .orEmpty()
+            .split(SEPARATOR)
+            .mapNotNull { entry ->
+                val (at, price) = entry.split(PAIR, limit = 2).takeIf { it.size == 2 } ?: return@mapNotNull null
+                at.toLongOrNull()?.let { PriceChange(it, price.toFloatOrNull()) }
+            }
 
-    /** Saves [price]; null or a non-positive value clears it. */
+    /** The current price per kWh, or null while none is set. */
+    fun pricePerKwh(): Float? = priceChanges().lastOrNull()?.pricePerKwh
+
+    /** Saves [price] as a new change made now; null or a non-positive value clears it. */
     fun setPricePerKwh(price: Float?) {
+        val valid = price?.takeIf { it.isFinite() && it > 0f }
+        val changes = recordPriceChange(priceChanges(), PriceChange(System.currentTimeMillis(), valid))
         prefs
             .edit()
-            .apply {
-                if (price != null && price.isFinite() && price > 0f) putFloat(KEY_PRICE, price) else remove(KEY_PRICE)
-            }.apply()
+            .putString(KEY_CHANGES, changes.joinToString(SEPARATOR) { "${it.atMillis}$PAIR${it.pricePerKwh ?: ""}" })
+            .apply()
     }
 
     /** The ISO 4217 code the owner chose, or null to follow the phone's locale. */
@@ -31,7 +45,9 @@ class EnergyPriceStore(
 
     private companion object {
         const val PREFS = "teslable_energy_price"
-        const val KEY_PRICE = "price_per_kwh"
+        const val KEY_CHANGES = "price_changes"
+        const val SEPARATOR = ","
+        const val PAIR = ":"
         const val KEY_CURRENCY = "currency_code"
     }
 }
