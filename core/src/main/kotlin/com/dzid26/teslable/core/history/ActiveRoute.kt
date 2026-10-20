@@ -33,15 +33,15 @@ fun activeRoute(
 fun RouteSample.continuing(previous: RouteSample?): RouteSample {
     val miles = milesToArrival?.takeIf { it.isFinite() && it >= 0f }
     val sameTrip = previous != null && readTime() - previous.readTime() <= ROUTE_FRESH_MILLIS
-    val start = listOfNotNull(if (sameTrip) previous?.tripStartMiles else null, miles).maxOrNull()
+    val start = listOfNotNull(if (sameTrip) previous.tripStartMiles else null, miles).maxOrNull()
     return copy(tripStartMiles = start)
 }
 
 /** How far along the trip is, 0 to 1, or null when the length or the remaining distance is unknown or zero. */
 fun RouteSample.tripProgress(): Float? {
-    val start = tripStartMiles?.takeIf { it > 0f } ?: return null
-    val left = milesToArrival?.takeIf { it.isFinite() && it >= 0f } ?: return null
-    return (1f - left / start).coerceIn(0f, 1f)
+    val start = tripStartMiles?.takeIf { it > 0f }
+    val left = milesToArrival?.takeIf { it.isFinite() && it >= 0f }
+    return if (start != null && left != null) (1f - left / start).coerceIn(0f, 1f) else null
 }
 
 private fun RouteSample.readTime(): Long = readAtMillis ?: timestampMillis
