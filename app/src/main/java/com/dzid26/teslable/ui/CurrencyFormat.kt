@@ -52,7 +52,8 @@ private fun formatLocale(currency: Currency): Locale {
     return Locale
         .getAvailableLocales()
         .filter { it.country.isNotEmpty() && localeCurrencyOf(it) == currency }
-        .minByOrNull { it.toString() } ?: phone
+        // The country's own language first (pl_PL, not en_PL or ru_PL), then a stable order.
+        .minWithOrNull(compareBy({ !it.language.equals(it.country, ignoreCase = true) }, { it.toString() })) ?: phone
 }
 
 private fun localeCurrencyOf(locale: Locale): Currency? = runCatching { Currency.getInstance(locale) }.getOrNull()
