@@ -72,10 +72,10 @@ Date: 2026-10-07
   non-exportable keys (Android Keystore `PURPOSE_AGREE_KEY`, Secure Enclave)
   stay possible.
 
-## Update proposed 2026-10-16: build-migration plan
+## Update 2026-10-20: build-migration plan
 
-Status of this section: Proposed. It plans the plugin switch the Decision
-section deferred.
+Status of this section: Accepted (proposed 2026-10-16). It plans the plugin
+switch the Decision section deferred.
 
 Preconditions, in order:
 
