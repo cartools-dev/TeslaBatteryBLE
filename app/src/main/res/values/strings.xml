@@ -128,4 +128,7 @@
     <string name="trip_arrival_range">Arrive with %1$d%% (about %2$s)</string>
     <string name="trip_energy">about %1$s kWh</string>
     <string name="trip_energy_cost">about %1$s kWh · %2$s at home price</string>
+    <string name="drive_energy">about %1$s kWh</string>
+    <string name="drive_cost">%1$s at home price</string>
+    <string name="drive_percent_per_distance">%1$s%% per %2$s</string>
 </resources>

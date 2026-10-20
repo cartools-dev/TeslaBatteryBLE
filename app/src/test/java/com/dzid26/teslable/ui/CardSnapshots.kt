@@ -515,6 +515,7 @@ class CardSnapshots {
                 samples = driveSamples(),
                 drives = driveReadings(),
                 initialWindow = DriveWindow.SINCE_CHARGE,
+                ratedKwhPerMile = 0.2736f,
             )
         }
     }

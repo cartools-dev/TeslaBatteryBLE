@@ -23,7 +23,11 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import com.dzid26.teslable.R
+import com.dzid26.teslable.core.health.DriveStats
+import com.dzid26.teslable.core.health.driveStats
 import com.dzid26.teslable.core.history.BatterySample
 import com.dzid26.teslable.core.history.DriveSample
 import com.dzid26.teslable.core.history.DriveWindow
@@ -32,6 +36,7 @@ import com.dzid26.teslable.core.history.FullRangeScaleEstimator
 import com.dzid26.teslable.core.history.drivePoints
 import com.dzid26.teslable.core.history.totalDrop
 import com.dzid26.teslable.core.units.DistanceUnit
+import java.text.DecimalFormatSymbols
 import java.util.Locale
 
 /**
@@ -50,6 +55,8 @@ internal fun DriveHistoryCard(
     initialWindow: DriveWindow = DriveWindow.MEDIUM,
     // The fitted full-range scale; the car screen fits it once for all its cards.
     scale: FullRangeScale? = remember(samples) { FullRangeScaleEstimator.estimate(samples) },
+    // The learned rated constant (kWh per rated mile); null hides the energy and efficiency stats.
+    ratedKwhPerMile: Float? = null,
 ) {
     var window by rememberSaveable { mutableStateOf(initialWindow) }
     val unit = LocalDistanceUnit.current
@@ -57,6 +64,8 @@ internal fun DriveHistoryCard(
     val points =
         remember(samples, drives, window, unit, scale) { drivePoints(samples, drives, scale, window.miles(unit), window.sinceLastCharge) }
     val used = remember(points) { points.totalDrop { it.socPercent } }
+    val pricePerKwh = LocalPricePerKwh.current
+    val stats = remember(points, scale, ratedKwhPerMile, pricePerKwh) { driveStats(points, scale, ratedKwhPerMile, pricePerKwh) }
     val plotted =
         remember(points, unit) {
             points.map { Plotted(unit.fromMiles(it.milesDriven.toFloat()).toDouble(), it.socPercent, it.regenerating, it.trip) }
@@ -83,8 +92,8 @@ internal fun DriveHistoryCard(
                     plotted.last().distance,
                     unit,
                     used,
-                    wholeStepsOnly =
-                        scale?.pinned != true,
+                    wholeStepsOnly = scale?.pinned != true,
+                    stats = stats,
                 )
             }
         }
@@ -115,11 +124,15 @@ private fun DriveFooter(
     unit: DistanceUnit,
     used: Float,
     wholeStepsOnly: Boolean,
+    stats: DriveStats?,
 ) {
     Text(
         text = "Driven: ${formatDistance(driven, unit)} \u00B7 ${formatPercentTenths(used.coerceAtLeast(0f))}% used",
         style = MaterialTheme.typography.bodySmall,
     )
+    if (stats != null) {
+        driveStatsLines(stats, unit).forEach { Text(it, style = MaterialTheme.typography.bodySmall) }
+    }
     if (wholeStepsOnly) {
         Text(
             text = "Whole-percent steps until the full range is learned.",
@@ -127,6 +140,30 @@ private fun DriveFooter(
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
     }
+}
+
+/**
+ * The lines under the footer: "312 Wh/mi \u00B7 6.4 kWh \u00B7 $1.02 at home price" (the energy ones need the
+ * learned full range and rated constant) and "0.8% per mi". A part the data cannot supply is left out.
+ */
+@Composable
+private fun driveStatsLines(
+    stats: DriveStats,
+    unit: DistanceUnit,
+): List<String> {
+    val efficiency = LocalEfficiencyUnit.current
+    val separator = remember { DecimalFormatSymbols.getInstance().decimalSeparator }
+    val currencyCode = LocalCurrencyCode.current
+    val energy =
+        listOfNotNull(
+            stats.kwhPerMile?.let { efficiency.format(it, unit, separator) },
+            stats.energyKwh?.let { stringResource(R.string.drive_energy, formatKwh(it)) },
+            stats.costAtHomePrice?.let { stringResource(R.string.drive_cost, formatMoney(it, currencyCode)) },
+        )
+    return listOfNotNull(
+        energy.takeIf { it.isNotEmpty() }?.joinToString(" \u00B7 "),
+        stats.percentPerMile?.let { stringResource(R.string.drive_percent_per_distance, formatPercentHundredths(unit.ratePerUnit(it)), unit.symbol) },
+    )
 }
 
 @Composable
@@ -158,3 +195,5 @@ internal fun formatDistance(
 internal fun formatWholePercent(percent: Float): String = String.format(Locale.getDefault(), "%.0f%%", percent)
 
 private fun formatPercentTenths(percent: Float): String = String.format(Locale.getDefault(), "%.1f", percent)
+
+private fun formatPercentHundredths(percent: Float): String = String.format(Locale.getDefault(), "%.2f", percent)

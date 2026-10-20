@@ -273,7 +273,7 @@ internal fun CarScreen(
                         nowMillis = nowMillis ?: System.currentTimeMillis(),
                         statuses = vehicleStatuses,
                     )
-                    DriveHistoryCard(vehicleHistory, vehicleDrives, scale = scale)
+                    DriveHistoryCard(vehicleHistory, vehicleDrives, scale = scale, ratedKwhPerMile = health.ratedKwhPerMile)
                     BatteryHealthCard(health)
                 }
             }
