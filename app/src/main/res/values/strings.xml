@@ -134,5 +134,5 @@
     <string name="drive_driven">Driven: %1$s \u00B7</string>
     <string name="drive_used">%1$s%% used</string>
     <string name="drive_rate_joined">\u00B7 %1$s</string>
-    <string name="drive_whole_steps_hint">Whole-percent steps until the full range is learned.</string>
+    <string name="drive_rough_note">Figures are rough until the car\u2019s full range is learned.</string>
 </resources>

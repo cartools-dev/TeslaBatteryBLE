@@ -118,8 +118,8 @@ private fun DriveChips(
 }
 
 /**
- * "Driven: N km \u00B7 N% used \u00B7 0.8% per km": the percent rate joins the first line once known. While the percent is only
- * whole levels, the used figure carries a hint saying so.
+ * "Driven: N km \u00B7 N% used \u00B7 0.8% per km": the percent rate joins the first line once known. While the full range is
+ * not learned the figures are rough, and a note under the lines says so.
  */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
@@ -130,18 +130,13 @@ private fun DriveFooter(
     wholeStepsOnly: Boolean,
     stats: DriveStats?,
 ) {
-    val color = MaterialTheme.colorScheme.onSurface
     val usedText = stringResource(R.string.drive_used, formatPercentTenths(used.coerceAtLeast(0f)))
     FlowRow(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
         Text(
             text = stringResource(R.string.drive_driven, formatDistance(driven, unit)),
             style = MaterialTheme.typography.bodySmall,
         )
-        if (wholeStepsOnly) {
-            HintText(text = usedText, hint = stringResource(R.string.drive_whole_steps_hint), color = color)
-        } else {
-            Text(usedText, style = MaterialTheme.typography.bodySmall)
-        }
+        Text(usedText, style = MaterialTheme.typography.bodySmall)
         stats?.percentPerMile?.let { rate ->
             Text(
                 text = stringResource(R.string.drive_rate_joined, percentPerDistance(rate, unit)),
@@ -151,6 +146,13 @@ private fun DriveFooter(
     }
     if (stats != null) {
         driveEnergyLine(stats, unit)?.let { Text(it, style = MaterialTheme.typography.bodySmall) }
+    }
+    if (wholeStepsOnly) {
+        Text(
+            text = stringResource(R.string.drive_rough_note),
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
     }
 }
 
