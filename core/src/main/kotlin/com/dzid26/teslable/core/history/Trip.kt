@@ -40,30 +40,28 @@ data class Trip(
  * reading is a navigation cancelled at once and is left out.
  */
 fun segmentTrips(readings: List<RouteSample>): List<Trip> {
-    val trips = mutableListOf<Trip>()
-    var run = mutableListOf<RouteSample>()
-
-    fun close() {
-        if (run.size >= 2) {
-            val miles = run.mapNotNull { it.milesToArrival?.takeIf { m -> m.isFinite() && m >= 0f } }.maxOrNull()
-            trips += Trip(run.first(), run.last(), miles)
-        }
-        run = mutableListOf()
-    }
+    val runs = mutableListOf<MutableList<RouteSample>>()
     for (reading in readings.sortedBy { it.observedAtMillis() }) {
-        val previous = run.lastOrNull()
-        val newTrip =
-            previous != null &&
-                (
-                    reading.observedAtMillis() - previous.observedAtMillis() > ROUTE_FRESH_MILLIS ||
-                        namesDiffer(previous.destination, reading.destination)
-                )
-        if (newTrip) close()
-        run += reading
+        val run = runs.lastOrNull()
+        val previous = run?.last()
+        if (run != null && previous != null && !startsNewTrip(previous, reading)) {
+            run += reading
+        } else {
+            runs += mutableListOf(reading)
+        }
     }
-    close()
-    return trips
+    return runs.filter { it.size >= 2 }.map { run ->
+        val miles = run.mapNotNull { it.milesToArrival?.takeIf { m -> m.isFinite() && m >= 0f } }.maxOrNull()
+        Trip(run.first(), run.last(), miles)
+    }
 }
+
+private fun startsNewTrip(
+    previous: RouteSample,
+    next: RouteSample,
+): Boolean =
+    next.observedAtMillis() - previous.observedAtMillis() > ROUTE_FRESH_MILLIS ||
+        namesDiffer(previous.destination, next.destination)
 
 /** The trips that are over: [live], the route being navigated now, is not a past trip. */
 fun List<Trip>.excludingLive(live: RouteSample?): List<Trip> =
