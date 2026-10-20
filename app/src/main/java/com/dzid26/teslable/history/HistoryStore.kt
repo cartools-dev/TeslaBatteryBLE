@@ -207,7 +207,7 @@ class HistoryStore(
                 driveLogs.append(vehicleId, record)
                 if (sample != null) _driveSamples.value = (_driveSamples.value + sample).takeLast(MAX_SAMPLES)
                 if (route != null) {
-                    val readings = ((routeReadings[vehicleId] ?: emptyList()) + route).takeLast(MAX_ROUTE_READINGS)
+                    val readings = (routeReadings[vehicleId].orEmpty() + route).takeLast(MAX_ROUTE_READINGS)
                     routeReadings[vehicleId] = readings
                     _trips.value = _trips.value + (vehicleId to segmentTrips(readings).takeLast(MAX_TRIPS))
                 }
