@@ -35,6 +35,9 @@ class TripSnapshots {
     fun tripCardNavigating() = snapTrip("trip-card_navigating")
 
     @Test
+    fun tripCardTraffic() = snapTrip("trip-card_traffic", trafficDelayMinutes = 2.4f)
+
+    @Test
     fun tripCardNoPrice() = snapTrip("trip-card_no-price", pricePerKwh = null)
 
     @Test
@@ -52,6 +55,7 @@ class TripSnapshots {
         destination: String? = "Home",
         pricePerKwh: Float? = 0.30f,
         scale: FullRangeScale? = demoTripScale,
+        trafficDelayMinutes: Float = 0f,
     ) {
         val route =
             RouteSample(
@@ -60,7 +64,7 @@ class TripSnapshots {
                 destination,
                 4.7f,
                 12.2f,
-                0f,
+                trafficDelayMinutes,
                 44f,
                 tripStartMiles = 11.4f,
                 tripStartedAtMillis =

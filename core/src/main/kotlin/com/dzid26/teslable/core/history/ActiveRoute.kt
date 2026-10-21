@@ -2,6 +2,8 @@
 
 package com.dzid26.teslable.core.history
 
+import kotlin.math.roundToInt
+
 /**
  * The route the car is navigating right now, or null (#207).
  *
@@ -47,6 +49,18 @@ fun RouteSample.tripTotalMillis(): Long? {
     val left = minutesToArrival?.takeIf { it.isFinite() && it >= 0f }
     return if (started != null && left != null) observedAtMillis() - started + (left * MILLIS_PER_MINUTE).toLong() else null
 }
+
+/**
+ * The traffic delay on this route in whole minutes, or null when there is none (or under half a
+ * minute). The car's own minutes to arrival already count the traffic, as its navigation shows the
+ * ETA with traffic; this is the share of them it blames on traffic, for "(+3m traffic)" next to the
+ * time. The trip card and the notification both read it here.
+ */
+fun RouteSample.trafficMinutes(): Int? =
+    trafficDelayMinutes
+        ?.takeIf { it.isFinite() }
+        ?.roundToInt()
+        ?.takeIf { it > 0 }
 
 /** How far along the trip is, 0 to 1, or null when the length or the remaining distance is unknown or zero. */
 fun RouteSample.tripProgress(): Float? {

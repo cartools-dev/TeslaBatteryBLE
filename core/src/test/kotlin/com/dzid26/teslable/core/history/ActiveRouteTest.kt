@@ -90,6 +90,13 @@ class ActiveRouteTest {
     }
 
     @Test
+    fun `traffic delay shows in whole minutes only when there is one`() {
+        assertEquals(3, route(carMinutes = 100).copy(trafficDelayMinutes = 2.6f).trafficMinutes())
+        assertNull(route(carMinutes = 100).copy(trafficDelayMinutes = 0.2f).trafficMinutes())
+        assertNull(route(carMinutes = 100).copy(trafficDelayMinutes = null).trafficMinutes())
+    }
+
+    @Test
     fun `a long gap starts a new trip`() {
         val first = route(carMinutes = 100, miles = 10f).continuing(null)
         val later = route(carMinutes = 130, miles = 3f).continuing(first)

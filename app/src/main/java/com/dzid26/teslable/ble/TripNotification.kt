@@ -17,6 +17,7 @@ import com.dzid26.teslable.core.history.FullRangeScaleEstimator
 import com.dzid26.teslable.core.history.RouteSample
 import com.dzid26.teslable.core.history.activeRoute
 import com.dzid26.teslable.core.history.compactDuration
+import com.dzid26.teslable.core.history.trafficMinutes
 import com.dzid26.teslable.core.units.DistanceUnit
 import java.text.DecimalFormatSymbols
 import kotlin.math.roundToInt
@@ -57,11 +58,7 @@ internal fun tripNotice(
         TripNotice(
             milesLeftTenths = estimate.milesRemaining?.let { (it * TENTHS).roundToInt() },
             minutesLeft = route.minutesToArrival?.takeIf { it.isFinite() && it >= 0f }?.roundToInt(),
-            trafficMinutes =
-                route.trafficDelayMinutes
-                    ?.takeIf { it.isFinite() }
-                    ?.roundToInt()
-                    ?.takeIf { it > 0 },
+            trafficMinutes = route.trafficMinutes(),
             arrivalPercent = estimate.arrivalPercent?.roundToInt(),
             arrivalRatedMiles = estimate.arrivalRatedMiles?.roundToInt(),
         )
