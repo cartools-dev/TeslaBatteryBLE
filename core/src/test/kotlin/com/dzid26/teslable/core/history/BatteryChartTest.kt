@@ -118,13 +118,23 @@ class BatteryChartTest {
     fun projectionUsesTheLiveRateAndTheRunsMiles() {
         val samples =
             listOf(
-                sample(0, 50, ChargingStateKind.Charging, limit = 80).copy(ratedRangeMiles = 150f),
-                sample(10, 60, ChargingStateKind.Charging, limit = 80).copy(ratedRangeMiles = 180f),
+                sample(0, 50, ChargingStateKind.Charging, limit = 80).copy(ratedRangeMiles = 150f, chargeRateMph = 90f),
+                sample(10, 60, ChargingStateKind.Charging, limit = 80).copy(ratedRangeMiles = 180f, chargeRateMph = 90f),
             )
 
         // 20% left at 3 mi/% = 60 mi; at the live 90 mph that is 40 min,
         // not the 20 min the integer-percent average would give.
-        val projection = chargeProjection(samples, chargeRateMph = 90f)!!
+        val projection = chargeProjection(samples)!!
+        assertEquals(10 * 60_000L + 40 * 60_000L, projection.completionMillis)
+    }
+
+    @Test
+    fun projectionNeedsOnlyOneReadingWithTheLiveRate() {
+        val samples =
+            listOf(sample(10, 60, ChargingStateKind.Charging, limit = 80).copy(ratedRangeMiles = 180f, chargeRateMph = 90f))
+
+        // 20% x 3 mi/% = 60 mi at 90 mph is 40 min after the only reading.
+        val projection = chargeProjection(samples)!!
         assertEquals(10 * 60_000L + 40 * 60_000L, projection.completionMillis)
     }
 
@@ -132,12 +142,12 @@ class BatteryChartTest {
     fun projectionUsesTheLearnedScaleWithTheLiveRate() {
         val samples =
             listOf(
-                sample(0, 50, ChargingStateKind.Charging, limit = 80),
-                sample(10, 60, ChargingStateKind.Charging, limit = 80),
+                sample(0, 50, ChargingStateKind.Charging, limit = 80).copy(chargeRateMph = 90f),
+                sample(10, 60, ChargingStateKind.Charging, limit = 80).copy(chargeRateMph = 90f),
             )
 
         // 20% x 2.4 mi/% = 48 mi; at 90 mph that is 32 min.
-        val projection = chargeProjection(samples, chargeRateMph = 90f, scale = unpinnedScale(2.4f))!!
+        val projection = chargeProjection(samples, scale = unpinnedScale(2.4f))!!
         assertEquals(10 * 60_000L + 32 * 60_000L, projection.completionMillis)
     }
 
