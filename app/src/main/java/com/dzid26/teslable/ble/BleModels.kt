@@ -223,7 +223,7 @@ data class ConnectionDisplay(
     val stateText: String,
     val rssi: Int?,
 ) {
-    val status: String get() = rssi?.let { "$stateText · RSSI\u00A0$it\u00A0dBm" } ?: stateText
+    val status: String get() = rssi?.let { "$stateText · RSSI\u00A0${it}dBm" } ?: stateText
 }
 
 /**
