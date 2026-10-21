@@ -141,5 +141,5 @@ Follow-up tests with a stable link, which settle the caveat in "Sleep" above.
 
 ## Related
 
-- Issue #112 (the report), `docs/research/tesla-ble-capabilities.md`
+- Issue #112 (the report), `docs/protocol/capabilities.md`
   (Constraints: Polling).

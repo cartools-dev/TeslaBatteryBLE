@@ -1,7 +1,7 @@
 # Range as an online SOC signal: what the car reports, and what it can tell us
 
 Date: 2026-10-05
-Related: `docs/research/battery-health-methods.md` (method taxonomy), `docs/reference/fleet-telemetry-vs-ble.md` (signal matrix), `docs/research/tesla-ble-capabilities.md` (BLE field catalogue).
+Related: `docs/research/battery-health-methods.md` (method taxonomy), `docs/reference/fleet-telemetry-vs-ble.md` (signal matrix), `docs/protocol/capabilities.md` (BLE field catalogue).
 
 Question: can the float rated range give sub-percent SOC online, without charging to 100%? This rework supersedes the earlier range-at-100 framing for `bestSocPercent`: active 100% calibration is out of scope (owner decision 2026-10-05). The range-at-100 question stays answered below as a by-product. Owner direction (2026-10-05) broadens this: rated miles become the backbone unit (section 6), with SOC derived at display time.
 

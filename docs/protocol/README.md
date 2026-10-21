@@ -63,3 +63,5 @@ key-storage details.
 - [`../reference/fleet-telemetry-vs-ble.md`](../reference/fleet-telemetry-vs-ble.md) —
   generated cloud-vs-BLE signal matrix: every Fleet Telemetry field and whether
   it is readable over BLE.
+- [`capabilities.md`](capabilities.md) — what the car exposes over BLE: readable
+  data, commands, what is not available, and the wake, role and polling constraints.
