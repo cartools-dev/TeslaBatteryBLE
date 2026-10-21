@@ -25,6 +25,8 @@ cp "$SRC" "$APK"
 
 git fetch --tags origin main
 DESCRIBE="$(git describe --tags --match 'v[0-9]*' "$SHA" 2>/dev/null || echo "$SHA")"
+# git describe writes v0.6.4-59-gdc08b2c; drop the "g" so the title reads v0.6.4-59-dc08b2c.
+DESCRIBE="$(printf '%s' "$DESCRIBE" | sed -E 's/-g([0-9a-f]+)$/-\1/')"
 
 {
   echo "Preview build of \`main\` at [${SHA:0:7}](https://github.com/$REPO/commit/$SHA) (\`$DESCRIBE\`)."
