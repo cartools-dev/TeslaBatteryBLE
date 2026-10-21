@@ -77,6 +77,7 @@ import com.dzid26.teslable.ble.connectionDisplay
 import com.dzid26.teslable.ble.vehicleStatusText
 import com.dzid26.teslable.core.health.PriceChange
 import com.dzid26.teslable.core.health.chargeSessionOpen
+import com.dzid26.teslable.core.health.chargeSessions
 import com.dzid26.teslable.core.health.lastFinishedChargeStats
 import com.dzid26.teslable.core.health.priceForCharge
 import com.dzid26.teslable.core.history.BatterySample
@@ -326,6 +327,9 @@ internal fun CarScreen(
                         scale = scale,
                         ratedKwhPerMile = health.ratedKwhPerMile,
                         pricePerKwh = pricePerKwh,
+                    )
+                    ChargeSessionsCard(
+                        remember(vehicleHistory) { chargeSessions(vehicleHistory, nowMillis ?: System.currentTimeMillis()) },
                     )
                     BatteryHealthCard(health)
                     BatteryStatsCard(rest)

@@ -15,11 +15,26 @@ import com.dzid26.teslable.protocol.ChargingStateKind
  * reported nothing or the counter did not grow.
  */
 data class ChargeSession(
+    /** The car's clock at the first charging sample, millis. */
+    val startMillis: Long,
+    /** The car's clock at the last charging sample, millis. */
+    val endMillis: Long,
     val startPercent: Float,
     val endPercent: Float,
     val energyAddedKwh: Float?,
     val milesAddedRated: Float?,
+    /** True for the session that is still going; its figures grow until it ends. */
+    val inProgress: Boolean = false,
 ) {
+    val durationMillis: Long get() = endMillis - startMillis
+
+    /** Energy over duration, kW; null without energy or under a minute of data, where the average means nothing. */
+    val averageKw: Float?
+        get() {
+            val energy = energyAddedKwh ?: return null
+            return if (durationMillis >= MIN_AVERAGE_MILLIS) energy / (durationMillis / MILLIS_PER_HOUR) else null
+        }
+
     val swingPercent: Float get() = endPercent - startPercent
 
     /** The rated constant this session measured: kWh per rated mile. */
@@ -57,6 +72,22 @@ data class ChargeSession(
  * sample, say); the session then carries the last value.
  */
 fun chargeSessions(samples: List<BatterySample>): List<ChargeSession> = chargeRuns(samples).map { it.toSession() }
+
+/**
+ * [chargeSessions], with the newest marked in progress when the history says one is still going at [nowMillis]
+ * (see [chargeSessionOpen]).
+ */
+fun chargeSessions(
+    samples: List<BatterySample>,
+    nowMillis: Long,
+): List<ChargeSession> {
+    val sessions = chargeSessions(samples)
+    return if (sessions.isNotEmpty() && chargeSessionOpen(samples, nowMillis)) {
+        sessions.dropLast(1) + sessions.last().copy(inProgress = true)
+    } else {
+        sessions
+    }
+}
 
 private fun chargeRuns(samples: List<BatterySample>): List<List<BatterySample>> {
     val runs = mutableListOf<MutableList<BatterySample>>()
@@ -102,6 +133,8 @@ fun lastFinishedChargeStats(
 
 private fun List<BatterySample>.toSession(): ChargeSession =
     ChargeSession(
+        startMillis = first().timestampMillis,
+        endMillis = last().timestampMillis,
         startPercent = first().batteryLevel.toFloat(),
         endPercent = last().batteryLevel.toFloat(),
         energyAddedKwh = counterGrowth { it.chargeEnergyAdded },
@@ -149,6 +182,9 @@ fun chargeSessionOpen(
 
 /** Below this swing the estimator itself refuses to compute a capacity. */
 const val MIN_SWING_PERCENT = 5f
+
+private const val MIN_AVERAGE_MILLIS = 60_000L
+private const val MILLIS_PER_HOUR = 3_600_000f
 
 /** A pause (Stopped or NoPower) shorter than this does not end a session. */
 private const val MAX_PAUSE_MILLIS = 10 * 60_000L
