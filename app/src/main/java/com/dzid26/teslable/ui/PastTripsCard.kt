@@ -98,7 +98,7 @@ private fun arrivalLine(
     val level = summary.arrivalPercent ?: return null
     val percent = level.roundToInt()
     val unit = LocalDistanceUnit.current
-    val ratedMiles = scale?.takeIf { it.goodEnoughForTrips() }?.let { it.offsetMiles + it.milesPerPercent * level }
+    val ratedMiles = scale?.takeIf { it.goodEnoughForTrips() }?.let { it.ratedMilesAt(level) }
     // "Arrived" at the destination, "Ended" when the trip stopped short of it.
     val ids =
         when {

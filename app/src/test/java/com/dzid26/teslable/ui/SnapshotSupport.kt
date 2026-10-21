@@ -61,7 +61,7 @@ internal fun Paparazzi.snapCard(
 
 /** A pinned 270-mile full range, so the trip cards can show the rated range an arrival level stands for. */
 internal val demoTripScale =
-    FullRangeScale(fullRangeMiles = 270f, offsetMiles = 0f, standardErrorMiles = 0.1f, samples = 40, pinned = true)
+    FullRangeScale(milesPerPercent = 2.7f, offsetMiles = 0f, standardErrorMiles = 0.1f, samples = 40, pinned = true)
 
 /** How long before the render the demo past trips began. */
 internal const val DEMO_TRIP_AGO_MILLIS = 26 * 3_600_000L

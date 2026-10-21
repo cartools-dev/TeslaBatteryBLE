@@ -137,7 +137,7 @@ class BatteryChartTest {
             )
 
         // 20% x 2.4 mi/% = 48 mi; at 90 mph that is 32 min.
-        val projection = chargeProjection(samples, chargeRateMph = 90f, fullRangeMiles = 240f)!!
+        val projection = chargeProjection(samples, chargeRateMph = 90f, scale = unpinnedScale(2.4f))!!
         assertEquals(10 * 60_000L + 32 * 60_000L, projection.completionMillis)
     }
 
@@ -150,7 +150,7 @@ class BatteryChartTest {
             )
 
         // No live rate: the run average still gives 20 min for the last 20%.
-        val projection = chargeProjection(samples, fullRangeMiles = 240f)!!
+        val projection = chargeProjection(samples, scale = unpinnedScale(2.4f))!!
         assertEquals(10 * 60_000L + 20 * 60_000L, projection.completionMillis)
     }
 
@@ -205,8 +205,12 @@ class BatteryChartTest {
         assertNull(projection.latestMillis)
     }
 
+    /** A scale whose slope is known but too loose to convert levels, so projections keep the integer level. */
+    private fun unpinnedScale(milesPerPercent: Float) =
+        FullRangeScale(milesPerPercent, offsetMiles = 0f, standardErrorMiles = 0.1f, samples = 10, pinned = false)
+
     private val pinnedScale =
-        FullRangeScale(fullRangeMiles = 300f, offsetMiles = 0f, standardErrorMiles = 0.3f, samples = 20, pinned = true)
+        FullRangeScale(milesPerPercent = 3.0f, offsetMiles = 0f, standardErrorMiles = 0.3f, samples = 20, pinned = true)
 
     private fun ranged(
         minutes: Long,

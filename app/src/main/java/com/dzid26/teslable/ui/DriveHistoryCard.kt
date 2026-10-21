@@ -32,10 +32,10 @@ import com.dzid26.teslable.core.history.BatterySample
 import com.dzid26.teslable.core.history.DriveSample
 import com.dzid26.teslable.core.history.DriveWindow
 import com.dzid26.teslable.core.history.FullRangeScale
-import com.dzid26.teslable.core.history.FullRangeScaleEstimator
 import com.dzid26.teslable.core.history.drivePoints
 import com.dzid26.teslable.core.history.totalDrop
 import com.dzid26.teslable.core.units.DistanceUnit
+import com.dzid26.teslable.history.FullRangeScales
 import java.text.DecimalFormatSymbols
 import java.util.Locale
 
@@ -54,7 +54,7 @@ internal fun DriveHistoryCard(
     // Injectable for the Paparazzi snapshots; production opens on the middle window.
     initialWindow: DriveWindow = DriveWindow.MEDIUM,
     // The fitted full-range scale; the car screen fits it once for all its cards.
-    scale: FullRangeScale? = remember(samples) { FullRangeScaleEstimator.estimate(samples) },
+    scale: FullRangeScale? = remember(samples) { FullRangeScales.of(samples) },
     // The learned rated constant (kWh per rated mile); null hides the energy and efficiency stats.
     ratedKwhPerMile: Float? = null,
 ) {

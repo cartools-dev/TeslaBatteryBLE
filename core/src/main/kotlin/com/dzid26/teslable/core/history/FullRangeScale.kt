@@ -16,22 +16,25 @@ import kotlin.math.sqrt
  * the level, and it needs no 100% charge.
  */
 data class FullRangeScale(
-    /** Miles per 100% of displayed SOC: the slope of the fit, times 100. */
-    val fullRangeMiles: Float,
+    /** Miles per displayed percent: the slope of the fit. Not the range at 100%, see [milesAtFull]. */
+    val milesPerPercent: Float,
     /** Rated miles at displayed SOC 0 (the fit's intercept; absorbs rounding and any buffer). */
     val offsetMiles: Float,
-    /** One standard error of [fullRangeMiles]. */
+    /** One standard error of the miles per 100%. */
     val standardErrorMiles: Float,
     /** Level boundaries that contributed. */
     val samples: Int,
     /** True when the scale is tight enough to trust for SOC conversion. */
     val pinned: Boolean,
 ) {
-    val lowerMiles: Float get() = fullRangeMiles - 2f * standardErrorMiles
-    val upperMiles: Float get() = fullRangeMiles + 2f * standardErrorMiles
+    val lowerMiles: Float get() = milesPerPercent * PERCENT_FULL - 2f * standardErrorMiles
+    val upperMiles: Float get() = milesPerPercent * PERCENT_FULL + 2f * standardErrorMiles
 
-    /** Miles per displayed percent. */
-    val milesPerPercent: Float get() = fullRangeMiles / 100f
+    /** The rated miles the fitted line gives at a displayed SOC (percent). */
+    fun ratedMilesAt(socPercent: Float): Float = offsetMiles + milesPerPercent * socPercent
+
+    /** The rated range at displayed SOC 100: the fitted line's value there, offset included. */
+    val milesAtFull: Float get() = ratedMilesAt(PERCENT_FULL)
 
     /** Sub-percent SOC from a rated range reading; null until the scale is [pinned]. */
     fun socPercent(ratedMiles: Float?): Float? {
@@ -106,7 +109,7 @@ object FullRangeScaleEstimator {
         val relativeError = fit.slopeError / fit.slope
         val pinned = span >= MIN_LEVEL_SPAN && relativeError <= PIN_TOLERANCE
         return FullRangeScale(
-            fullRangeMiles = (fit.slope * 100.0).toFloat(),
+            milesPerPercent = fit.slope.toFloat(),
             offsetMiles = fit.offset.toFloat(),
             standardErrorMiles = (fit.slopeError * 100.0).toFloat(),
             samples = used,
@@ -182,3 +185,5 @@ const val TENTHS_PER_PERCENT = 10
 
 /** A SOC in whole tenths of a percent: 62.4 is 624. Rounds half up, so 99.96 carries to 100.0. */
 fun socTenths(percent: Float): Int = (percent * TENTHS_PER_PERCENT).roundToInt()
+
+private const val PERCENT_FULL = 100f

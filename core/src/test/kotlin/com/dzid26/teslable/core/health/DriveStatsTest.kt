@@ -16,7 +16,7 @@ class DriveStatsTest {
     ) = DrivePoint(timestampMillis = 0, milesDriven = miles, socPercent = percent, regenerating = false, trip = trip)
 
     // 300 mi at 100%: 3 miles per percent.
-    private val scale = FullRangeScale(300f, 0f, 1f, 20, pinned = true)
+    private val scale = FullRangeScale(3f, 0f, 1f, 20, pinned = true)
 
     @Test
     fun `computes the rates from the percent used and the rated constant`() {

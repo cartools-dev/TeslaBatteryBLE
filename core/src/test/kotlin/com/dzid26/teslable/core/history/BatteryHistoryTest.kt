@@ -80,7 +80,7 @@ class BatteryHistoryTest {
         // A scale of 2.7 mi per percent: 3.0 rated miles drained is 1.11 points,
         // which the whole levels (80 -> 79) would round to 1 or 2.
         val scale =
-            FullRangeScale(fullRangeMiles = 270f, offsetMiles = 0f, standardErrorMiles = 0.1f, samples = 10, pinned = true)
+            FullRangeScale(milesPerPercent = 2.7f, offsetMiles = 0f, standardErrorMiles = 0.1f, samples = 10, pinned = true)
         val samples =
             listOf(
                 rated(0, 80, 216.0f, ChargingStateKind.Charging),
@@ -101,7 +101,7 @@ class BatteryHistoryTest {
     @Test
     fun chargeStatsFallBackToLevelsWithoutRatedRange() {
         val scale =
-            FullRangeScale(fullRangeMiles = 270f, offsetMiles = 0f, standardErrorMiles = 0.1f, samples = 10, pinned = true)
+            FullRangeScale(milesPerPercent = 2.7f, offsetMiles = 0f, standardErrorMiles = 0.1f, samples = 10, pinned = true)
         val stats = chargeStats(listOf(sample(0, 80, ChargingStateKind.Charging), sample(60, 77)))!!
 
         assertEquals(null, stats.usedMiles)

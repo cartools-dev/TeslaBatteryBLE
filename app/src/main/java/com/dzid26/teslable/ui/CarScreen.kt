@@ -80,7 +80,6 @@ import com.dzid26.teslable.core.history.BatterySample
 import com.dzid26.teslable.core.history.ChargeProjection
 import com.dzid26.teslable.core.history.DriveSample
 import com.dzid26.teslable.core.history.FullRangeScale
-import com.dzid26.teslable.core.history.FullRangeScaleEstimator
 import com.dzid26.teslable.core.history.HistoryRange
 import com.dzid26.teslable.core.history.ProjectionContext
 import com.dzid26.teslable.core.history.RouteSample
@@ -97,6 +96,7 @@ import com.dzid26.teslable.core.history.socTenths
 import com.dzid26.teslable.core.history.statusDurations
 import com.dzid26.teslable.core.history.within
 import com.dzid26.teslable.health.healthSummary
+import com.dzid26.teslable.history.FullRangeScales
 import com.dzid26.teslable.protocol.ChargingStateKind
 import com.dzid26.teslable.protocol.PairingPhase
 import com.dzid26.teslable.protocol.asleep
@@ -159,12 +159,12 @@ internal fun CarScreen(
             statusHistory.filter { it.vehicleId == vehicle.bleName }
         }
     val paired = isPaired(connection, vehicle)
+    // Fitted once for every card below: the hero, the trip, both history charts.
+    val scale = remember(vehicleHistory) { FullRangeScales.of(vehicleHistory) }
     val health =
         remember(vehicleHistory, vehicleDrives, vehicleStatuses) {
             healthSummary(vehicleHistory, drives = vehicleDrives, statuses = vehicleStatuses)
         }
-    // Fitted once for every card below: the hero, the trip, both history charts.
-    val scale = remember(vehicleHistory) { FullRangeScaleEstimator.estimate(vehicleHistory) }
     // What a pull on this screen will do, and the feedback while it runs.
     val pullLabel =
         when {
@@ -319,7 +319,7 @@ internal fun HeroCard(
     // The owner's price per kWh, for the session cost; null shows none.
     pricePerKwh: Float? = null,
     // The fitted full-range scale; the car screen fits it once for all its cards.
-    scale: FullRangeScale? = remember(history) { FullRangeScaleEstimator.estimate(history) },
+    scale: FullRangeScale? = remember(history) { FullRangeScales.of(history) },
 ) {
     val context = LocalContext.current
     val display = connectionDisplay(connection, advert, vehicle = vehicle)
@@ -722,7 +722,7 @@ internal fun BatteryHistoryCard(
     val visible = samples.within(range, now)
     val stats = lastFinishedChargeStats(samples, now)
     // Fitted once: the stats, the projection and the chart all read it.
-    val scale = remember(samples) { FullRangeScaleEstimator.estimate(samples) }
+    val scale = remember(samples) { FullRangeScales.of(samples) }
 
     Card(modifier = Modifier.fillMaxWidth()) {
         Column(Modifier.padding(12.dp)) {
@@ -752,7 +752,7 @@ internal fun BatteryHistoryCard(
                     range.durationMillis
                         ?: (visible.last().timestampMillis - visible.first().timestampMillis)
                             .coerceAtLeast(1L)
-                val charge = chargeProjection(samples, fullRangeMiles = scale?.fullRangeMiles, scale = scale)
+                val charge = chargeProjection(samples, scale = scale)
                 // Parked drain: the drive samples' odometer marks the
                 // stretches the car moved. Shown next to the charge
                 // projection too: where the battery heads if unplugged now.
