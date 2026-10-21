@@ -105,6 +105,17 @@ val keystoreProperties =
 // Preview, release and demo builds never set it and keep the real ID.
 val ciDebugBuild = project.findProperty("ciDebugBuild") == "true"
 
+// PR builds share one install slot (.pr). Their git distance from the tag depends on the
+// branch's own commits, so a shorter branch built later would look like a downgrade; the
+// CI run number only grows, so each PR build updates the previous one in place. The offset
+// keeps it above the git-derived codes of PR builds installed before this rule.
+val ciVersionCode: Int? =
+    if (ciDebugBuild) {
+        providers.environmentVariable("GITHUB_RUN_NUMBER").orNull?.toIntOrNull()?.let { 1_000_000_000 + it }
+    } else {
+        null
+    }
+
 android {
     namespace = "com.dzid26.teslable"
     compileSdk = 37
@@ -113,7 +124,7 @@ android {
         applicationId = "com.dzid26.teslable"
         minSdk = 27
         targetSdk = 37
-        versionCode = gitVersionCode
+        versionCode = ciVersionCode ?: gitVersionCode
         versionName = gitVersionName
         buildConfigField(
             "boolean",
