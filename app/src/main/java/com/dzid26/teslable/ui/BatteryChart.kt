@@ -26,7 +26,6 @@ import com.patrykandpatrick.vico.compose.cartesian.data.LineCartesianLayerModel
 import com.patrykandpatrick.vico.compose.cartesian.decoration.Decoration
 import com.patrykandpatrick.vico.compose.cartesian.layer.LineCartesianLayer
 import com.patrykandpatrick.vico.compose.cartesian.layer.rememberLineCartesianLayer
-import com.patrykandpatrick.vico.compose.cartesian.marker.CartesianMarkerController
 import com.patrykandpatrick.vico.compose.cartesian.marker.DefaultCartesianMarker
 import com.patrykandpatrick.vico.compose.cartesian.rememberCartesianChart
 import com.patrykandpatrick.vico.compose.cartesian.rememberVicoScrollState
@@ -118,7 +117,10 @@ internal fun BatteryChart(
     val lastMeasuredMillis = samples.last().timestampMillis
     val description = remember(samples, scale) { chartDescription(samples, scale) }
 
+    val pin = rememberCursorPin()
+
     ProvideVicoTheme(rememberM3VicoTheme()) {
+        val cursor = rememberCursorMarker(window, axis, lastMeasuredMillis, scale)
         val chart =
             rememberCartesianChart(
                 rememberLineCartesianLayer(
@@ -134,15 +136,16 @@ internal fun BatteryChart(
                 ),
                 startAxis = rememberPercentAxis(),
                 bottomAxis = rememberTimeAxis(timeFormatter),
-                marker = rememberCursorMarker(window, axis, lastMeasuredMillis, scale),
-                markerController = CartesianMarkerController.rememberToggleOnTap(),
-                decorations = remember(shape.beams) { listOf(Beams(shape.beams)) },
+                decorations =
+                    remember(shape.specs, shape.beams, pin, cursor, lineColor) {
+                        listOf(Beams(shape.beams), ScrubCursor(pin, cursor, shape.specs.flatMap { it.xs.zip(it.ys) }, lineColor))
+                    },
                 getXStep = { _, _, _ -> xStep },
             )
         CartesianChartHost(
             chart = chart,
             model = remember(shape.specs) { batteryModel(shape.specs) },
-            modifier = modifier.semantics { contentDescription = description },
+            modifier = modifier.scrubbing(pin).semantics { contentDescription = description },
             scrollState = rememberVicoScrollState(scrollEnabled = false),
             zoomState = rememberVicoZoomState(zoomEnabled = false, initialZoom = Zoom.Content),
         )

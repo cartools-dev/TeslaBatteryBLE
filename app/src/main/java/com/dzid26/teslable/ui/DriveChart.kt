@@ -30,7 +30,6 @@ import com.patrykandpatrick.vico.compose.cartesian.decoration.Decoration
 import com.patrykandpatrick.vico.compose.cartesian.layer.LineCartesianLayer
 import com.patrykandpatrick.vico.compose.cartesian.layer.rememberLine
 import com.patrykandpatrick.vico.compose.cartesian.layer.rememberLineCartesianLayer
-import com.patrykandpatrick.vico.compose.cartesian.marker.CartesianMarkerController
 import com.patrykandpatrick.vico.compose.cartesian.rememberCartesianChart
 import com.patrykandpatrick.vico.compose.cartesian.rememberVicoScrollState
 import com.patrykandpatrick.vico.compose.cartesian.rememberVicoZoomState
@@ -127,7 +126,10 @@ internal fun RangeChart(
     val yFormatter = remember { CartesianValueFormatter { _, value, _ -> formatWholePercent(value.toFloat()) } }
     val cursorDescriber = remember(unit) { PointDescriber { x, y -> "${formatPercent(y.toFloat())}% · ${formatDistance(x, unit)}" } }
 
+    val pin = rememberCursorPin()
+
     ProvideVicoTheme(rememberM3VicoTheme()) {
+        val cursor = rememberChartCursor(cursorDescriber)
         val chart =
             rememberCartesianChart(
                 rememberLineCartesianLayer(
@@ -143,15 +145,19 @@ internal fun RangeChart(
                         itemPlacer = remember(axes.yStep) { VerticalAxis.ItemPlacer.step({ axes.yStep }) },
                     ),
                 bottomAxis = HorizontalAxis.rememberBottom(valueFormatter = distanceFormatter),
-                marker = rememberChartCursor(cursorDescriber),
-                markerController = CartesianMarkerController.rememberToggleOnTap(),
-                decorations = remember(regenBands) { listOf(RegenBands(regenBands, chargingChartColor)) },
+                decorations =
+                    remember(regenBands, points, pin, cursor) {
+                        listOf(
+                            RegenBands(regenBands, chargingChartColor),
+                            ScrubCursor(pin, cursor, points.map { it.distance to it.value.toDouble() }, driveChartColor),
+                        )
+                    },
                 getXStep = { _, _, _ -> axes.xStep },
             )
         CartesianChartHost(
             chart = chart,
             model = remember(trips, regenPoints) { rangeModel(trips, regenPoints) },
-            modifier = modifier,
+            modifier = modifier.scrubbing(pin),
             scrollState = rememberVicoScrollState(scrollEnabled = false),
             zoomState = rememberVicoZoomState(zoomEnabled = false, initialZoom = Zoom.Content),
         )
@@ -256,3 +262,7 @@ internal fun CartesianDrawingContext.canvasY(y: Double): Float {
     val yRange = ranges.getYRange(null)
     return layerBounds.bottom - ((y - yRange.minY) / yRange.length).toFloat() * layerBounds.height
 }
+
+/** The data x on the first layer at a canvas x: the inverse of [canvasX]. */
+internal fun CartesianDrawingContext.dataX(canvasX: Float): Double =
+    ranges.minX + (canvasX - (layerBounds.left + layerDimensions.startPadding - scroll)) / layerDimensions.xSpacing * ranges.xStep

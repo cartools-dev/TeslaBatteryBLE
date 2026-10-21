@@ -30,3 +30,4 @@ Date: 2026-10-15
   listed in `THIRD_PARTY_NOTICES.md`.
 - Cursors and gradients become configuration rather than drawing code.
 - Both charts share one framework; syncing the two cursors is a later change.
+- The chart cursor is drawn by the app, not by Vico's marker controller: Vico's marker hides on every lift and cannot be cleared from outside the chart, which fights a chart inside a scrolling page. The app keeps the cursor position, decides tap / sideways drag / page scroll itself, and draws Vico's marker at that position as a decoration.

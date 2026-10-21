@@ -186,6 +186,7 @@ internal fun CarScreen(
         }
     }
     Scaffold(
+        modifier = Modifier.countingTouches(),
         topBar = {
             TopAppBar(
                 navigationIcon = {
