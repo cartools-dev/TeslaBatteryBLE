@@ -86,7 +86,7 @@ The Infotainment session is requested on demand, by the read itself
 - The wait for the handshake ends when the session is established, the retries
   give up, the car is reported asleep, or the link drops. A wait that outlived
   its handshake once blocked every read for a whole drive (found in the first
-  real-car log, `docs/research/real-car-log-2026-10-09.md`).
+  real-car log, `docs/research/infotainment-polling-and-sleep.md` (Real-car findings)).
 - The policy's "session ready" input means "a read can be attempted now": a
   session exists or the VIN is valid so one can be started.
 
@@ -110,7 +110,7 @@ ticks does not turn a 10 s cadence into 20 s.
   1 or 10 minute hold is not restarted, because reads are not status changes).
   A car that stays awake for another reason the status does not show gets one
   reading every 20 minutes; one that would have slept is never touched by it.
-- Measured on 2026-10-09 (`docs/research/real-car-log-2026-10-09.md`): a read
+- Measured on 2026-10-09 (`docs/research/infotainment-polling-and-sleep.md` (Real-car findings)): a read
   keeps the car awake only about 0.5-2.5 minutes past it, not the ~10 minutes
   assumed above, and a BLE wake with one read sleeps after about 2 minutes. The
   design holds, and the cost of the hold is smaller than estimated: the car
