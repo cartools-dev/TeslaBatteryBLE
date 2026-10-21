@@ -436,7 +436,10 @@ private fun heroStatusText(
     return offlineFor?.let { "Disconnected\u00A0$it" } ?: display.status
 }
 
-/** Charge limit · AC voltage, current and speed · charging state, as one quiet line under the hero. */
+/**
+ * "Charging to 80%" while charging, else the charge limit and the charging state, with the AC voltage, current
+ * and speed between them: one quiet line under the hero.
+ */
 @Composable
 private fun ChargeDetails(
     charge: ChargeState?,
@@ -444,11 +447,16 @@ private fun ChargeDetails(
     showSession: Boolean,
 ) {
     if (charge == null) return
+    val charging = charge.chargingStateKind == ChargingStateKind.Charging
     val details =
         buildList {
-            charge.charge_limit_soc?.let { add("Charge limit\u00A0$it%") }
+            val limit = charge.charge_limit_soc
+            when {
+                charging -> add(limit?.let { "Charging to\u00A0$it%" } ?: chargingStateText(ChargingStateKind.Charging))
+                limit != null -> add("Charge limit\u00A0$limit%")
+            }
             chargerElectricalText(charge, LocalDistanceUnit.current)?.let { add(it) }
-            charge.chargingStateKind?.let { add(chargingStateText(it)) }
+            if (!charging) charge.chargingStateKind?.let { add(chargingStateText(it)) }
             if (showSession) sessionEnergyText(charge.charge_energy_added, pricePerKwh, LocalCurrencyCode.current)?.let { add(it) }
         }
     if (details.isNotEmpty()) {
