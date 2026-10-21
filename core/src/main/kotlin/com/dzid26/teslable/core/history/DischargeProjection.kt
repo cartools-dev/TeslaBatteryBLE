@@ -106,7 +106,7 @@ fun dischargeProjection(
     val mainRate = sleepRate ?: mixedRate
     val projectedSoc = (fromSoc - mainRate * horizon).toFloat().coerceIn(0f, FULL_PERCENT)
     val mixedSoc = (fromSoc - mixedRate * horizon).toFloat().coerceIn(0f, FULL_PERCENT)
-    val reach = 2.0 * hypot(parked.errorPerMilli, mainRate * scale.levelScaleError()) * horizon
+    val reach = 2.0 * hypot(parked.errorPerMilli, mainRate * (scale.levelScaleError() ?: 0.0)) * horizon
     val hasStats = parked.pairs >= MIN_BEAM_PAIRS
     val hasBeam = hasStats || sleepRate != null
     // The beam: the statistics around the line, reaching down to the mixed line when the main one is the sleep rate.

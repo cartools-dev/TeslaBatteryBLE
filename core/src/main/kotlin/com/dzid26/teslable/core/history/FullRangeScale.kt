@@ -181,8 +181,8 @@ object FullRangeScaleEstimator {
 /** The sample's SOC for plotting: sub-percent from the fitted [scale] when it is pinned, else the integer level. */
 fun BatterySample.soc(scale: FullRangeScale?): Float = scale?.socPercent(ratedRangeMiles) ?: batteryLevel.toFloat()
 
-/** The shared error of the levels read through [this] scale; zero without a pinned one, which reads the integer level. */
-fun FullRangeScale?.levelScaleError(): Double = this?.takeIf { it.pinned }?.relativeError ?: 0.0
+/** The shared error of the levels read through [this] scale; null without a pinned one, which reads the integer level instead. */
+fun FullRangeScale?.levelScaleError(): Double? = this?.takeIf { it.pinned }?.relativeError
 
 const val TENTHS_PER_PERCENT = 10
 
