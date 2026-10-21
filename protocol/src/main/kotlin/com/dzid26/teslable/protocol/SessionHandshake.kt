@@ -156,7 +156,7 @@ class SessionHandshake(
                 } else {
                     clientAddress
                 }
-            pending[uuid.toHex()] = domain
+            pending[uuid.toHexString()] = domain
             val request =
                 TeslaSessionRequests.buildSessionInfoRequest(
                     domain = domain,
@@ -174,7 +174,7 @@ class SessionHandshake(
         val message = runCatching { RoutableMessage.ADAPTER.decode(bytes) }.getOrNull() ?: return false
         val encodedInfo = message.session_info?.toByteArray() ?: return false
         val challenge = message.request_uuid.toByteArray()
-        val domain = pending.remove(challenge.toHex()) ?: return false
+        val domain = pending.remove(challenge.toHexString()) ?: return false
         val tag =
             message.signature_data
                 ?.session_info_tag
@@ -239,5 +239,3 @@ class SessionHandshake(
         val DOMAINS = listOf(Domain.DOMAIN_VEHICLE_SECURITY, Domain.DOMAIN_INFOTAINMENT)
     }
 }
-
-private fun ByteArray.toHex(): String = joinToString("") { (it.toInt() and 0xFF).toString(16).padStart(2, '0') }

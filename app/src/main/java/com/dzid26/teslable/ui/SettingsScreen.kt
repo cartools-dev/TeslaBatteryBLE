@@ -89,7 +89,7 @@ fun SettingsScreen(
             vehicles.mapNotNull { vehicle ->
                 keyStore
                     .keyId(vehicle.bleName)
-                    ?.toHex()
+                    ?.toHexString()
                     ?.let { id -> vehicle.title to id }
             }
         }
@@ -510,6 +510,5 @@ private fun ClearPairingCacheDialog(
     )
 }
 
-private fun ByteArray.toHex(): String = joinToString("") { byte -> (byte.toInt() and 0xFF).toString(16).padStart(2, '0') }
 
 private val CURRENCY_FIELD_WIDTH = 140.dp
