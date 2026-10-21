@@ -146,8 +146,8 @@ private fun LongestSleepRow(sleep: DeepSleep) {
 /** The drain over the sleep as "0.7%/day"; null when the battery lost nothing measurable. */
 @Composable
 private fun sleepRate(sleep: DeepSleep): String? {
-    if (sleep.percentPerHour <= 0.0) return null
-    val perDay = perDay(sleep.percentPerHour, LocalLocale.current.platformLocale)
+    val perHour = sleep.percentPerHour?.takeIf { it > 0.0 } ?: return null
+    val perDay = perDay(perHour, LocalLocale.current.platformLocale)
     return perDay?.let { stringResource(R.string.history_parked_rate, it) } ?: stringResource(R.string.history_parked_rate_tiny)
 }
 
