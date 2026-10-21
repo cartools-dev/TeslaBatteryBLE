@@ -2,7 +2,7 @@
 
 Status: Accepted
 Date: 2026-10-05
-Related: `docs/requirements/multi-vehicle.md`, ADR-0001, ADR-0003
+Related: ADR-0001, ADR-0003
 
 ## Context
 

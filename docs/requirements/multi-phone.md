@@ -1,7 +1,7 @@
 # Requirements: multi-phone clones (draft, decide later)
 
 Status: Captured direction (2026-10-05); not scheduled
-Related: `docs/requirements/key-backup-ux.md`, `docs/requirements/multi-vehicle.md`
+Related: `docs/requirements/key-backup-ux.md`
 
 ## Direction
 
