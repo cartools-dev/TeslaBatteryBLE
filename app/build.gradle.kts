@@ -4,6 +4,7 @@ import java.util.Properties
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.compose)
+    alias(libs.plugins.ksp)
     alias(libs.plugins.paparazzi)
     alias(libs.plugins.ktlint)
     alias(libs.plugins.detekt)
@@ -193,6 +194,11 @@ android {
     }
 }
 
+ksp {
+    // The schema is exported so a future migration can be tested against it (ADR-0014).
+    arg("room.schemaLocation", "$projectDir/schemas")
+}
+
 kotlin {
     compilerOptions {
         jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17)
@@ -203,6 +209,8 @@ dependencies {
     implementation(project(":core"))
     implementation(project(":protocol"))
     implementation(libs.androidx.core.ktx)
+    implementation(libs.room.runtime)
+    ksp(libs.room.compiler)
     implementation(libs.androidx.activity.compose)
     implementation(platform(libs.androidx.compose.bom))
     implementation(libs.androidx.compose.ui)
@@ -215,6 +223,7 @@ dependencies {
     testImplementation(libs.junit)
     testImplementation(libs.material.kolor)
     testImplementation(libs.paparazzi)
+    testImplementation(libs.robolectric)
 }
 
 // Generated code (BuildConfig, etc.) follows its own conventions. The task
