@@ -27,8 +27,8 @@ data class FullRangeScale(
     /** True when the scale is tight enough to trust for SOC conversion. */
     val pinned: Boolean,
 ) {
-    val lowerMiles: Float get() = milesPerPercent * PERCENT_FULL - 2f * standardErrorMiles
-    val upperMiles: Float get() = milesPerPercent * PERCENT_FULL + 2f * standardErrorMiles
+    /** The slope's standard error as a share of the slope: how far every level converted through it is off together. */
+    val relativeError: Double get() = standardErrorMiles / (milesPerPercent * PERCENT_FULL).toDouble()
 
     /** The rated miles the fitted line gives at a displayed SOC (percent). */
     fun ratedMilesAt(socPercent: Float): Float = offsetMiles + milesPerPercent * socPercent
@@ -180,6 +180,9 @@ object FullRangeScaleEstimator {
 
 /** The sample's SOC for plotting: sub-percent from the fitted [scale] when it is pinned, else the integer level. */
 fun BatterySample.soc(scale: FullRangeScale?): Float = scale?.socPercent(ratedRangeMiles) ?: batteryLevel.toFloat()
+
+/** The shared error of the levels read through [this] scale; zero without a pinned one, which reads the integer level. */
+fun FullRangeScale?.levelScaleError(): Double = this?.takeIf { it.pinned }?.relativeError ?: 0.0
 
 const val TENTHS_PER_PERCENT = 10
 
