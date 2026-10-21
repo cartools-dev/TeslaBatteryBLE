@@ -134,5 +134,7 @@ internal fun TripSection(
     pricePerKwh: Float?,
 ) {
     if (route == null) return
+    // The card is for glancing at while driving: keep the screen on and undimmed while it shows.
+    KeepScreenOn()
     TripCard(route, tripEstimate(route, currentRatedMiles, scale, ratedKwhPerMile, pricePerKwh))
 }
