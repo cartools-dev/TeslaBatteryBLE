@@ -2,7 +2,7 @@
 
 Date: 2026-10-04
 
-> Context: TeslaBatteryBLE is a local-first Android app (BLE, no cloud) that can read charge state (SOC, rated/estimated range, charge limit, energy added, charger power) and track parked drain. Benchmark: Dr.EV by BatterMachine computes SoH, remaining life, cell-imbalance warnings, and charging efficiency from Tesla cloud Fleet Telemetry (pack voltage/current/temperature). This brief asks what can be matched locally, what needs OBD, and what needs opt-in cloud.
+> Context: TeslaBatteryBLE is a local-first Android app (BLE, no cloud) that can read charge state (SOC, rated/estimated range, charge limit, energy added, charger power) and track parked drain. Benchmark: a cloud-based battery-health app computes SoH, remaining life, cell-imbalance warnings, and charging efficiency from Tesla cloud Fleet Telemetry (pack voltage/current/temperature). This brief asks what can be matched locally, what needs OBD, and what needs opt-in cloud.
 
 ## Summary (max 6 bullets)
 
@@ -50,7 +50,7 @@ What it does: controlled discharge (below 10%, possibly to 0%) then full AC rech
 
 Recurrent (Range Score, "CarFax for batteries") aggregates daily datapoints (temp, age, charge patterns) across the fleet to predict remaining range-life and flag outliers [13][21]; Geotab's 22k-EV study gives public priors (avg ~2.3%/yr degradation; frequent high-power DCFC leading factor) [14]. For a local-first app: no live cohort without cloud, but published curves can ship as static reference bands ("typical 3-yr-old ≈97%, 5-yr ≈95%" per Recurrent via third-party writeups [22]) against which the user's trended SoH is plotted.
 
-### Charging efficiency & cell imbalance (Dr.EV extras)
+### Charging efficiency & cell imbalance (extras)
 
 - Efficiency: AC `ACChargingEnergyIn` (charger-measured) vs `DCChargingEnergyIn` (battery-measured) plus `ACChargingPower`/`DCChargingPower` give loss ratios; BLE `energy_added` + wall-meter or charger kW can approximate locally.
 - Imbalance: needs per-brick min/max — Telemetry has `BrickVoltageMin/Max` [10]; CAN has cell-group voltages/CAC (Scan My Tesla surfaces highest/lowest cell groups + CAC imbalance [23]); BLE has nothing. Local warnings without OBD must stay heuristic (e.g. sudden range drop + slow charge taper), never labeled "cell imbalance".
@@ -77,7 +77,7 @@ Integration sketch: optional "Connect OBD" screen (BLE GATT to dongle, ELM327/ST
 ## Cloud (opt-in) capabilities
 
 - Fleet API (REST polling): vehicle-data endpoints (charge state, climate, drive, location), commands, wakes; needs developer app registration (domain, keypair, Tesla account OAuth, per-vehicle virtual-key pairing), pay-per-use billing with $10/mo developer discount and hard billing limits (over-limit apps auto-disabled) [30][31]; polling is expensive vs streaming, Tesla pushes migration to Telemetry [31].
-- Fleet Telemetry (streaming, self-hosted): car pushes only subscribed fields on change at up to 2 Hz [10]; unlocks wake-free history, high-frequency V/I/T for Dr.EV-style estimators, and alert streams; same onboarding burden plus running a server (reference impl: `teslamotors/fleet-telemetry`) [18]; per-signal billing still applies [31].
+- Fleet Telemetry (streaming, self-hosted): car pushes only subscribed fields on change at up to 2 Hz [10]; unlocks wake-free history, high-frequency V/I/T for cloud-style estimators, and alert streams; same onboarding burden plus running a server (reference impl: `teslamotors/fleet-telemetry`) [18]; per-signal billing still applies [31].
 - What it buys over BLE+OBD: continuous history without proximity, fleet cohorts, RUL models, efficiency analytics. Privacy cost: tokens that can locate/track the car, server-side location + charge history; keep default OFF, explicit consent, token stored in user-controlled backend only, per Tesla best-practice (don't wake excessively, use minimum_delta, prefer telemetry over polling) [31].
 
 ## Precedents worth copying
@@ -91,7 +91,7 @@ Integration sketch: optional "Connect OBD" screen (BLE GATT to dongle, ELM327/ST
 | Teslemetry / Tessie (API wrappers) | Hosted Fleet API/Telemetry access, per-signal data (incl. Pack V/I example payloads) [33] | No (hosted cloud) | Field list for future opt-in mapping |
 | Recurrent | Range Score + health reports from fleetStats; buyer-facing verdicts [13][21] | No | Peer-band + Buy/Caution/Pass-style plain-language verdict |
 | Geotab (fleet study) | Public degradation priors (~2.3%/yr; DCFC factor) [14] | N/A (research) | Static reference bands + habit advice |
-| Dr.EV | SoH ring + peer range, RUL (personalized vs absolute mi/yr), lifespan factors (±months), early warnings (imbalance ×N, trend, streaks) [19][20] | No (cloud AI) | Factor-attribution UX ("High charge limit −12 mo") — computed locally from charge-limit/drain history, no AI claims |
+| Benchmark app | SoH ring + peer range, RUL (personalized vs absolute mi/yr), lifespan factors (±months), early warnings (imbalance ×N, trend, streaks) [19][20] | No (cloud AI) | Factor-attribution UX ("High charge limit −12 mo") — computed locally from charge-limit/drain history, no AI claims |
 
 ## Cautions
 
@@ -140,5 +140,5 @@ Integration sketch: optional "Connect OBD" screen (BLE GATT to dongle, ELM327/ST
 ## Confidence & gaps
 
 - High confidence: rated-range + energy-delta formulas; Service-Mode procedure/conditions; Telemetry field list (verified against official docs table); OBD hardware compat + MX+ price; Fleet API billing/onboarding shape.
-- Medium confidence: exact OBD coverage per newest Highland/Juniper harness (vendor pages change; verify before recommending SKUs); budget-dongle reliability (community-reported, varies by firmware); Recurrent/Geotab numbers as cited by third parties (directional priors, not pack truth); Dr.EV accuracy claims (vendor-published R²/session counts, no independent audit).
+- Medium confidence: exact OBD coverage per newest Highland/Juniper harness (vendor pages change; verify before recommending SKUs); budget-dongle reliability (community-reported, varies by firmware); Recurrent/Geotab numbers as cited by third parties (directional priors, not pack truth); the benchmark app's accuracy claims (vendor-published R²/session counts, no independent audit).
 - Gaps (need car-in-hand or owner input, not web): per-trim EPA/original-kWh baseline table for the app; BLE signal inventory vs estimator minimums (which charge-state fields the BLE GATT layer actually yields today); CAN DBC/PID mapping for the dongle path (Scan My Tesla sheet is reference, not a license); UX copy for confidence intervals; decision on static peer-band dataset to bundle.
