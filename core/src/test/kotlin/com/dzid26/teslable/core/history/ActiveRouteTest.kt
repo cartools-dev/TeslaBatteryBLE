@@ -90,6 +90,22 @@ class ActiveRouteTest {
     }
 
     @Test
+    fun `traffic delay shows in whole minutes only when there is one`() {
+        assertEquals(3, route(carMinutes = 100).copy(trafficDelayMinutes = 2.6f).trafficMinutes())
+        assertNull(route(carMinutes = 100).copy(trafficDelayMinutes = 0.2f).trafficMinutes())
+        assertNull(route(carMinutes = 100).copy(trafficDelayMinutes = null).trafficMinutes())
+    }
+
+    @Test
+    fun `the traffic share is the delay over the whole trip's time`() {
+        val first = route(carMinutes = 100, miles = 10f).copy(minutesToArrival = 20f).continuing(null)
+        val later = route(carMinutes = 110, miles = 5f).copy(minutesToArrival = 10f, trafficDelayMinutes = 6f).continuing(first)
+        // 10 minutes driven plus 10 left is 20; 6 of them are traffic.
+        assertEquals(0.3f, later.trafficShare()!!, 0.001f)
+        assertNull(first.trafficShare())
+    }
+
+    @Test
     fun `a long gap starts a new trip`() {
         val first = route(carMinutes = 100, miles = 10f).continuing(null)
         val later = route(carMinutes = 130, miles = 3f).continuing(first)

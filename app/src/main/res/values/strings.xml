@@ -125,6 +125,7 @@
     <string name="trip_total">Trip total: %1$s</string>
     <string name="trip_distance_label">to go</string>
     <string name="trip_time_label">to arrive</string>
+    <string name="trip_traffic">Traffic delay: +%1$s</string>
     <string name="trip_past_distance_label">distance</string>
     <string name="trip_past_time_label">duration</string>
     <string name="trip_past_option">%1$s · %2$s</string>
