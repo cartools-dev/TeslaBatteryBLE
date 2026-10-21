@@ -43,7 +43,7 @@ import java.util.Locale
  * Battery percent over distance driven: the driving counterpart of the battery
  * history card, which plots percent over time. Percent is the sub-percent SOC
  * (the rated range over the fitted full range); points where the car was
- * regenerating are green. The window is the last 15, 50 or 150 km (10, 30 or
+ * regenerating are green. The window is the last 10, 50 or 100 km (10, 50 or
  * 100 mi) or everything since the last charge. Each trip is its own line, so a
  * charge or a long parked gap never gets a connecting stroke.
  */
@@ -100,7 +100,7 @@ internal fun DriveHistoryCard(
     }
 }
 
-/** The distance-window chips: 15 / 50 / 150 km (10 / 30 / 100 mi) and since the last charge. */
+/** The distance-window chips: 10 / 50 / 100 km (10 / 50 / 100 mi) and since the last charge. */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun DriveChips(
