@@ -182,7 +182,6 @@ private fun parkedDrain(
 ): ParkedDrain {
     val drops = mutableListOf<Double>()
     val spans = mutableListOf<Long>()
-    val slept = mutableListOf<Boolean>()
     val readings = driveReadingsAt(samples, drives)
     for (index in 1 until samples.size) {
         val a = samples[index - 1]
@@ -192,13 +191,11 @@ private fun parkedDrain(
         if (stayedParked(readingA, readingB) && !a.isCharging && !b.isCharging) {
             drops += (a.soc(scale) - b.soc(scale)).toDouble()
             spans += b.timestampMillis - a.timestampMillis
-            slept += sleptThrough(a, b, statuses)
         }
     }
     val drop = drops.sum()
     val millis = spans.sum()
-    val sleepDrop = drops.filterIndexed { index, _ -> slept[index] }.sum()
-    val sleepMillis = spans.filterIndexed { index, _ -> slept[index] }.sum()
+    val sleepDrops = deepSleeps(samples, drives, statuses, scale).mapNotNull { it.drop }
     if (millis <= 0L) return ParkedDrain(drop, millis, drops.size, 0.0)
     val rate = drop / millis
     var squared = 0.0
@@ -211,7 +208,20 @@ private fun parkedDrain(
     // already carry some rounding noise, so adding it here counts it twice in part;
     // erring wide is the intended side.
     val rounding = TWO_READINGS_VARIANCE * readingResolution(scale) * readingResolution(scale)
-    return ParkedDrain(drop, millis, drops.size, squared, rounding, SleepSpan(sleepDrop, sleepMillis, slept.count { it }))
+    return ParkedDrain(
+        drop,
+        millis,
+        drops.size,
+        squared,
+        rounding,
+        SleepSpan(
+            sleepDrops.sumOf {
+                it.percent
+            },
+            sleepDrops.sumOf { it.spanMillis },
+            sleepDrops.size,
+        ),
+    )
 }
 
 /** True when two drive readings put the car at one odometer reading and out of gear: it stayed parked between them. */
@@ -224,36 +234,6 @@ internal fun stayedParked(
         a.odometerInHundredthsOfAMile == b.odometerInHundredthsOfAMile &&
         !a.inGear &&
         !b.inGear
-
-/**
- * True when the car slept through the gap between two reads: a status sample
- * inside it says asleep and none says awake. The reads themselves are awake
- * moments (the car answers only when awake), so only the inside counts. Times
- * are the phone's clock, which the status samples share.
- */
-internal fun sleptThrough(
-    a: BatterySample,
-    b: BatterySample,
-    statuses: List<StatusSample>,
-): Boolean {
-    val from = a.readAtMillis ?: a.timestampMillis
-    val to = b.readAtMillis ?: b.timestampMillis
-    // The statuses are oldest first: find the first one inside the gap, then walk it.
-    var low = 0
-    var high = statuses.size
-    while (low < high) {
-        val middle = (low + high) / 2
-        if (statuses[middle].timestampMillis > from) high = middle else low = middle + 1
-    }
-    var sawAsleep = false
-    var index = low
-    while (index < statuses.size && statuses[index].timestampMillis < to) {
-        if (!statuses[index].asleep) return false
-        sawAsleep = true
-        index++
-    }
-    return sawAsleep
-}
 
 /**
  * How far ahead a range's projection looks, rounded to a figure a person can
@@ -290,6 +270,3 @@ private const val HOUR = 60 * MINUTE
 
 /** Less parked time than this makes the rate too noisy to extrapolate. */
 private const val MIN_RATE_SPAN_MILLIS = 10 * MINUTE
-
-/** The shortest sleep that counts as slept enough: the rate's own minimum span. */
-internal const val MIN_SLEEP_SPAN_MILLIS = MIN_RATE_SPAN_MILLIS

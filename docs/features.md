@@ -13,7 +13,7 @@ What the app does today, in detail. The short version is in the [README](../READ
   from the status history, and the notification shows how long the car has been asleep;
   no duration is shown when the history does not reach back to the change
 - **Charge session cost** — set your home charging price per kWh in Settings (a new price applies from the start of the latest charge, so changing it mid-charge prices that whole charge) and the car view shows the energy added and what the session cost while it charges, then on the Last charge line once it ends; the currency is picked from a dropdown of common ones and defaults to your phone's
-- **Longest deep sleep** — the battery health card shows the longest stretch the car slept through between two parked readings (the same definition the parked-drain projection uses), and when it started
+- **Longest deep sleep** — the battery health card shows the longest stretch the car's status log says it slept, when it started, and the battery drain over it per day when parked battery readings bracket it. The parked-drain projection uses the same definition of a sleep
 - **Metric or imperial** — pick System default, Metric or Imperial in Settings; range and the health card show km or mi, and the rated constant reads as Wh/km, kWh/100km or km/kWh (display only, the car reports miles)
 - **On-demand wake** — the car is only woken when you ask, never in the background
 - **Lets the car sleep** — while it is charging, driving, in Sentry mode or running the climate (the car stays

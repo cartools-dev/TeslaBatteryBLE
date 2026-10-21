@@ -239,6 +239,12 @@ class DischargeProjectionTest {
         assertEquals(true, looseWidth > tidyWidth)
     }
 
+    /** Asleep readings every ten minutes from [from] to [to], then the wake reading five minutes on. */
+    private fun sleep(
+        from: Long,
+        to: Long,
+    ) = (from..to step 10).map { status(it, asleep = true) } + status(to + 5, asleep = false)
+
     private fun status(
         minutes: Long,
         asleep: Boolean,
@@ -251,10 +257,10 @@ class DischargeProjectionTest {
     )
 
     @Test
-    fun `the asleep rate comes from the gaps the car slept through`() {
+    fun `the asleep rate comes from the sleeps the reads bracket`() {
         // Two slept-through gaps lose a point each; the last, awake gap loses 3.
         val samples = listOf(sample(0, 80), sample(120, 79), sample(240, 78), sample(360, 75))
-        val statuses = listOf(status(60, asleep = true), status(180, asleep = true), status(300, asleep = false))
+        val statuses = sleep(5, 115) + sleep(125, 235)
         val projection = assertNotNull(project(samples, context = ProjectionContext(statuses = statuses), rangeMillis = 24 * HOUR))
         // Asleep: 2 points over 4 h = 0.5 %/h is the line; mixed: 5 points over 6 h.
         assertEquals(0.5, projection.percentPerHour, 1e-9)
@@ -264,7 +270,7 @@ class DischargeProjectionTest {
         assertTrue(projection.lowSoc!! <= 65f)
         // A single slept-through pair is not enough to call a rate.
         val one = listOf(sample(0, 80), sample(120, 79), sample(240, 76))
-        val oneAsleep = listOf(status(60, asleep = true), status(180, asleep = false))
+        val oneAsleep = sleep(5, 115)
         assertNull(
             assertNotNull(project(one, context = ProjectionContext(statuses = oneAsleep), rangeMillis = 24 * HOUR)).mixedPercentPerHour,
         )
@@ -278,7 +284,7 @@ class DischargeProjectionTest {
                 project(samples, context = ProjectionContext(statuses = emptyList()), rangeMillis = 24 * HOUR),
             ).mixedPercentPerHour,
         )
-        // A status inside the gap that says awake rules it out.
+        // A sleep cut short by an awake reading leaves reads that no longer bracket it closely.
         val awake = listOf(status(60, asleep = true), status(90, asleep = false))
         assertNull(
             assertNotNull(project(samples, context = ProjectionContext(statuses = awake), rangeMillis = 24 * HOUR)).mixedPercentPerHour,
