@@ -26,13 +26,16 @@ Related: ADR-0002, ADR-0004, ADR-0006, ADR-0007, ADR-0008, ADR-0012
 
 - **Raw records move into Room** (Android only, in `app`) as opaque blobs with
   typed key columns, in a database `history.db`:
-  `(id, vehicleId, kind, carTimestamp, phoneTime, originId, blob)`.
+  `(id, vehicleId, kind, carTimestamp, phoneTime, originId, odometer, blob)`.
   - `blob` is the encoded `BleRecord`, so unknown and future Tesla fields
     survive untouched, as in ADR-0006. The schema never holds proto fields.
   - `carTimestamp` is the car's own timestamp and is the timeline (ADR-0006,
     ADR-0008). `phoneTime` is the acquisition time from the envelope. `originId`
     is a random per-install id.
-  - Indexes on `(vehicleId, kind, carTimestamp)`. Unique key on
+  - `odometer` is nullable: filled at insert from records that carry it, so log
+    pulls and trip lookups by distance need no blob decoding. It is a plain
+    column, not part of the unique key.
+  - Indexes on `(vehicleId, kind, carTimestamp)` and `(vehicleId, odometer)`. Unique key on
     `(vehicleId, kind, carTimestamp, originId)`, so a re-import is a no-op.
   - Writes are batched in short transactions (WAL, `synchronous=NORMAL`).
 - **Retention is a `DELETE`** by age (ADR-0012's 90 days and 200,000-row
