@@ -39,7 +39,7 @@ class VehicleStatusTextTest {
 
     @Test
     fun `a duration that is unknown or under a minute is left out`() {
-        assertEquals("Asleep\u00A05m · Locked · User\u00A0away", vehicleStatusText(asleepLocked, durations(asleepFor = 5 * minute)))
+        assertEquals("Asleep\u00A05min · Locked · User\u00A0away", vehicleStatusText(asleepLocked, durations(asleepFor = 5 * minute)))
         assertEquals(
             "Asleep · Locked\u00A03h · User\u00A0away",
             vehicleStatusText(
