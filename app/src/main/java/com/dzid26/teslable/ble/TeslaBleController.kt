@@ -458,16 +458,21 @@ class TeslaBleController(
         if (_state.value.explicitScan) probeNames(strongestByName.values)
     }
 
+    private fun worthProbing(device: TeslaAdvert): Boolean =
+        (device.rssi ?: Int.MIN_VALUE) > NAME_PROBE_MIN_RSSI &&
+            TeslaNames.isTeslaBleName(device.name) &&
+            !vehicles.containsKey(device.name)
+
     /**
      * The car's name is only readable over a connection, so a scan briefly connects to each
-     * unknown car once, which lets its row show the name without a tap. Capped like any link.
+     * unknown car in range once, which lets its row show the name without a tap. Capped like any link.
      */
     private fun probeNames(found: Collection<TeslaAdvert>) {
         var active = links.values.count { it.phase in ACTIVE_PHASES }
         for (device in found) {
             if (active >= MAX_ACTIVE_LINKS) break
             val name = device.name
-            if (!TeslaNames.isTeslaBleName(name) || vehicles.containsKey(name) || !nameProbes.add(name)) continue
+            if (!worthProbing(device) || !nameProbes.add(name)) continue
             if (links[name]?.phase in ACTIVE_PHASES) continue
             ensureLink(name, device.address).connect()
             active++
@@ -1610,6 +1615,9 @@ class TeslaBleController(
         const val WAKE_REFRESH_MS = 5000L
         const val WAKE_REFRESH_MAX_ATTEMPTS = 6
         const val MAX_ACTIVE_LINKS = 3
+
+        /** Weaker adverts (dBm) are too far for a connection to finish; a tap still reads the name. */
+        const val NAME_PROBE_MIN_RSSI = -103
         const val PREFS = "teslable"
         const val KEY_TRACKING_ENABLED = "tracking_enabled"
         const val KEY_SELECTED_VEHICLE = "selected_vehicle"
