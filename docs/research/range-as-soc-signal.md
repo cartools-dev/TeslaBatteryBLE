@@ -52,7 +52,7 @@ No range-at-100 signal. Fleet Telemetry also needs an owner account plus a self-
 `bestSocPercent (future) ≈ ratedRangeMiles / fullRatedRangeMiles × 100`
 
 - **Resolution.** `battery_range` is a 2-dp float (proto L317). 0.01 mi over a ~300 mi full range is ~0.003% SOC — far finer than the 1% int, if the underlying value is continuous.
-- **Basis.** Our matrix reads rated range as "remaining energy over the trim's rated consumption constant" (`docs/reference/fleet-telemetry-vs-ble.md` L89, `tools/signal-matrix/mapping.json` L43), and `battery-health-methods.md` L31 cites third-party [1] that rated miles are linearly proportional to capacity via a fixed Wh/mi constant. Neither is a Tesla statement (section 5).
+- **Basis.** Our matrix reads rated range as "remaining energy over the trim's rated consumption constant" (`docs/reference/fleet-telemetry-vs-ble.md` L89, `tools/signal-matrix/mapping.json` L43), and `battery-health-methods.md` (rated-range method) cites third-party [1] that rated miles are linearly proportional to capacity via a fixed Wh/mi constant. Neither is a Tesla statement (section 5).
 - **Unknown.** Whether the car computes `battery_range` from the integer SOC (so it steps in ~3 mi quanta) or from a finer/smoothed internal SOC (so it drifts continuously). The parked test in section 3 settles it; the whole approach hinges on that.
 - **Observed (2026-10-05, parked).** The level held at 77 while `ratedRangeMiles` fell 206.93877 → 206.85713 → 206.61224 over ~2.6 h (0.33 mi; ~0.12% SOC at a ~268.5 mi scale; ~0.13 mi/h). So the rated range does carry sub-percent information, and the drops were ~1× and ~3× a ~0.0816 mi step (origin unknown).
 
@@ -169,7 +169,7 @@ Owner direction 2026-10-05: make rated miles the primary unit everywhere — sto
 - `tools/signal-matrix/upstream/fleet-telemetry/vehicle_data.proto` L13–L293 (signal numbers; firmware note L288).
 - `tools/signal-matrix/upstream/tesla-docs/available-data.tsv` L2, L10, L12, L25, L41, L89–L90, L117, L170, L210.
 - `docs/reference/fleet-telemetry-vs-ble.md` L89 and `tools/signal-matrix/mapping.json` L43 (our rated-range wording, not Tesla).
-- `docs/research/battery-health-methods.md` L20–L31, L43 (method taxonomy, third-party citations).
+- `docs/research/battery-health-methods.md` (method taxonomy, third-party citations).
 
 ## 8. Scale fit: slope of the level steps (2026-10-15)
 
