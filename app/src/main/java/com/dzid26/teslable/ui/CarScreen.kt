@@ -557,8 +557,7 @@ private fun SocBlock(
 private fun isPaired(
     connection: TeslaConnection?,
     vehicle: Vehicle?,
-): Boolean =
-    connection?.isPaired == true || vehicle?.isPaired == true
+): Boolean = connection?.isPaired == true || vehicle?.isPaired == true
 
 @Composable
 private fun KeyCard(
