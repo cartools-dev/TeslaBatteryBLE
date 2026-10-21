@@ -9,9 +9,9 @@ import com.dzid26.teslable.core.health.chargeSessions
 import com.dzid26.teslable.core.history.BatterySample
 import com.dzid26.teslable.core.history.DeepSleep
 import com.dzid26.teslable.core.history.DriveSample
-import com.dzid26.teslable.core.history.FullRangeScaleEstimator
 import com.dzid26.teslable.core.history.StatusSample
 import com.dzid26.teslable.core.history.longestDeepSleep
+import com.dzid26.teslable.history.FullRangeScales
 import kotlin.math.roundToInt
 
 // Battery-health glue: turns the recorded raw samples into the numbers the car
@@ -65,7 +65,7 @@ fun healthSummary(
     // The one full-range definition is the fitted scale of the level steps
     // (`FullRangeScaleEstimator`); a charge session contributes the rated
     // constant (kWh per rated mile) from the energy and miles it added.
-    val scale = FullRangeScaleEstimator.estimate(samples)
+    val scale = FullRangeScales.of(samples)
     val backboneSession = sessions.lastOrNull { it.kwhPerMile != null }
     val energySession =
         sessions.lastOrNull { it.energyAddedKwh != null && it.swingPercent >= MIN_SWING_PERCENT }
