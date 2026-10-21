@@ -132,8 +132,8 @@ enabled.
 
 ## Is it on F-Droid or Play?
 
-Not yet. Right now the signed build of `main` is published as a rolling `main-latest`
-pre-release. Signed stable releases and F-Droid are planned — see
+Not yet. Right now the signed build of `main` is published on one fixed
+"Preview of main" pre-release. Signed stable releases and F-Droid are planned — see
 the [master plan](master-plan.md).
 
 ## How do I report a bug / security issue?

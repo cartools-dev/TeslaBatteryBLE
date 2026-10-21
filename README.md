@@ -91,17 +91,22 @@ Releases are signed with the owner key and include prereleases such as betas.
 4. Install and let Obtainium keep it updated
 
 To follow `main` instead of tagged releases, every push to `main` that passes CI
-replaces the single `main-latest` pre-release with a signed build. Keep
-**Include prereleases** on and, in the app's Obtainium settings, turn on
-**Release date as version** (the tag name never changes, so the date is what
-tells Obtainium a new build exists). Also allow background updates and, on
-Android 12+, let it install silently (Settings -> Apps -> Obtainium -> Install
-unknown apps).
+updates one pre-release titled **Preview of main**: its tag is renamed to
+`main-<sha7>` and its APK replaced, signed with the release key. In the app's
+Obtainium settings:
 
-**Include prereleases** now also follows `main`: tagged betas are pre-releases too,
-so with it on you get whichever is newer. To follow only tagged releases and
-betas, keep it on and set the app's release-title filter in Obtainium to a regex
-that excludes previews, for example `^(?!Preview).*`.
+1. Turn on **Include prereleases**.
+2. Set the release-title filter to the regex `^Preview` so this app ignores
+   every other release.
+3. Turn on **Fall back to older releases**; without it Obtainium finds nothing
+   whenever a newer tagged release exists above the preview.
+4. Allow background updates and, on Android 12+, let Obtainium install silently
+   (Settings -> Apps -> Obtainium -> Install unknown apps).
+
+Users who follow tagged betas with **Include prereleases** and no title filter
+are not affected as long as a tagged pre-release is newer than the preview; to be
+sure, set the title filter to the inverted regex `^Preview` (Obtainium's invert
+switch).
 
 The preview is signed with the release key, so it only updates an install signed
 with that key. A debug build you installed yourself uses the same package name
