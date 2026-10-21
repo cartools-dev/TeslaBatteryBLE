@@ -362,7 +362,7 @@ internal fun HeroCard(
                 }
                 // The app key state sits above the connection state: it is
                 // what unlocks authenticated reads.
-                if (keySlot != null || pairing == PairingPhase.OK) {
+                if (isPaired(connection, vehicle)) {
                     Text(
                         text = keySlot?.let { "App key paired · slot\u00A0$it" } ?: "App key paired",
                         style = MaterialTheme.typography.bodySmall,
@@ -557,10 +557,7 @@ private fun SocBlock(
 private fun isPaired(
     connection: TeslaConnection?,
     vehicle: Vehicle?,
-): Boolean =
-    connection?.keySlot != null ||
-        vehicle?.keySlot != null ||
-        connection?.pairing == PairingPhase.OK
+): Boolean = connection?.isPaired == true || vehicle?.isPaired == true
 
 @Composable
 private fun KeyCard(
