@@ -39,7 +39,7 @@ All features in detail: [`docs/features.md`](docs/features.md). What is planned:
 
 Download the APK from [Releases](https://github.com/dzid26/TeslaBatteryBLE/releases) (prereleases are signed with the owner key), or let [Obtainium](https://github.com/ImranR98/Obtainium) keep it updated: add `https://github.com/dzid26/TeslaBatteryBLE`, and turn on **Include prereleases** to follow tagged betas.
 
-To follow `main`, every push that passes CI updates one prerelease titled **Preview of main**. Set Obtainium's release-title filter to `^Preview`, turn on **Include prereleases** and **Fall back to older releases**. Do not uninstall the app to switch signing keys, because that wipes the car pairing key. Details: [`docs/install.md`](docs/install.md).
+To follow `main`, every push that passes CI updates one prerelease titled **Preview of main**. Set Obtainium's release-title filter to `^Preview`, turn on **Include prereleases** and **Fall back to older releases**. Do not uninstall the app to switch signing keys, because that wipes the car pairing key. Details: [`docs/faq.md`](docs/faq.md#how-do-i-install-and-update-it).
 
 No stable release has shipped yet.
 
@@ -56,7 +56,7 @@ On Windows, use `.\gradlew`. Test, lint and CI details: [`CONTRIBUTING.md`](CONT
 
 ## Architecture
 
-Three modules: `protocol/` (pure-JVM Tesla BLE protocol), `core/` (battery domain, no Android) and `app/` (Compose UI, BLE, tracking service). See [`docs/architecture.md`](docs/architecture.md), [`docs/protocol/`](docs/protocol/) and [`docs/adr/`](docs/adr/).
+Three modules: `protocol/` (pure-JVM Tesla BLE protocol), `core/` (battery domain, no Android) and `app/` (Compose UI, BLE, tracking service). See [`docs/README.md`](docs/README.md#code-layout), [`docs/protocol/`](docs/protocol/) and [`docs/adr/`](docs/adr/).
 
 ## Contributing
 
