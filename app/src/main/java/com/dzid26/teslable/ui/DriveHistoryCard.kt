@@ -111,7 +111,7 @@ private fun DriveChips(
     // Four chips do not fit a narrow phone on one line; they wrap whole.
     FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         DriveWindow.entries.forEach { entry ->
-            val label = entry.label(unit)?.let { "$it ${unit.symbol}" } ?: "Since charge"
+            val label = entry.label(unit)?.let { "$it${unit.symbol}" } ?: "Since charge"
             FilterChip(selected = window == entry, onClick = { onWindow(entry) }, label = { Text(label, maxLines = 1) })
         }
     }

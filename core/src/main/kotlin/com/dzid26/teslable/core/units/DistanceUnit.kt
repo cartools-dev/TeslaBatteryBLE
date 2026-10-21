@@ -27,9 +27,9 @@ enum class DistanceUnit(
     fun energyPerUnit(kwhPerMile: Float): Float = kwhPerMile / perMile
 
     /**
-     * [miles] shown in this unit with its symbol, such as "342.0 km" or "212 mi".
+     * [miles] shown in this unit with its symbol, such as "342.0km" or "212mi".
      * [decimals] is 0 or 1; the separator is the caller's, so the app can pass the locale's.
-     * The gap is a no-break space so the number never wraps from its unit.
+     * There is no gap: the symbol follows the number, like "12min", so the figures stay narrow.
      */
     fun format(
         miles: Float,
@@ -45,7 +45,7 @@ enum class DistanceUnit(
                 val sign = if (value < 0f) "-" else ""
                 "$sign${tenths / 10}$decimalSeparator${tenths % 10}"
             }
-        return "$number\u00A0$symbol"
+        return "$number$symbol"
     }
 }
 
