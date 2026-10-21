@@ -110,11 +110,12 @@ val ciDebugBuild = project.findProperty("ciDebugBuild") == "true"
 // CI run number only grows, so each PR build updates the previous one in place. The offset
 // keeps it above the git-derived codes of PR builds installed before this rule.
 val ciVersionCode: Int? =
-    if (ciDebugBuild) {
-        providers.environmentVariable("GITHUB_RUN_NUMBER").orNull?.toIntOrNull()?.let { 1_000_000_000 + it }
-    } else {
-        null
-    }
+    providers
+        .environmentVariable("GITHUB_RUN_NUMBER")
+        .orNull
+        ?.toIntOrNull()
+        ?.takeIf { ciDebugBuild }
+        ?.let { 1_000_000_000 + it }
 
 android {
     namespace = "com.dzid26.teslable"

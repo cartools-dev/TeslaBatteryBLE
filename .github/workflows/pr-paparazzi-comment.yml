@@ -342,9 +342,9 @@ jobs:
           [[ "$artifact_id" =~ ^[0-9]+$ ]] || { echo "no debug APK artifact"; exit 0; }
           line="Debug APK: [zip from Android CI](https://github.com/$GITHUB_REPOSITORY/actions/runs/$RUN_ID/artifacts/$artifact_id) (GitHub sign-in needed)"
           tag="pr-paparazzi-${HEAD_SHA:0:7}"
-          read -r id body < <(gh api "repos/$GITHUB_REPOSITORY/issues/$PR/comments?per_page=100" --paginate \
-            --jq '[.[] | select(.user.login == "github-actions[bot]" and (.body | contains("<!-- pr-paparazzi -->")) and (.body | contains("'"$tag"'")))] | last // empty | "\(.id) x"')
-          [ -n "${id:-}" ] || { echo "no snapshots comment for $tag yet"; exit 0; }
+          id="$(gh api "repos/$GITHUB_REPOSITORY/issues/$PR/comments?per_page=100" --paginate \
+            --jq '[.[] | select(.user.login == "github-actions[bot]" and (.body | contains("<!-- pr-paparazzi -->")) and (.body | contains("'"$tag"'")))] | last // empty | .id | tostring' | tail -n 1)"
+          [ -n "$id" ] || { echo "no snapshots comment for $tag yet"; exit 0; }
           old="$(gh api "repos/$GITHUB_REPOSITORY/issues/comments/$id" --jq .body)"
           new="$(printf '%s\n' "$old" | sed -E "s|^Debug APK: .*\$|$line|")"
           if [ "$new" = "$old" ]; then
