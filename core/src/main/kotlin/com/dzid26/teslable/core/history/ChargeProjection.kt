@@ -227,7 +227,7 @@ private fun ratedMilesPerHour(
 /** The full rated range implied by one sample's range and level; null without both. */
 private fun impliedFullRangeMiles(sample: BatterySample): Float? {
     val miles = sample.ratedRangeMiles?.takeIf { it.isFinite() && it > 0f } ?: return null
-    return if (sample.percent > 0) miles / (sample.percent / 100f) else null
+    return if (sample.batteryLevel > 0) miles / (sample.batteryLevel / 100f) else null
 }
 
 /** Miles per displayed percent: the learned scale, else the run's rated-range gain. */
@@ -239,7 +239,7 @@ private fun milesPerPercent(
     fullRangeMiles?.takeIf { it.isFinite() && it > 0f }?.let { return it / 100f }
     val firstMiles = first.ratedRangeMiles ?: return null
     val lastMiles = last.ratedRangeMiles ?: return null
-    val gainedPercent = last.percent - first.percent
+    val gainedPercent = last.batteryLevel - first.batteryLevel
     if (gainedPercent <= 0) return null
     val gainedMiles = lastMiles - firstMiles
     if (!gainedMiles.isFinite() || gainedMiles <= 0f) return null

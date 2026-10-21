@@ -17,7 +17,7 @@ internal fun chargeProjected(
     window: Window,
     color: Color,
 ): Projected {
-    val from = TimePoint(target.from.timestampMillis, target.from.percent.toFloat())
+    val from = TimePoint(target.from.timestampMillis, target.from.batteryLevel.toFloat())
     val spec = projectionSpec(SeriesKind.CHARGE_PROJECTION, from, chargeEnd(target, window.end, target.completionMillis), window)
     val beam =
         target.beam?.let { (earliest, latest) ->
@@ -82,7 +82,7 @@ internal fun chargeEnd(
 ): TimePoint {
     if (completionMillis <= windowEnd) return TimePoint(completionMillis, projection.targetPercent.toFloat())
     val fromMillis = projection.from.timestampMillis
-    val fromPercent = projection.from.percent
+    val fromPercent = projection.from.batteryLevel
     val share = (windowEnd - fromMillis).toFloat() / (completionMillis - fromMillis)
     // Not rounded: far from the limit the two sides differ by well under a point.
     return TimePoint(windowEnd, fromPercent + (projection.targetPercent - fromPercent) * share)
