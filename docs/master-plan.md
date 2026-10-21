@@ -82,7 +82,7 @@ A trustworthy shell around the existing protocol work. No user-facing features.
 - [ ] Notifications: charge complete, SOC thresholds, **vampire-drain alert**.
 - [ ] Widget (Glance), automation intents (Tasker), CSV/JSON export.
 - [ ] **TeslaMate export/sync** (owner direction 2026-10-08): get the phone's BLE history into the owner's self-hosted TeslaMate to fill gaps in its cloud data. Export maps the raw records (ChargeState, DriveState, VCSEC status) onto TeslaMate's vehicle-data shape with the car's timestamps; status readings become asleep/online states. Upstream has no way in for this data yet (its only importer takes data older than the first TeslaMate record); discussion in teslamate-org/teslamate#5496. File export first (share sheet, no new permission); direct sync to the owner's server is opt-in and needs `INTERNET` plus, at targetSdk 37, the runtime `ACCESS_LOCAL_NETWORK` for LAN addresses, with PRIVACY.md and the positioning line updated when it ships. Retention keeps records until they are synced (20k cap, #123).
-- [ ] Multiple cars: storage, per-vehicle links, VIN, per-car notifications and the cars/car UI landed (ADR-0004); share redacted diagnostics open. Requirements: `docs/requirements/multi-vehicle.md`.
+- [ ] Multiple cars: storage, per-vehicle links, VIN, per-car notifications and the cars/car UI landed (ADR-0004); share redacted diagnostics open.
 - [ ] Share redacted diagnostics.
 - [ ] Compatibility matrix (car models, vehicle software, Android versions).
 - [ ] FAQ / troubleshooting.
