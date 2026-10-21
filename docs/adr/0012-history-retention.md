@@ -1,6 +1,6 @@
 # ADR-0012: History retention — raw for N days, then summaries
 
-Status: Proposed (owner chose N, backstop, shared N and the cut-off on 2026-10-16; navigation data and the storage engine are still open)
+Status: Proposed (owner chose N, backstop, shared N and the cut-off on 2026-10-16; navigation data is still open; the storage engine is decided in ADR-0014)
 Date: 2026-10-16
 Related: ADR-0002, ADR-0006, ADR-0008, ADR-0009 (slower parked cadence),
 ADR-0004 (cut-off trigger), issue #123, `docs/master-plan.md` (TeslaMate export)
