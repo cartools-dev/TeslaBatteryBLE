@@ -13,21 +13,38 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.dzid26.teslable.R
 import com.dzid26.teslable.core.health.TripEstimate
+import com.dzid26.teslable.core.history.RouteSample
 import com.dzid26.teslable.core.history.compactDuration
+import com.dzid26.teslable.core.history.trafficMinutes
+import com.dzid26.teslable.core.history.trafficShare
 import java.text.DecimalFormatSymbols
 
 /** The string ids naming the distance and time figures: what is left of a live trip, what a past one took. */
 internal class TripLabels(
     @StringRes val distance: Int,
     @StringRes val time: Int,
+    // The traffic delay the car counts in the time, which tints the time figure and explains itself in a tip; null for none.
+    val traffic: TripTraffic? = null,
 )
 
-internal val liveTripLabels = TripLabels(R.string.trip_distance_label, R.string.trip_time_label)
+/** A traffic delay of [minutes], which is [share] (0 to 1) of the whole trip's time. */
+internal class TripTraffic(
+    val minutes: Int,
+    val share: Float,
+)
+
+internal fun liveTripLabels(route: RouteSample): TripLabels {
+    val minutes = route.trafficMinutes()
+    val traffic = minutes?.let { TripTraffic(it, route.trafficShare() ?: 0f) }
+    return TripLabels(R.string.trip_distance_label, R.string.trip_time_label, traffic)
+}
 
 internal val pastTripLabels = TripLabels(R.string.trip_past_distance_label, R.string.trip_past_time_label)
 
@@ -59,7 +76,7 @@ internal fun TripStats(
     // The stats wrap whole on a narrow phone instead of squeezing the digits.
     FlowRow(horizontalArrangement = Arrangement.spacedBy(STAT_GAP), verticalArrangement = Arrangement.spacedBy(4.dp)) {
         distance?.let { TripStat(it, stringResource(labels.distance)) }
-        time?.let { TripStat(it, stringResource(labels.time)) }
+        time?.let { TripStat(it, stringResource(labels.time), labels.traffic) }
         when {
             cost != null && kwh != null -> TripStat(cost, stringResource(R.string.trip_cost_label, kwh))
             kwh != null -> TripStat("$kwh kWh", stringResource(R.string.trip_energy_label))
@@ -71,15 +88,17 @@ internal fun TripStats(
 private fun TripStat(
     value: String,
     label: String,
+    traffic: TripTraffic? = null,
 ) {
+    val style = MaterialTheme.typography.headlineMedium.copy(fontWeight = FontWeight.SemiBold)
     Column {
-        Text(
-            text = value,
-            style = MaterialTheme.typography.headlineMedium,
-            fontWeight = FontWeight.SemiBold,
-            color = MaterialTheme.colorScheme.primary,
-            maxLines = 1,
-        )
+        if (traffic == null) {
+            Text(text = value, style = style, color = MaterialTheme.colorScheme.primary, maxLines = 1)
+        } else {
+            // The time the car blames partly on traffic: amber, turning red as traffic is more of the trip, with a tip naming the delay.
+            val delay = compactDuration(traffic.minutes * MILLIS_PER_MINUTE).orEmpty()
+            HintText(value, stringResource(R.string.trip_traffic, delay), trafficColor(traffic.share), style)
+        }
         // A long label wraps under its figure instead of widening the column and pushing the next figure down a row.
         Text(
             text = label,
@@ -90,5 +109,12 @@ private fun TripStat(
     }
 }
 
+/** Amber for a little traffic, shading to red as the delay nears [RED_TRAFFIC_SHARE] of the whole trip's time. */
+private fun trafficColor(share: Float): Color = lerp(AMBER, RED, (share / RED_TRAFFIC_SHARE).coerceIn(0f, 1f))
+
+private val AMBER = Color(0xFFFFB300)
+private val RED = Color(0xFFE53935)
+private const val RED_TRAFFIC_SHARE = 0.3f
+private const val MILLIS_PER_MINUTE = 60_000L
 private val STAT_GAP = 16.dp
 private val STAT_LABEL_MAX_WIDTH = 112.dp

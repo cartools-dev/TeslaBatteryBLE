@@ -62,6 +62,16 @@ fun RouteSample.trafficMinutes(): Int? =
         ?.roundToInt()
         ?.takeIf { it > 0 }
 
+/**
+ * The traffic delay as a share of the whole trip's time, 0 to 1, or null without a delay. The whole
+ * trip is [tripTotalMillis] (time already driven plus the time left), else the time left alone.
+ */
+fun RouteSample.trafficShare(): Float? {
+    val delay = trafficMinutes() ?: return null
+    val totalMillis = tripTotalMillis() ?: minutesToArrival?.takeIf { it.isFinite() && it > 0f }?.let { (it * MILLIS_PER_MINUTE).toLong() }
+    return totalMillis?.takeIf { it > 0L }?.let { (delay * MILLIS_PER_MINUTE / it.toFloat()).coerceIn(0f, 1f) }
+}
+
 /** How far along the trip is, 0 to 1, or null when the length or the remaining distance is unknown or zero. */
 fun RouteSample.tripProgress(): Float? {
     val start = tripStartMiles?.takeIf { it > 0f }

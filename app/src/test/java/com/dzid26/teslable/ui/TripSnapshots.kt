@@ -38,6 +38,9 @@ class TripSnapshots {
     fun tripCardTraffic() = snapTrip("trip-card_traffic", trafficDelayMinutes = 2.4f)
 
     @Test
+    fun tripCardHeavyTraffic() = snapTrip("trip-card_heavy-traffic", trafficDelayMinutes = 8f)
+
+    @Test
     fun tripCardNoPrice() = snapTrip("trip-card_no-price", pricePerKwh = null)
 
     @Test

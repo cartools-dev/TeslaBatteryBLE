@@ -42,6 +42,8 @@ internal fun HintText(
     text: String,
     hint: String,
     color: Color,
+    // The chart hints are small print; a figure passes its own style.
+    style: TextStyle = MaterialTheme.typography.bodySmall,
     modifier: Modifier = Modifier,
 ) {
     val state = rememberTooltipState(isPersistent = true)
@@ -56,7 +58,7 @@ internal fun HintText(
     ) {
         Text(
             text = text,
-            style = MaterialTheme.typography.bodySmall,
+            style = style,
             color = color,
             modifier =
                 Modifier

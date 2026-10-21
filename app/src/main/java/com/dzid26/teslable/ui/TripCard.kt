@@ -25,8 +25,6 @@ import com.dzid26.teslable.core.health.TripEstimate
 import com.dzid26.teslable.core.health.tripEstimate
 import com.dzid26.teslable.core.history.FullRangeScale
 import com.dzid26.teslable.core.history.RouteSample
-import com.dzid26.teslable.core.history.compactDuration
-import com.dzid26.teslable.core.history.trafficMinutes
 import com.dzid26.teslable.core.history.tripProgress
 import com.dzid26.teslable.core.history.tripTotalMillis
 import com.dzid26.teslable.core.units.DistanceUnit
@@ -63,7 +61,7 @@ internal fun TripCard(
                 time = tripTimeText(route.minutesToArrival?.takeIf { it.isFinite() }?.let { (it * MILLIS_PER_MINUTE).toLong() }),
                 estimate = estimate,
                 currencyCode = currencyCode,
-                labels = liveTripLabels,
+                labels = liveTripLabels(route),
             )
             route.tripProgress()?.let { progress ->
                 Spacer(Modifier.height(8.dp))
@@ -84,13 +82,6 @@ internal fun TripCard(
             }
             totalText(route)?.let {
                 Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            }
-            route.trafficMinutes()?.let { minutes ->
-                Text(
-                    text = stringResource(R.string.trip_traffic, compactDuration(minutes * MILLIS_PER_MINUTE).orEmpty()),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
             }
         }
     }
