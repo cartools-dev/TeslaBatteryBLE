@@ -10,7 +10,7 @@ import kotlin.test.assertNull
 class TripEstimateTest {
     private val scale =
         FullRangeScale(
-            milesPer100Percent = 300f,
+            milesPerPercent = 3.0f,
             offsetMiles = 2f,
             standardErrorMiles = 0.5f,
             samples = 40,

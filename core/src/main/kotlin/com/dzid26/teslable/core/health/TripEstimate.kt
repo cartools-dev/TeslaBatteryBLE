@@ -70,7 +70,7 @@ fun tripEstimate(
  * energy is a few kWh, so a slope that is off by a couple of percent does not matter, and the scale's
  * values move smoothly, where the pinned flag can flip on a single reading near its threshold.
  */
-fun FullRangeScale.goodEnoughForTrips(): Boolean = standardErrorMiles <= milesPer100Percent * TRIP_MAX_SCALE_ERROR
+fun FullRangeScale.goodEnoughForTrips(): Boolean = standardErrorMiles <= milesPerPercent * PERCENT_MAX * TRIP_MAX_SCALE_ERROR
 
 private const val TRIP_MAX_SCALE_ERROR = 0.03f
 private const val PERCENT_MAX = 100f

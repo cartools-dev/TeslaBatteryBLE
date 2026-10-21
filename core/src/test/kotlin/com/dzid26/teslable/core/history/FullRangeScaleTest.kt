@@ -53,7 +53,7 @@ class FullRangeScaleTest {
         )) {
             val scale = FullRangeScaleEstimator.estimate(climb(270f, -2f, 40.1f, 70f, round))!!
             assertTrue(scale.pinned)
-            assertEquals(270f, scale.milesPer100Percent, 1.5f)
+            assertEquals(2.7f, scale.milesPerPercent, 0.015f)
         }
     }
 
@@ -79,7 +79,7 @@ class FullRangeScaleTest {
         // A sample after a drive: level 1 lower but miles far lower than the step implies.
         val bumped = charge.take(50) + sample(999, charge[49].batteryLevel + 1, 120f) + charge.drop(50)
         val scale = FullRangeScaleEstimator.estimate(bumped)!!
-        assertEquals(270f, scale.milesPer100Percent, 2f)
+        assertEquals(2.7f, scale.milesPerPercent, 0.02f)
     }
 
     @Test
@@ -106,7 +106,7 @@ class FullRangeScaleTest {
 
     @Test
     fun `the line gives rated miles at a soc and at full`() {
-        val scale = FullRangeScale(milesPer100Percent = 300f, offsetMiles = 2f, standardErrorMiles = 0.1f, samples = 10, pinned = true)
+        val scale = FullRangeScale(milesPerPercent = 3.0f, offsetMiles = 2f, standardErrorMiles = 0.1f, samples = 10, pinned = true)
         assertEquals(2f, scale.ratedMilesAt(0f), 0.001f)
         assertEquals(152f, scale.ratedMilesAt(50f), 0.001f)
         assertEquals(302f, scale.milesAtFull, 0.001f)

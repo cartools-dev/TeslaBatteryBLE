@@ -220,6 +220,6 @@ class TripTest {
 
     private companion object {
         const val MINUTE = 60_000L
-        val scale = FullRangeScale(milesPer100Percent = 300f, offsetMiles = 0f, standardErrorMiles = 0.1f, samples = 40, pinned = true)
+        val scale = FullRangeScale(milesPerPercent = 3.0f, offsetMiles = 0f, standardErrorMiles = 0.1f, samples = 40, pinned = true)
     }
 }

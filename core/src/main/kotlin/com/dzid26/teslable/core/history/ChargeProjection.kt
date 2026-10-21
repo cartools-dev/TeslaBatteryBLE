@@ -36,7 +36,7 @@ data class ChargeProjection(
  * Projects when the charge limit is reached while charging.
  *
  * Miles first: when a live [chargeRateMph] is known and a miles-per-percent
- * basis exists (the learned [FullRangeScale.milesPer100Percent], else the current run's rated
+ * basis exists (the learned [FullRangeScale.milesPerPercent], else the current run's rated
  * range gain), the remaining time is `remainingPercent * milesPerPercent /
  * rateMph`. The percent-based average of the trailing run is the fallback
  * (integer SOC only). Returns null when the last sample is not charging, the
@@ -74,7 +74,7 @@ private fun baseChargeProjection(
     if (elapsed < MIN_RATE_SPAN_MILLIS) return null
     val remaining = target - lastSoc
 
-    val milesPerPercent = milesPerPercent(first, last, scale?.milesPer100Percent)
+    val milesPerPercent = milesPerPercent(first, last, scale?.milesPerPercent)
     val rate = chargeRateMph?.takeIf { it.isFinite() && it > 0f }
     if (rate != null && milesPerPercent != null) {
         return ChargeProjection(
@@ -89,7 +89,7 @@ private fun baseChargeProjection(
         // The level has not ticked yet: the run's own rated-range slope keeps
         // moving on a slow charger.
         val milesRate = ratedMilesPerHour(first, last, elapsed)
-        val fullRange = scale?.milesPer100Percent?.takeIf { it.isFinite() && it > 0f } ?: impliedFullRangeMiles(last)
+        val fullRange = scale?.milesPerPercent?.takeIf { it.isFinite() && it > 0f }?.let { it * 100f } ?: impliedFullRangeMiles(last)
         if (milesRate != null && fullRange != null) {
             val remainingMiles = fullRange * remaining / 100f
             return ChargeProjection(
@@ -232,9 +232,9 @@ private fun impliedFullRangeMiles(sample: BatterySample): Float? {
 private fun milesPerPercent(
     first: BatterySample,
     last: BatterySample,
-    milesPer100Percent: Float?,
+    scaleMilesPerPercent: Float?,
 ): Float? {
-    milesPer100Percent?.takeIf { it.isFinite() && it > 0f }?.let { return it / 100f }
+    scaleMilesPerPercent?.takeIf { it.isFinite() && it > 0f }?.let { return it }
     val firstMiles = first.ratedRangeMiles ?: return null
     val lastMiles = last.ratedRangeMiles ?: return null
     val gainedPercent = last.batteryLevel - first.batteryLevel

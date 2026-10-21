@@ -16,22 +16,19 @@ import kotlin.math.sqrt
  * the level, and it needs no 100% charge.
  */
 data class FullRangeScale(
-    /** Miles per 100% of displayed SOC: the slope of the fit, times 100. Not the range at 100%, see [milesAtFull]. */
-    val milesPer100Percent: Float,
+    /** Miles per displayed percent: the slope of the fit. Not the range at 100%, see [milesAtFull]. */
+    val milesPerPercent: Float,
     /** Rated miles at displayed SOC 0 (the fit's intercept; absorbs rounding and any buffer). */
     val offsetMiles: Float,
-    /** One standard error of [fullRangeMiles]. */
+    /** One standard error of the miles per 100%. */
     val standardErrorMiles: Float,
     /** Level boundaries that contributed. */
     val samples: Int,
     /** True when the scale is tight enough to trust for SOC conversion. */
     val pinned: Boolean,
 ) {
-    val lowerMiles: Float get() = milesPer100Percent - 2f * standardErrorMiles
-    val upperMiles: Float get() = milesPer100Percent + 2f * standardErrorMiles
-
-    /** Miles per displayed percent. */
-    val milesPerPercent: Float get() = milesPer100Percent / 100f
+    val lowerMiles: Float get() = milesPerPercent * PERCENT_FULL - 2f * standardErrorMiles
+    val upperMiles: Float get() = milesPerPercent * PERCENT_FULL + 2f * standardErrorMiles
 
     /** The rated miles the fitted line gives at a displayed SOC (percent). */
     fun ratedMilesAt(socPercent: Float): Float = offsetMiles + milesPerPercent * socPercent
@@ -112,7 +109,7 @@ object FullRangeScaleEstimator {
         val relativeError = fit.slopeError / fit.slope
         val pinned = span >= MIN_LEVEL_SPAN && relativeError <= PIN_TOLERANCE
         return FullRangeScale(
-            milesPer100Percent = (fit.slope * 100.0).toFloat(),
+            milesPerPercent = fit.slope.toFloat(),
             offsetMiles = fit.offset.toFloat(),
             standardErrorMiles = (fit.slopeError * 100.0).toFloat(),
             samples = used,

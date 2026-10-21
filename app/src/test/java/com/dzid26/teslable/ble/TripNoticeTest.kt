@@ -12,7 +12,7 @@ class TripNoticeTest {
     private val inputs =
         TripInputs(
             currentRatedMiles = 130f,
-            scale = FullRangeScale(milesPer100Percent = 270f, offsetMiles = 0f, standardErrorMiles = 0.1f, samples = 40, pinned = true),
+            scale = FullRangeScale(milesPerPercent = 2.7f, offsetMiles = 0f, standardErrorMiles = 0.1f, samples = 40, pinned = true),
         )
 
     private fun route(
