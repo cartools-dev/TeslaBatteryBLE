@@ -39,9 +39,6 @@ data class BatterySample(
      */
     val readAtMillis: Long? = null,
 ) {
-    /** The displayed level, derived for the chart, stats, and car view. */
-    val percent: Int get() = batteryLevel
-
     val isCharging: Boolean get() = chargingState == ChargingStateKind.Charging
 }
 
@@ -140,10 +137,10 @@ fun chargeStats(samples: List<BatterySample>): ChargeStats? {
         currentMiles = newest.ratedRangeMiles,
         minMiles = tailMiles.minOrNull(),
         maxMiles = tailMiles.maxOrNull(),
-        chargeLevel = charged.percent,
-        currentLevel = newest.percent,
-        minLevel = tail.minOf { it.percent },
-        maxLevel = tail.maxOf { it.percent },
+        chargeLevel = charged.batteryLevel,
+        currentLevel = newest.batteryLevel,
+        minLevel = tail.minOf { it.batteryLevel },
+        maxLevel = tail.maxOf { it.batteryLevel },
         energyKwh = charged.chargeEnergyAdded?.takeIf { it > 0f },
     )
 }

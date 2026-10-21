@@ -197,7 +197,7 @@ fun batteryPercent(
     }
     return lastKnown?.let {
         // The age is the phone's read time; the sample's own timestamp is the car's clock.
-        BatteryPercent(value = it.percent, stale = true, readAtMillis = it.readAtMillis)
+        BatteryPercent(value = it.batteryLevel, stale = true, readAtMillis = it.readAtMillis)
     }
 }
 
