@@ -56,7 +56,7 @@ On Windows, use `.\gradlew`. Test, lint and CI details: [`CONTRIBUTING.md`](CONT
 
 ## Architecture
 
-Three modules: `protocol/` (pure-JVM Tesla BLE protocol), `core/` (battery domain, no Android) and `app/` (Compose UI, BLE, tracking service). See [`docs/architecture.md`](docs/architecture.md), [`docs/protocol/`](docs/protocol/) and [`docs/adr/`](docs/adr/).
+Three modules: `protocol/` (pure-JVM Tesla BLE protocol), `core/` (battery domain, no Android) and `app/` (Compose UI, BLE, tracking service). See [`docs/README.md`](docs/README.md#code-layout), [`docs/protocol/`](docs/protocol/) and [`docs/adr/`](docs/adr/).
 
 ## Contributing
 
