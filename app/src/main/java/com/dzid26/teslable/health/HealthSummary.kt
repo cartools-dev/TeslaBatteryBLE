@@ -70,7 +70,7 @@ fun healthSummary(
     val energySession =
         sessions.lastOrNull { it.energyAddedKwh != null && it.swingPercent >= MIN_SWING_PERCENT }
     // The range at 100%: the fitted line's value at displayed SOC 100.
-    val fullRangeMiles = scale?.let { it.offsetMiles + it.fullRangeMiles }
+    val fullRangeMiles = scale?.milesAtFull
     val ratedKwhPerMile = backboneSession?.kwhPerMile
     val capacityKwh =
         ratedKwhPerMile?.let { constant -> fullRangeMiles?.let { constant * it } }

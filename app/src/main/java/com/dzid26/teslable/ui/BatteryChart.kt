@@ -176,7 +176,7 @@ private fun rememberCursorMarker(
             PointDescriber { x, y ->
                 val millis = window.start + (x * MILLIS_PER_HOUR).roundToLong()
                 // The rated range at that level, from the fitted full range; unknown until it is learned.
-                val range = scale?.takeIf { it.pinned }?.let { unit.format(y.toFloat() / PERCENT_FULL * it.fullRangeMiles) }
+                val range = scale?.takeIf { it.pinned }?.let { unit.format(it.ratedMilesAt(y.toFloat())) }
                 cursorText(y.toFloat(), millis > lastMeasuredMillis, formatTime(millis, axis.showDate, axis.is24Hour), range)
             }
         }

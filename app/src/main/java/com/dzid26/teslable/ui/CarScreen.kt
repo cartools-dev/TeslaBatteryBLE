@@ -159,12 +159,12 @@ internal fun CarScreen(
             statusHistory.filter { it.vehicleId == vehicle.bleName }
         }
     val paired = isPaired(connection, vehicle)
+    // Fitted once for every card below: the hero, the trip, both history charts.
+    val scale = remember(vehicleHistory) { FullRangeScaleEstimator.estimate(vehicleHistory) }
     val health =
         remember(vehicleHistory, vehicleDrives, vehicleStatuses) {
             healthSummary(vehicleHistory, drives = vehicleDrives, statuses = vehicleStatuses)
         }
-    // Fitted once for every card below: the hero, the trip, both history charts.
-    val scale = remember(vehicleHistory) { FullRangeScaleEstimator.estimate(vehicleHistory) }
     // What a pull on this screen will do, and the feedback while it runs.
     val pullLabel =
         when {
@@ -752,7 +752,7 @@ internal fun BatteryHistoryCard(
                     range.durationMillis
                         ?: (visible.last().timestampMillis - visible.first().timestampMillis)
                             .coerceAtLeast(1L)
-                val charge = chargeProjection(samples, fullRangeMiles = scale?.fullRangeMiles, scale = scale)
+                val charge = chargeProjection(samples, scale = scale)
                 // Parked drain: the drive samples' odometer marks the
                 // stretches the car moved. Shown next to the charge
                 // projection too: where the battery heads if unplugged now.
