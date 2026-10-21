@@ -3,7 +3,7 @@
 Status: Accepted
 Date: 2026-10-08
 Related: ADR-0001 (battery tracker), ADR-0008 (BLE log envelope), issue #112,
-`docs/research/tesla-ble-capabilities.md` (Constraints: Polling)
+`docs/protocol/capabilities.md` (Constraints: Polling)
 
 ## Context
 

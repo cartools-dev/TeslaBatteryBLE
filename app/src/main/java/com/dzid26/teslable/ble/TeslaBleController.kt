@@ -806,7 +806,7 @@ class TeslaBleController(
 
         /**
          * Asks for the status first and sends the key slot lookup and the session request only after
-         * its reply, so one VCSEC request is in flight at a time (docs/research/tesla-ble-capabilities.md,
+         * its reply, so one VCSEC request is in flight at a time (docs/protocol/capabilities.md,
          * Constraints → Polling). A timer sends them anyway if the reply never comes.
          */
         fun beginStartup() {
