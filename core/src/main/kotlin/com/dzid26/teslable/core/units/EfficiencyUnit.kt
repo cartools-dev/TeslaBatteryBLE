@@ -30,10 +30,10 @@ enum class EfficiencyUnit {
         if (!kwhPerMile.isFinite() || kwhPerMile <= 0f) return null
         val kwhPerUnit = distance.energyPerUnit(kwhPerMile)
         return when (this) {
-            ENERGY_PER_DISTANCE -> "${(kwhPerUnit * WH_PER_KWH).roundToInt()}\u00A0Wh/${distance.symbol}"
+            ENERGY_PER_DISTANCE -> "${(kwhPerUnit * WH_PER_KWH).roundToInt()}Wh/${distance.symbol}"
             ENERGY_PER_100_DISTANCE ->
-                "${fixed(kwhPerUnit * PER_HUNDRED, 1, decimalSeparator)}\u00A0kWh/100\u00A0${distance.symbol}"
-            DISTANCE_PER_ENERGY -> "${fixed(1f / kwhPerUnit, 2, decimalSeparator)}\u00A0${distance.symbol}/kWh"
+                "${fixed(kwhPerUnit * PER_HUNDRED, 1, decimalSeparator)}kWh/100${distance.symbol}"
+            DISTANCE_PER_ENERGY -> "${fixed(1f / kwhPerUnit, 2, decimalSeparator)}${distance.symbol}/kWh"
         }
     }
 }

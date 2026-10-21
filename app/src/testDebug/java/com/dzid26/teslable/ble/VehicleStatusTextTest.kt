@@ -34,7 +34,7 @@ class VehicleStatusTextTest {
     @Test
     fun `asleep and locked each show how long they have held`() {
         val d = durations(asleepFor = hour + 12 * minute, lockedFor = 3 * hour)
-        assertEquals("Asleep\u00A01h\u00A012m · Locked\u00A03h · User\u00A0away", vehicleStatusText(asleepLocked, d))
+        assertEquals("Asleep\u00A01h12m · Locked\u00A03h · User\u00A0away", vehicleStatusText(asleepLocked, d))
     }
 
     @Test

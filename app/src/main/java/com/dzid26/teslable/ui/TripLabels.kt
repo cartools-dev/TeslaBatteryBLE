@@ -79,7 +79,7 @@ internal fun TripStats(
         time?.let { TripStat(it, stringResource(labels.time), labels.traffic) }
         when {
             cost != null && kwh != null -> TripStat(cost, stringResource(R.string.trip_cost_label, kwh))
-            kwh != null -> TripStat("$kwh kWh", stringResource(R.string.trip_energy_label))
+            kwh != null -> TripStat("${kwh}kWh", stringResource(R.string.trip_energy_label))
         }
     }
 }

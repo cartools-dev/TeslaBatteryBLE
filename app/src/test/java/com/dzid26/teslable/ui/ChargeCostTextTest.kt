@@ -23,12 +23,12 @@ class ChargeCostTextTest {
 
     @Test
     fun energyAndCostWithAPrice() {
-        assertEquals("31.3 kWh · \$6.26", sessionEnergyText(31.3f, 0.2f))
+        assertEquals("31.3kWh · \$6.26", sessionEnergyText(31.3f, 0.2f))
     }
 
     @Test
     fun energyAloneWithoutAPrice() {
-        assertEquals("31.3 kWh", sessionEnergyText(31.3f, null))
+        assertEquals("31.3kWh", sessionEnergyText(31.3f, null))
     }
 
     @Test
@@ -40,6 +40,6 @@ class ChargeCostTextTest {
     @Test
     fun costInTheChosenCurrency() {
         val text = sessionEnergyText(31.3f, 0.2f, "EUR")!!
-        assertTrue(text, text.startsWith("31.3\u00A0kWh · ") && text.contains("€") && text.contains("6.26"))
+        assertTrue(text, text.startsWith("31.3kWh · ") && text.contains("€") && text.contains("6.26"))
     }
 }

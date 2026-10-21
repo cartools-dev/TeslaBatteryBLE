@@ -470,12 +470,12 @@ private fun chargerElectricalText(charge: ChargeState): String? {
     val actual = charge.charger_actual_current
     val amps =
         when {
-            actual != null && limit != null -> "$actual/$limit A"
-            actual != null && volts != null -> "$actual A"
-            limit != null -> "$limit A"
+            actual != null && limit != null -> "$actual/${limit}A"
+            actual != null && volts != null -> "${actual}A"
+            limit != null -> "${limit}A"
             else -> null
         }
-    return listOfNotNull(volts?.let { "$it V" }, amps).takeIf { it.isNotEmpty() }?.joinToString(" · ")
+    return listOfNotNull(volts?.let { "${it}V" }, amps).takeIf { it.isNotEmpty() }?.joinToString(" · ")
 }
 
 /**

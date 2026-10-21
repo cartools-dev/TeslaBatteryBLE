@@ -73,7 +73,7 @@ internal fun BatteryHealthCard(summary: HealthSummary) {
             summary.capacityKwh?.let { kwh ->
                 EstimateRow(
                     label = { LabelText("Usable capacity") },
-                    value = "~${(kwh * 10).roundToInt() / 10f} kWh",
+                    value = "~${(kwh * 10).roundToInt() / 10f}kWh",
                     detail =
                         summary.ratedKwhPerMile?.let { constant ->
                             efficiency.format(constant, unit, separator)?.let { "rated constant $it" }
