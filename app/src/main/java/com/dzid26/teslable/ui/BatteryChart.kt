@@ -4,7 +4,6 @@ package com.dzid26.teslable.ui
 
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.key
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -120,38 +119,36 @@ internal fun BatteryChart(
 
     val pin = rememberCursorPin()
 
-    // A clear from a touch elsewhere rebuilds the chart, dropping a live cursor Vico still shows.
-    key(pin.reset) {
-        ProvideVicoTheme(rememberM3VicoTheme()) {
-            val cursor = rememberCursorMarker(window, axis, lastMeasuredMillis, scale)
-            val chart =
-                rememberCartesianChart(
-                    rememberLineCartesianLayer(
-                        lineProvider =
-                            remember(
-                                shape.specs,
-                                lines,
-                            ) { LineCartesianLayer.LineProvider.series(shape.specs.map { lines.getValue(it.kind) }) },
-                        rangeProvider =
-                            remember(shape) {
-                                CartesianLayerRangeProvider.fixed(minX = 0.0, maxX = spanHours, minY = shape.yMin, maxY = shape.yMax)
-                            },
-                    ),
-                    startAxis = rememberPercentAxis(),
-                    bottomAxis = rememberTimeAxis(timeFormatter),
-                    marker = cursor,
-                    markerController = rememberCursorController(pin),
-                    decorations = remember(shape.beams, pin, cursor) { listOf(Beams(shape.beams), PinnedCursor(pin, cursor)) },
-                    getXStep = { _, _, _ -> xStep },
-                )
-            CartesianChartHost(
-                chart = chart,
-                model = remember(shape.specs) { batteryModel(shape.specs) },
-                modifier = modifier.markingTouches(pin).semantics { contentDescription = description },
-                scrollState = rememberVicoScrollState(scrollEnabled = false),
-                zoomState = rememberVicoZoomState(zoomEnabled = false, initialZoom = Zoom.Content),
+    ProvideVicoTheme(rememberM3VicoTheme()) {
+        val cursor = rememberCursorMarker(window, axis, lastMeasuredMillis, scale)
+        val chart =
+            rememberCartesianChart(
+                rememberLineCartesianLayer(
+                    lineProvider =
+                        remember(
+                            shape.specs,
+                            lines,
+                        ) { LineCartesianLayer.LineProvider.series(shape.specs.map { lines.getValue(it.kind) }) },
+                    rangeProvider =
+                        remember(shape) {
+                            CartesianLayerRangeProvider.fixed(minX = 0.0, maxX = spanHours, minY = shape.yMin, maxY = shape.yMax)
+                        },
+                ),
+                startAxis = rememberPercentAxis(),
+                bottomAxis = rememberTimeAxis(timeFormatter),
+                decorations =
+                    remember(shape.specs, shape.beams, pin, cursor, lineColor) {
+                        listOf(Beams(shape.beams), ScrubCursor(pin, cursor, shape.specs.flatMap { it.xs.zip(it.ys) }, lineColor))
+                    },
+                getXStep = { _, _, _ -> xStep },
             )
-        }
+        CartesianChartHost(
+            chart = chart,
+            model = remember(shape.specs) { batteryModel(shape.specs) },
+            modifier = modifier.scrubbing(pin).semantics { contentDescription = description },
+            scrollState = rememberVicoScrollState(scrollEnabled = false),
+            zoomState = rememberVicoZoomState(zoomEnabled = false, initialZoom = Zoom.Content),
+        )
     }
 }
 
