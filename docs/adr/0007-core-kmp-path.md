@@ -74,8 +74,16 @@ Date: 2026-10-07
 
 ## Update 2026-10-20: build-migration plan
 
-Status of this section: Accepted (proposed 2026-10-16). It plans the plugin
-switch the Decision section deferred.
+Status of this section: Deferred (2026-10-21; proposed 2026-10-16, accepted
+2026-10-20). It plans the plugin switch the Decision section deferred.
+
+Deferred because Swift implementations of the Tesla BLE protocol already
+serve iOS, so a multiplatform `:protocol` would mostly duplicate them. A
+JVM library already serves Android, desktop and server Kotlin. The plan
+comes back if an iOS version of this app becomes a goal: then the shared
+value is mostly `:core` (history, health, charge sessions), not only the
+protocol. Until then the guardrails above and the detekt `ForbiddenImport`
+check stay, so the switch remains about one PR.
 
 Preconditions, in order:
 
