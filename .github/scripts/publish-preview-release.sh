@@ -29,10 +29,11 @@ DESCRIBE="$(git describe --tags --match 'v[0-9]*' "$SHA" 2>/dev/null || echo "$S
 DESCRIBE="$(printf '%s' "$DESCRIBE" | sed -E 's/-g([0-9a-f]+)$/-\1/')"
 
 {
-  echo "Preview build of \`main\` at [${SHA:0:7}](https://github.com/$REPO/commit/$SHA) (\`$DESCRIBE\`)."
+  echo "**Rolling preview of \`main\`, debuggable.** This release is replaced in place on every push to \`main\` that passes the tests, static analysis and the emulator smoke test: its tag is renamed to the new commit and the APK is replaced."
   echo
-  echo "Signed with the release key, so it updates an installed release in place. Debuggable, so logs can be pulled with \`adb run-as\`; tagged releases are not."
-  echo "This one release is updated in place on every push to \`main\` that passes the tests, static analysis and the emulator smoke test: its tag is renamed to the new commit and the APK is replaced."
+  echo "> **Debuggable build:** the app's private storage (including the car pairing key and the logs) can be read with \`adb run-as com.dzid26.teslable\` by anyone with adb access to the phone. Install it only on your own phone. Tagged releases are not debuggable."
+  echo
+  echo "Built from [${SHA:0:7}](https://github.com/$REPO/commit/$SHA) (\`$DESCRIBE\`). Signed with the release key, so it updates an installed release in place."
 } > preview-notes.md
 
 release="$(gh api --paginate "repos/$REPO/releases" \
