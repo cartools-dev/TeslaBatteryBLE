@@ -21,7 +21,10 @@ plugins {
 // minor * 10_000 + patch * 100 + stage, where stage is the pre-release number
 // (beta.3 -> 3, no number -> 0) and a stable release is 99, so it sorts above
 // its own pre-releases. Use one pre-release series per patch version (do not
-// mix alpha/beta/rc). Without git history (a tarball, a shallow clone with no
+// mix alpha/beta/rc). That number is then multiplied by 1000 and the commits
+// since the tag are added, so every build on main is an update over the one
+// before it and still sorts below the next tagged release (a preview build is
+// never a downgrade). Without git history (a tarball, a shallow clone with no
 // tags) it falls back to 0.0.0-dev / 1.
 val gitDescribe: String =
     try {
@@ -36,7 +39,7 @@ val gitDescribe: String =
         ""
     }
 val tagVersion =
-    Regex("""^v(\d+)[.](\d+)[.](\d+)(?:-([0-9A-Za-z.]+?))?(?:-\d+-g[0-9a-f]+)?$""")
+    Regex("""^v(\d+)[.](\d+)[.](\d+)(?:-([0-9A-Za-z.]+?))?(?:-(\d+)-g[0-9a-f]+)?$""")
         .matchEntire(gitDescribe)
 val describedVersionName =
     if (tagVersion != null) {
@@ -65,7 +68,7 @@ fun ciVersionName(
 val gitVersionName = ciVersionName(describedVersionName, ciPrNumber, ciHeadSha)
 val gitVersionCode: Int =
     tagVersion?.let { match ->
-        val (majorText, minorText, patchText, preRelease) = match.destructured
+        val (majorText, minorText, patchText, preRelease, distanceText) = match.destructured
         val major = majorText.toInt()
         val minor = minorText.toInt()
         val patch = patchText.toInt()
@@ -76,7 +79,14 @@ val gitVersionCode: Int =
                 else -> Regex("""\d+$""").find(preRelease)?.value?.toInt() ?: 0
             }
         require(preRelease.isEmpty() || stage < 99) { "pre-release number must stay below 99: $gitDescribe" }
-        major * 1_000_000 + minor * 10_000 + patch * 100 + stage
+        // Clamped so a long stretch without a tag never breaks a build; the CI
+        // preview job refuses to publish once the real count reaches 1000.
+        val distance = distanceText.ifEmpty { "0" }.toInt().coerceAtMost(999)
+        val release = major.toLong() * 1_000_000 + minor * 10_000 + patch * 100 + stage
+        val code = release * 1000 + distance
+        // Int tops out at 2_147_483_647, i.e. about v2.14.x: past that, versionCode needs a new scheme.
+        require(code <= Int.MAX_VALUE) { "versionCode overflows: $gitDescribe" }
+        code.toInt()
     } ?: 1
 
 // The owner-held signing identity, shared by local builds and CI (see

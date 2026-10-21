@@ -517,6 +517,115 @@ jobs:
           APK_ARTIFACT_URL: ${{ needs.build.outputs.apk-artifact-url }}
         run: bash .github/scripts/update-draft-release.sh
 
+  # The signing key never shares a job with a write-capable token: preview-build
+  # holds the keystore (read-only token, no persisted credentials) and hands the
+  # APK to preview, which can write releases but sees no secrets.
+  preview-build:
+    name: Build signed preview APK
+    # Signed with the release key like a tagged release, and only after the
+    # tests, static analysis and the emulator smoke test passed for this push.
+    # It is a fresh assembleRelease, not the smoke-tested APK (same as the tag job).
+    needs: [tests, static, smoke]
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    environment: release
+    permissions:
+      contents: read
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          fetch-depth: 0 # full history and tags: versionName and versionCode are derived from git describe
+          persist-credentials: false
+
+      # The build clamps the commit count so debug and PR builds never break;
+      # a preview must not ship with a clamped versionCode.
+      - name: Require a recent release tag
+        run: |
+          set -euo pipefail
+          count="$(git rev-list --count "$(git describe --tags --abbrev=0 --match 'v[0-9]*')..HEAD")"
+          if [ "$count" -ge 1000 ]; then
+            echo "::error::$count commits since the last v* tag; cut a tag so preview versionCodes keep rising"
+            exit 1
+          fi
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6 # v6
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@3f5f9adaf7d9fecd50b5935e54106014257a94e6 # v6
+
+      - name: Make gradlew executable
+        run: chmod +x gradlew
+
+      - name: Set up signing
+        env:
+          SIGNING_KEYSTORE_BASE64: ${{ secrets.SIGNING_KEYSTORE_BASE64 }}
+          SIGNING_STORE_PASSWORD: ${{ secrets.SIGNING_STORE_PASSWORD }}
+          SIGNING_KEY_ALIAS: ${{ secrets.SIGNING_KEY_ALIAS }}
+          SIGNING_KEY_PASSWORD: ${{ secrets.SIGNING_KEY_PASSWORD }}
+        run: |
+          set -euo pipefail
+          for name in SIGNING_KEYSTORE_BASE64 SIGNING_STORE_PASSWORD SIGNING_KEY_ALIAS SIGNING_KEY_PASSWORD; do
+            if [ -z "${!name:-}" ]; then
+              echo "::error::$name is not set in the release environment"
+              exit 1
+            fi
+          done
+          echo "$SIGNING_KEYSTORE_BASE64" | base64 -d > "$RUNNER_TEMP/release.jks"
+          {
+            echo "storeFile=$RUNNER_TEMP/release.jks"
+            echo "storePassword=$SIGNING_STORE_PASSWORD"
+            echo "keyAlias=$SIGNING_KEY_ALIAS"
+            echo "keyPassword=$SIGNING_KEY_PASSWORD"
+          } > keystore.properties
+
+      - name: Build the signed release APK
+        run: ./gradlew :app:assembleRelease
+
+      - name: Stage the APK
+        run: |
+          set -euo pipefail
+          apk=app/build/outputs/apk/release/app-release.apk
+          [ -f "$apk" ] || { echo "::error::$apk missing (unsigned build?)"; exit 1; }
+          mkdir -p dist
+          cp "$apk" dist/TeslaBatteryBLE-preview.apk
+
+      - name: Upload the preview APK
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+        with:
+          name: preview-apk
+          path: dist/TeslaBatteryBLE-preview.apk
+          retention-days: 1
+
+  preview:
+    name: Publish rolling preview
+    needs: preview-build
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    permissions:
+      contents: write
+    concurrency:
+      group: preview-release
+      cancel-in-progress: false
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          fetch-depth: 0
+
+      - name: Download the preview APK
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
+        with:
+          name: preview-apk
+          path: dist
+
+      - name: Publish the rolling preview release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: bash .github/scripts/publish-preview-release.sh
+
   go-vectors:
     runs-on: ubuntu-latest
     steps:
