@@ -158,6 +158,10 @@ android {
         }
         release {
             signingConfigs.findByName("release")?.let { signingConfig = it }
+            // Only the rolling "Preview of main" build (-PpreviewDebuggable=true, set by CI)
+            // is debuggable, so `adb run-as` can pull its logs. It keeps R8 and the release
+            // key; tagged releases and the smoke build never set it.
+            isDebuggable = project.findProperty("previewDebuggable") == "true"
             isMinifyEnabled = true
             isShrinkResources = true
             proguardFiles(

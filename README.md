@@ -111,6 +111,9 @@ are not affected as long as a tagged pre-release is newer than the preview; to b
 sure, set the title filter to the inverted regex `^Preview` (Obtainium's invert
 switch).
 
+The preview is also debuggable (`adb run-as` can read its logs); tagged releases are
+not.
+
 The preview is signed with the release key, so it only updates an install signed
 with that key. A debug build you installed yourself uses the same package name
 but a different key; Android then offers to uninstall first. Do not accept that:
