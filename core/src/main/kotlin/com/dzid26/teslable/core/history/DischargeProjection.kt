@@ -2,6 +2,7 @@
 
 package com.dzid26.teslable.core.history
 
+import kotlin.math.hypot
 import kotlin.math.roundToInt
 import kotlin.math.sqrt
 
@@ -59,7 +60,8 @@ data class DischargeProjection(
  * range through the fitted [scale] when it is pinned, so a pair of readings
  * is a fraction of a percent, not a whole level; without it the integer
  * levels stand in. The beam is two standard errors of that rate: the spread
- * of the pairs around it, never less than the readings' own resolution.
+ * of the pairs around it, never less than the readings' own resolution,
+ * joined with the scale's own slope error.
  *
  * The line follows the deep-sleep rate once the car has slept enough to tell: the
  * rate of the pairs it slept through (a VCSEC status inside the gap says asleep
@@ -104,7 +106,7 @@ fun dischargeProjection(
     val mainRate = sleepRate ?: mixedRate
     val projectedSoc = (fromSoc - mainRate * horizon).toFloat().coerceIn(0f, FULL_PERCENT)
     val mixedSoc = (fromSoc - mixedRate * horizon).toFloat().coerceIn(0f, FULL_PERCENT)
-    val reach = 2.0 * parked.errorPerMilli * horizon
+    val reach = 2.0 * hypot(parked.errorPerMilli, mainRate * (scale.levelScaleError() ?: 0.0)) * horizon
     val hasStats = parked.pairs >= MIN_BEAM_PAIRS
     val hasBeam = hasStats || sleepRate != null
     // The beam: the statistics around the line, reaching down to the mixed line when the main one is the sleep rate.

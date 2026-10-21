@@ -2,6 +2,7 @@
 
 package com.dzid26.teslable.core.history
 
+import kotlin.math.hypot
 import kotlin.math.sqrt
 
 // Chart-only analysis kept in `core` so the drawing code stays free of the
@@ -182,11 +183,14 @@ private class LevelFit(
     val scatter: Double,
 )
 
-/** One standard error of the fitted level-over-time slope, as a share of the slope; null without a rising fit. */
+/**
+ * One standard error of the charge rate, as a share of the rate; null without a rising fit. It joins the scatter
+ * of the readings around the line with the scale's own slope error, which moves every level together.
+ */
 private fun relativeRateError(
     run: List<BatterySample>,
     scale: FullRangeScale?,
-): Double? = levelFit(run, scale)?.let { it.scatter / sqrt(it.sxx) / it.slope }
+): Double? = levelFit(run, scale)?.let { hypot(it.scatter / sqrt(it.sxx) / it.slope, scale.levelScaleError() ?: 0.0) }
 
 /** Fits the run's levels over time; null with too few readings or a line that does not rise. */
 private fun levelFit(

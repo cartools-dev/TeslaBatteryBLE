@@ -112,4 +112,13 @@ class FullRangeScaleTest {
         assertEquals(302f, scale.milesAtFull, 0.001f)
         assertEquals(50f, scale.socPercent(scale.ratedMilesAt(50f))!!, 0.001f)
     }
+
+    @Test
+    fun `the scale error is a share of the slope and counts only while pinned`() {
+        val pinned = FullRangeScale(milesPerPercent = 3.0f, offsetMiles = 2f, standardErrorMiles = 1.5f, samples = 10, pinned = true)
+        assertEquals(0.005, pinned.relativeError, 1e-6)
+        assertEquals(0.005, pinned.levelScaleError()!!, 1e-6)
+        assertNull(pinned.copy(pinned = false).levelScaleError())
+        assertNull(null.levelScaleError())
+    }
 }
