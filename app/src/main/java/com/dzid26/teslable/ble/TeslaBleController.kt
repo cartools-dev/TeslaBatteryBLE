@@ -1289,8 +1289,8 @@ class TeslaBleController(
                     return false
                 }
             val requestId = session.requestId(encrypted) ?: return false
-            pendingCommands[uuid.toHex()] = PendingCommand(domain, requestId, kind, reason)
-            val sent = transmit(encrypted.encode(), CommandRecords.authenticated(reason, domain, payload), uuid.toHex())
+            pendingCommands[uuid.toHexString()] = PendingCommand(domain, requestId, kind, reason)
+            val sent = transmit(encrypted.encode(), CommandRecords.authenticated(reason, domain, payload), uuid.toHexString())
             if (!sent) log("${name()}: failed to send ${kind.name.lowercase()} request")
             if (sent && kind.isRead) readInFlight.onSent(System.currentTimeMillis())
             return sent
@@ -1346,7 +1346,7 @@ class TeslaBleController(
             val fault = message.signedMessageStatus?.takeIf { it.isRefusal }
             val encrypted = message.signature_data?.AES_GCM_Response_data != null
             if (!encrypted && fault == null) return false
-            val key = message.request_uuid.toByteArray().toHex()
+            val key = message.request_uuid.toByteArray().toHexString()
             val pending = pendingCommands.remove(key) ?: return false
             commands.replied(key, fault, deviceTimestamp)
             // A reply ends the read unless it sends the next request, which turns it back on.
@@ -1469,7 +1469,7 @@ class TeslaBleController(
                 // The status is in, so the car's awake state is known to the session request.
                 runStartupFollowUps()
             } else {
-                log("${name()}: RX ${message.size} bytes ${message.toHex()}")
+                log("${name()}: RX ${message.size} bytes ${message.toHexString()}")
             }
         }
 
@@ -1551,8 +1551,6 @@ class TeslaBleController(
                 }
             }
     }
-
-    private fun ByteArray.toHex(): String = joinToString("") { (it.toInt() and 0xFF).toString(16).padStart(2, '0') }
 
     private companion object {
         const val LOG_MAX_LINES = 200

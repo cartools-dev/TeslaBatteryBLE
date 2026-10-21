@@ -123,7 +123,7 @@ class PairingFlow(
         // The car may already have this key. Adding it again would ask for
         // the card and can fail, so check the whitelist first.
         pendingPairCheck = true
-        keyId = storedKeyId.toHex()
+        keyId = storedKeyId.toHexString()
         setPairing(PairingPhase.CHECKING)
         host.log("checking whether the key is already enrolled")
         host.transmitVcsec(TeslaVcsec.buildWhitelistInfoRequest(), PairingReason.PAIRING)
@@ -211,7 +211,7 @@ class PairingFlow(
     }
 
     private fun sendAddKey(keyPair: TeslaKeyPair) {
-        val id = keyPair.keyId.toHex()
+        val id = keyPair.keyId.toHexString()
         setPairing(PairingPhase.SENDING, id)
         host.log("pairing key $id")
         if (!host.transmitAddKey(TeslaPairing.buildAddKeyRequest(keyPair.publicKeyRaw))) {
@@ -317,7 +317,7 @@ class PairingFlow(
             pendingPairCheck = false
             when (phase) {
                 PairingPhase.SENDING, PairingPhase.WAITING_FOR_CARD, PairingPhase.CHECKING -> {
-                    setPairing(PairingPhase.OK, storedKeyId.toHex())
+                    setPairing(PairingPhase.OK, storedKeyId.toHexString())
                     host.onFreshlyEnrolled()
                     host.log("key enrolled (${whitelist.numberOfEntries} keys)")
                 }
@@ -423,5 +423,3 @@ private fun WhitelistInfo.isComplete(keyIdSize: Int): Boolean =
         whitelistEntries.size == numberOfEntries &&
         slotMask.countOneBits() == numberOfEntries &&
         whitelistEntries.all { it.publicKeySHA1.size >= keyIdSize }
-
-private fun ByteArray.toHex(): String = joinToString("") { (it.toInt() and 0xFF).toString(16).padStart(2, '0') }
