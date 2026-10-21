@@ -359,7 +359,6 @@ class FakeCarProtocol(
                             battery_level = batteryLevel,
                             usable_battery_level = batteryLevel,
                             battery_range = batteryLevel * RATED_MILES_PER_PERCENT,
-                            est_battery_range = batteryLevel * ESTIMATED_MILES_PER_PERCENT,
                             charge_limit_soc = CHARGE_LIMIT,
                             charge_energy_added =
                                 if (charging) {
@@ -527,7 +526,6 @@ class FakeCarProtocol(
         const val EPOCH_BYTES = 16
         const val CHARGE_LIMIT = 85
         const val RATED_MILES_PER_PERCENT = 3.0f
-        const val ESTIMATED_MILES_PER_PERCENT = 2.9f
         const val KWH_PER_PERCENT = 0.75f
 
         /** 12,345.67 miles: constant, because the simulated car never drives. */

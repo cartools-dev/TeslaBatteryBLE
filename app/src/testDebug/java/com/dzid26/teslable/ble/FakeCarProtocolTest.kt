@@ -135,7 +135,7 @@ class FakeCarProtocolTest {
         assertEquals(85, charge.charge_limit_soc)
         assertEquals(ChargingStateKind.Disconnected, charge.chargingStateKind)
         assertEquals(234f, charge.battery_range)
-        assertEquals(226.2f, charge.est_battery_range!!, 0.01f)
+        assertNull(charge.est_battery_range)
         // History takes time only from the car's own stamp.
         assertNotNull(charge.timestamp)
     }

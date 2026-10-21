@@ -39,7 +39,6 @@ internal object DemoHistory {
     private const val DRIVE_STEP_HUNDREDTHS_OF_A_MILE = 1_000
     private const val CHARGE_LIMIT = 85
     private const val RATED_MILES_PER_PERCENT = 3.0f
-    private const val ESTIMATED_MILES_PER_PERCENT = 2.9f
     private const val IDEAL_MILES_PER_PERCENT = 3.2f
     private const val KWH_PER_PERCENT = 0.75f
     private const val MINUTE = 60_000L
@@ -188,7 +187,6 @@ internal object DemoHistory {
             charging_state = chargingState(point.state),
             charge_limit_soc = CHARGE_LIMIT,
             battery_range = rated,
-            est_battery_range = point.percent * ESTIMATED_MILES_PER_PERCENT,
             ideal_battery_range = point.percent * IDEAL_MILES_PER_PERCENT,
             battery_level = point.percent,
             usable_battery_level = point.percent,
