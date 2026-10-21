@@ -2,7 +2,7 @@
 
 Status: living document. The checkboxes below are the source of truth for scope.
 Created: 2026-10-04 · Maintained alongside every change (see `AGENTS.md`).
-Research: `docs/research/feature-map.md` (battery-health feature synthesis) · `docs/reference/fleet-telemetry-vs-ble.md` (live cloud-vs-BLE signal matrix).
+Research: `docs/research/` · `docs/reference/fleet-telemetry-vs-ble.md` (live cloud-vs-BLE signal matrix).
 
 ## 1. What this is
 
@@ -48,77 +48,35 @@ account, nothing leaves the phone."*
 Real-car checklist (keep short): pair key → wake car → SOC read → background
 tracking survives screen off → notification updates → key survives app restart.
 
+Finished items are not listed below; see `docs/features.md`, the ADRs and git history.
+
 ## 5. Phase 0 — Foundation (target: week of Oct 5)
 
 A trustworthy shell around the existing protocol work. No user-facing features.
 
-- [x] Land the in-flight BLE refactor (`BlePermissions`, `KnownCarStore`, controller, strings) after build + test verification.
-- [x] `LICENSE` (AGPL-3.0-only) + `THIRD_PARTY_NOTICES.md` + `SPDX-License-Identifier` headers in sources.
-- [x] In-app license/credits screen data (with the About screen, Phase 1).
-- [x] README: pitch, badges, screenshots, features, install (GitHub / Obtainium), build, architecture diagram, license, "not affiliated with Tesla, Inc.".
-- [x] App icon: adaptive + monochrome (512 px store export still pending).
-- [x] `SECURITY.md`, `PRIVACY.md` ("nothing leaves the device"), `CODE_OF_CONDUCT.md`, `CONTRIBUTING.md`.
-- [x] Issue forms (bug: car model/year, vehicle software, Android version, logs; feature request), PR template, `.editorconfig`.
-- [x] CI gates: Android lint, app unit tests, concurrency cancel, least-privilege permissions, Dependabot.
-- [x] CI hardening: pinned action SHAs (#16); ktlint + detekt gates (#19).
 - [ ] Required checks on `main` (branch protection deliberately deferred while agents push directly).
-- [x] Release engineering: owner keystore + `SIGNING_*` CI secrets; tag releases ship `TeslaBatteryBLE-<tag>.apk`; every release attaches the Paparazzi full-screen snapshots (cars list, car view, Settings; light and dark rows) and requires a green emulator smoke test for the tagged commit; release checklist documented; a draft "Next release" tracks un-released changes and is published by the tag release.
-- [x] Docs skeleton: `docs/adr/` (ADR-0001 moved), `docs/protocol/` (transport, session/pairing, domains).
-- [x] `AGENTS.md` for future sessions.
 
 ## 6. Phase 1 — v0.2 "Trust & polish" (target: end of October)
 
-- [x] UX P0: permission rationale + pairing walkthrough (incl. NFC card tap), connection state clarity, last-known SOC, readable errors (2026-10-05).
-- [x] Key backup & restore UX: Settings-only wording shipped and restore verified on a real fresh install (2026-10-05); spec records what is intentionally out of scope: `docs/requirements/key-backup-ux.md`.
-- [x] Theft recovery: per-car keys, pairing always enrolls a freshly generated key (2026-10-05).
-- [x] About screen: version, licenses, privacy statement, donation links (2026-10-05).
-- [x] Dark theme. [ ] Strings extracted to resources (translation-ready).
-- [x] Fake BLE transport + simulated car (`FakeCarProtocol`, round-trip tests, CI demo run).
+- [ ] Strings extracted to resources (translation-ready).
 - [ ] Controller state-machine tests.
 - [ ] Store tests.
-- [x] Compose UI smoke tests + screenshot tests in CI (2026-10-10): Paparazzi JVM snapshots of the cars-list and car-view cards (light + dark, 24 states) diffed before/after the pushed commit and posted on PRs (light by default, dark on demand); no committed goldens. The emulator stays for the release smoke test only; release screenshots come from the Paparazzi full-screen snapshots.
 - [ ] Protocol vectors: nonce/metadata/counter/clock-skew edge cases (negative tests partly done in #41).
-- [x] Static analysis: Android lint + ktlint + type-resolved detekt 2.x at default thresholds in CI; existing findings tracked in `detekt-baseline-*.xml` (#127).
-- [x] R8 + resource shrinking and LeakCanary (debug only) added in #38; the release build is smoke-tested on an emulator in CI (#115).
 - [ ] Baseline Profile.
-- [x] Screenshots in `website/images/` (captured in CI, shared by the README and the landing page).
-- [x] Social preview image rendered (`website/images/social-preview.png`); upload in GitHub repo settings pending (owner action).
-- [x] Website v1 on GitHub Pages (plain, install-focused landing: https://dzid26.github.io/TeslaBatteryBLE/).
-- [x] Obtainium instructions (README); F-Droid metadata (`fastlane/`).
 - [ ] F-Droid submission; IzzyOnDroid submission; document GitHub→F-Droid signature migration (blocked on signed releases).
-- [x] `FUNDING.yml` + README donation section.
-- [x] About-screen donation links (with the About screen).
 - [ ] v0.2.0 tagged, signed, with curated changelog.
 
 ## 7. Phase 2 — v0.3–0.5 "Product" (target: Nov–Dec)
 
 - [ ] **Pre-1.0 hygiene sweep (owner decision 2026-10-05: remove all)**: delete legacy/migration paths — per-car legacy-key adoption, Keystore-material conversion, format migrations, dead branches. Very old installs re-pair (the key-storage session can restore a device key over adb); coordinate key-file changes with it.
 - [ ] Navigation: cars list → car view landed 2026-10-05 (no tabs; last opened car restored). Settings/Logs + ViewModels later.
-- [x] Tracking restarts after a reboot or an app update (2026-10-08): `BOOT_COMPLETED` / `MY_PACKAGE_REPLACED` receiver starts the service when tracking is on, a car is paired and the permissions are granted; nothing restarts after a force stop until the app is opened.
-- [x] SOC history graph + charge sessions (first cut 2026-10-04: CSV store, 6h/24h/7d/All graph, since-last-charge stats; session list + export later).
-- [x] Discharge projection on the history chart (2026-10-05, revised 2026-10-09): parked drain rate over the selected range, projected half the range ahead onto an x-axis expanded by that horizon; only parked pairs of samples count (not charging, odometer unchanged per the nearest drive sample), so an overnight gap up to the wake-up read counts and an unseen drive does not; dashed line and caption, demo drain; charge projection takes precedence while charging.
-- [x] History graph line styles: constant narrow line with a dot at every measurement (dense samples form a thick band) and a dashed charge-completion projection (2026-10-05).
-- [x] Battery history chart on Vico with a press cursor (2026-10-19, ADR-0011): same lines, dots, dashed projections and beams as before, drawn through the drive chart's framework; pressing shows the value and time at the nearest point (projected points say so). Cursor sync between the two charts is a later change.
 - [ ] **Battery health v1 (loose, BLE-only)**: rated-range + energy-delta capacity estimates fused with confidence + data-quality flag; session-count "Learning" gate; Service-Mode health-test result logging; habit cards (charge-limit share, AC/DC mix, deep discharges); charge taper / balancing-sawtooth detection; static reference bands from published studies. Never claim cell imbalance, pack temperatures, or month-quantified lifespan without pack-level data.
-- [x] **Float-precision readings** (2026-10-05): parse the float range fields (`battery_range` / `est_battery_range` / `ideal_battery_range`) and both SOC levels into the charge model and history samples; the car hero and history show the displayed SOC and rated range, and the raw fields are logged for the health estimators. Old CSV rows are dropped, not migrated (pre-1.0 hygiene).
 - [ ] Units choice in Settings: System default / Metric / Imperial (one global setting), defaulting to the device's measurement system (`android.icu.util.LocaleData.getMeasurementSystem`: US → imperial, SI → metric, UK → miles + °C); display-only conversion from canonical miles, with core conversion helpers + tests.
 - [ ] **Range backbone** (owner direction 2026-10-05): canonical unit is rated miles; parse `charge_rate_mph` / `charge_rate_mph_float` as the charging slope; stats, charge projection, and drain run in miles; SOC is derived from the learned full-range scale for display only, falling back to the raw int until the scale is pinned. Respects the units setting (display-only conversion from canonical miles). Core landed 2026-10-05: rate parsing, miles-first charge projection, learned full-range scale; the last-charge stats are kept in rated miles and converted to percent at the end, with one decimal from the fitted scale (2026-10-16).
-- [x] Projections on the range (2026-10-16): the parked-drain and charge projections fit on the rated range through the learned scale (sub-percent), each with a beam of two standard errors of its rate; the charge beam also spans the session's supply-voltage swings. Remaining: split the parked rate into deep-sleep and mixed.
-- [x] **Data policy decision** (issue #123, docs only, proposed 2026-10-16): cut-off trigger for the no-migration policy (the first normal release) recorded in AGENTS.md and ADR-0004; history retention plan in ADR-0012 (raw by age, 90 days, 200,000-record backstop, then per-session and per-day summaries kept indefinitely). Owner chose the values 2026-10-16; the navigation-data question and whether a Room store changes the plan are still open.
 - [ ] **Retention implementation** (after #229 merges): age-based trimming plus count backstop replacing the 20k cap, summary store with a versioned format, estimators reading summaries (ADR-0012).
 - [ ] At the cut-off (ADR-0004): version every on-device format, add a golden fixture per shipped format and a reader-accepts-fixture test.
 - [ ] Dual range/SOC display: switchable axes and two value hints (miles + SOC) on the car view and history chart.
-- [x] Drive chart (#187, 2026-10-16): a Drive history card plots the sub-percent SOC (rated range over the fitted full range) over distance driven, in the car's Energy-screen orange with green regen points and bands. In-gear samples plus the parked reads around each drive are placed by the nearest drive reading's odometer. The window is the last 10 / 50 / 100 km (10 / 50 / 100 mi by the units setting) or everything since the last charge. A charge, or a gap of over 30 minutes, starts a new trip with its own line, and the "used" figure sums each trip's drop. First chart on Vico (ADR-0011), press shows a marker. No estimated line: the car does not send `est_battery_range`.
-- [x] Trip card (#207, 2026-10-18): while the car navigates, a card shows the remaining distance and time, the car's predicted arrival level (a whole percent, confirmed on a real-car log with navigation on) and, once the full-range scale is pinned, the rated range it stands for, plus the trip's energy and cost at the home price. Built on `RouteSample` and `tripEstimate` (#258); the live route is the car's newest drive reply when it carries a route and was read within ten minutes; a reply without one drops it. The destination name is in no history view, but the raw drive log still holds it (ADR-0012 open choice 4: strip on export or drop at write time; dropping at write time would make the card read only the live reply). The card shows a trip progress bar (the longest remaining distance seen since navigation began is the trip's length, so a re-route stretches it) with the remaining distance, time and price in big type. A past-trips card above Battery health lists the finished navigations (segmented from the drive log's route readings; a gap over ten minutes or a new destination starts another) behind a name-and-time selector. Not yet: the arrival point on the battery chart, detecting a charging stop on the route.
 - [ ] Trip elevation and temperature (#207 follow-up, idea from R 2026-10-21): an elevation profile and stats (gain, loss, peak) per trip and the outside temperature along it. The car's `LocationState` carries `geo_elevation` and `geo_accuracy` but the app does not request it yet, and whether the car answers over BLE is unchecked; the outside temperature is in the climate message the app already logs. Needs a decision on keeping location data (the raw drive log already holds the route coordinates, see ADR-0012).
-- [x] **History storage decision** (2026-10-06): append-only logs of the car's raw BLE replies (ADR-0006) behind `HistoryStore`, one file per vehicle per kind; additive by construction so new fields never drop old rows; charge-rate plus charger power/voltage/amps fields are logged. BLE log envelope (2026-10-08, ADR-0008): every logged reply is wrapped in a `BleRecord` with the phone's `device_timestamp` and the car's timestamps untouched; charge records go to `<vehicleId>.charge.pblog` on the car's own timestamp, VCSEC status readings to `<vehicleId>.vcsec.pblog` timed by `device_timestamp`, logged on change, on (re)connect and every 15 min. The old raw `<vehicleId>.pblog` files are no longer read (reset; not deleted).
-- [x] **DriveState log** (owner direction 2026-10-08, ADR-0008): the car's raw `DriveState` is logged in full (shift state, speed, power, odometer, navigation destination and route), car-timestamped, in `<vehicleId>.drive.pblog`; one `GetDriveState` follows each charge reply while the car is awake. Real-car check pending: the Charging Manager key gets an answer and the file grows.
-- [x] **Connection events and signal strength** (owner direction 2026-10-08, ADR-0008): every `BleRecord` carries the phone's latest RSSI for the car (`rssi`), and the controller logs when a connection becomes ready (`CONNECTED`) and when an established one ends (`DISCONNECTED`) in `<vehicleId>.connection.pblog`; failed connection attempts are not logged. Log only, with no read model or UI yet. DISCONNECTED replaces the held-back status flush (`StatusLogGate`): it marks where watching ended, and the last logged status holds until then, so a TeslaMate export can end an asleep/online stretch there. Real-car check pending: the connection file gains a record on each connect and disconnect.
-- [x] **Infotainment poll back-off** (owner direction 2026-10-09, ADR-0009, #112): reads every 10 s while charging or driving, and for a hold after each status change (asleep to awake, any lock change, any closure change, fresh start, user request): 1 min, or 10 min while the car reports presence; none while asleep, so the car can sleep; an awake idle car gets one safety read per 20 min (longer than the car's own sleep countdown, tuned from the real-car check). Real-car check pending: the car shows asleep roughly 11-12 min after the last change with nobody present (20-25 min while a phone key counts as present); charging and driving still log every 10 s.
-- [x] **Sentry and climate count as active** for the poll back-off (owner direction 2026-10-09, ADR-0008/0009): each read is now charge, drive, closures and climate (Sentry mode lives in `ClosuresState`; `VehicleState` holds only the guest mode), both logged raw in `<vehicleId>.closures.pblog` and `.climate.pblog`, and Sentry or climate on keeps reads at 10 s. Real-car check pending: in Sentry or with the climate on, readings refresh every 10 s, and the car sleeps once both are off.
-- [x] **Command and app-state log** (owner direction 2026-10-09, ADR-0008): `Command` (every request the app sends, raw before encryption, with a reason; not the 10 s status poll), `CommandResult` (refusals and unanswered commands) and `AppState` (screen, foreground, tracking service with its start reason) payloads in `<vehicleId>.command.pblog` and `app.pblog`, so wakes and reads in real-car logs can be attributed to the app or the owner. `acquired_at` was renamed `device_timestamp` (name only). Log only, no read model. Real-car check pending: waking from the app logs a USER_WAKE command, a policy read logs POLICY_*, a refused read logs a command result, and screen off and on appears in `app.pblog`.
-- [x] **Fresh means still being read** (owner feedback 2026-10-09): a live reading is blue only while it is under 5 min old, the link is READY and the car's latest VCSEC status is not asleep (an idle awake car's SOC does not move; charging and driving keep reads coming), then gray with its age ("12m ago", always the phone's read time) on the car view, the list and the notification; the UI and notification clocks tick at the 5 min boundary, and sleep or a dropped link grey it through the normal state updates.
-- [x] **State durations** (owner feedback 2026-10-09): the car view status line shows how long the car has been asleep and locked ("Asleep 1h 12m · Locked 3h · User away"; user presence has no duration), from the status log (`statusDurations` in `core`; none when the log does not reach back to the change, when the change was seen more than one status heartbeat (15 min) plus a minute after the previous reading, or under a minute); the notification shows how long the car has been asleep.
 - [ ] Evaluate Android activity recognition to detect driving, and an opt-in "stay awake while the phone is near and moving" feature (deferred in ADR-0009).
 - [ ] **Drive detection** from the DriveState log (odometer deltas across gaps), for the parked-drain projection and TeslaMate drives. The projection part landed 2026-10-09; TeslaMate drives remain.
 - [ ] Notifications: charge complete, SOC thresholds, **vampire-drain alert**.
@@ -136,8 +94,6 @@ A trustworthy shell around the existing protocol work. No user-facing features.
 - [ ] Dokka for the `protocol` library. (`protocol`/`core` → KMP is deferred until an iOS app is a goal; plan in ADR-0007.)
 - [ ] Publish the library (Maven Central, `io.github.dzid26:teslable-protocol`, ADR-0013); semver + binary compatibility validator; sample CLI; library documentation.
 - [ ] **Battery health v2 (tight, optional OBD)**: BLE OBD dongle support (ELM327/STN), model harness guidance, read-only pack PIDs (nominal/full pack capacity, brick voltage min/max + CAC, pack temperatures), real imbalance card. Purely optional and fully on-device.
-- [x] Decide monorepo vs separate library repo: same repo, `protocol-v*` tags (ADR-0013).
-- [x] Split the protocol into its own `:protocol` module, free of app records (ADR-0013).
 - [ ] Governance lite: MAINTAINERS, public roadmap, Discussions, good-first-issues.
 - [ ] Launch: F-Droid stable, announcements (r/TeslaLounge, TMC forums, HN), funding live.
 - [ ] v1.0 signed release; reproducible-build notes; OpenSSF Scorecard; SBOM.
