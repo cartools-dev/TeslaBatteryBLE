@@ -92,14 +92,21 @@ fun BleUiState.selectedConnection(): TeslaConnection? {
 }
 
 /**
- * True when an enrolled car is connected, so the tracking service should run.
+ * True when an enrolled car is connected or on its way there, so the tracking
+ * service should run: a READY link with an enrolled key, or a link to a car the
+ * app already holds a key for that is still connecting. The notification then
+ * shows from the first connect attempt, not only after the first read.
  * A pure function of the UI state so Compose can observe it directly.
  */
 fun BleUiState.shouldTrack(): Boolean =
     trackingEnabled &&
         connections.values.any { connection ->
-            connection.phase == ConnectionPhase.READY &&
-                (connection.isPaired || connection.sessions.isNotEmpty())
+            when (connection.phase) {
+                ConnectionPhase.READY -> connection.isPaired || connection.sessions.isNotEmpty()
+                ConnectionPhase.CONNECTING, ConnectionPhase.CONNECTED, ConnectionPhase.DISCOVERING ->
+                    vehicles.any { it.address == connection.address && it.isPaired }
+                else -> false
+            }
         }
 
 /**

@@ -24,6 +24,7 @@ What the app does today, in detail. The short version is in the [README](../READ
   the app cannot see is read once every twenty minutes, which is longer than the car's own sleep timer, so
   the app never keeps it awake.
 - **Background tracking** via a foreground service: SOC timeline and connection state while parked or charging.
+  The notification shows from the first connect attempt to a paired car ("Connecting…"), not only after the first read.
   Tracking resumes by itself after a reboot or an app update (once the phone is unlocked), as long as tracking
   is on and a car is paired. Some phones (Xiaomi, Huawei, Oppo/Vivo, Samsung "sleeping apps") block this unless
   you allow autostart for the app or set its battery usage to unrestricted. After a force stop, Android keeps
