@@ -859,7 +859,7 @@ internal fun formatTime(
         .atZone(ZoneId.systemDefault())
         .format(timeFormatter(showDate, is24Hour))
 
-/** "12 min ago" from an age in millis, "under a minute ago" below one. */
+/** "12 min ago" from an age in millis, "<1min ago" below one. */
 @Composable
 private fun agoText(millis: Long): String =
     stringResource(R.string.duration_ago, compactDuration(millis.coerceAtLeast(0L)) ?: stringResource(R.string.trip_under_a_minute))

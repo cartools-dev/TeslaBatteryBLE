@@ -56,7 +56,7 @@ internal fun tripDistanceText(miles: Float?): String? {
     return miles?.let { unit.format(it, decimals = 1, decimalSeparator = separator) }
 }
 
-/** "12m" from a duration in millis, "under a minute" below one, null for none or a negative one. */
+/** "12m" from a duration in millis, "<1min" below one, null for none or a negative one. */
 @Composable
 internal fun tripTimeText(millis: Long?): String? =
     millis?.takeIf { it >= 0L }?.let { compactDuration(it) ?: stringResource(R.string.trip_under_a_minute) }
