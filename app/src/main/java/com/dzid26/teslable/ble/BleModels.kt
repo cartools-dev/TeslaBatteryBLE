@@ -40,7 +40,10 @@ data class TeslaConnection(
     /** Pairing flow state for this car; idle unless a Pair is in flight. */
     val pairing: PairingPhase = PairingPhase.IDLE,
     val pairingKeyId: String? = null,
-)
+) {
+    /** True when the app key is enrolled (or just was), so the car can authenticate this link. */
+    val isPaired: Boolean get() = keySlot != null || pairing == PairingPhase.OK
+}
 
 data class GattServiceInfo(
     val uuid: UUID,
@@ -96,11 +99,7 @@ fun BleUiState.shouldTrack(): Boolean =
     trackingEnabled &&
         connections.values.any { connection ->
             connection.phase == ConnectionPhase.READY &&
-                (
-                    connection.pairing == PairingPhase.OK ||
-                        connection.keySlot != null ||
-                        connection.sessions.isNotEmpty()
-                )
+                (connection.isPaired || connection.sessions.isNotEmpty())
         }
 
 /**
