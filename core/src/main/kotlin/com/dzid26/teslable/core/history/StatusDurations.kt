@@ -60,17 +60,17 @@ fun statusDurations(
 }
 
 /**
- * A compact duration: "20 min", "1h 12m", "3h", "2d 4h". Null under a minute. Minutes alone are
- * spelled "min", so "12 min" next to a distance is never read as miles or metres; from an hour on
+ * A compact duration: "20min", "1h 12m", "3h", "2d 4h". Null under a minute. Minutes alone are
+ * spelled "min", so "12min" next to a distance is never read as miles or metres; from an hour on
  * the units shorten to h and m. Minutes are dropped from a day on, as are hours that are zero.
  * The one duration format of the app: the trip card and notification, the status lines and the
- * health card all use it. Gaps are no-break spaces.
+ * health card all use it. The gap between hours and minutes is a no-break space.
  */
 fun compactDuration(millis: Long): String? {
     val minutes = millis / MINUTE_MILLIS
     return when {
         minutes < 1 -> null
-        minutes < 60 -> "$minutes\u00A0min"
+        minutes < 60 -> "${minutes}min"
         minutes < 24 * 60 -> "${minutes / 60}h" + (minutes % 60).takeIf { it > 0 }?.let { "\u00A0${it}m" }.orEmpty()
         else -> "${minutes / (24 * 60)}d" + (minutes / 60 % 24).takeIf { it > 0 }?.let { "\u00A0${it}h" }.orEmpty()
     }
