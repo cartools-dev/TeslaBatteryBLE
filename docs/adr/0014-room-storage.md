@@ -30,7 +30,9 @@ Related: ADR-0002, ADR-0004, ADR-0006, ADR-0007, ADR-0008, ADR-0012
   - `blob` is the encoded `BleRecord`, so unknown and future Tesla fields
     survive untouched, as in ADR-0006. The schema never holds proto fields.
   - `carTimestamp` is the car's own timestamp and is the timeline (ADR-0006,
-    ADR-0008). `phoneTime` is the acquisition time from the envelope. `originId`
+    ADR-0008). It is nullable: VCSEC status and some other replies carry none,
+    and a charge or drive reply may lack it (ADR-0008). Such rows are timed by
+    `phoneTime`, and the unique key uses `coalesce(carTimestamp, phoneTime)`. `phoneTime` is the acquisition time from the envelope. `originId`
     is a random per-install id.
   - `odometer` is nullable: filled at insert from records that carry it, so log
     pulls and trip lookups by distance need no blob decoding. It is a plain
