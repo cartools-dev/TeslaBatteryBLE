@@ -82,6 +82,9 @@ class TeslaBleController(
     private val handler = Handler(Looper.getMainLooper())
     private val clientAddress = TeslaCrypto.randomBytes(16)
     private var selectedBleName: String? = null
+
+    /** Cars a scan already connected to once, only to read their name; reset by each new scan. */
+    private val nameProbes = mutableSetOf<String>()
     private var uiVisible = false
     private var lastVisibilityEvent: AppState.Event? = null
 
@@ -188,6 +191,7 @@ class TeslaBleController(
             it.reconnectAttempts = 0
             it.nextRetryAtMs = 0
         }
+        nameProbes.clear()
         _state.update {
             it.copy(
                 scanning = true,
@@ -451,6 +455,23 @@ class TeslaBleController(
         }
         publishVehicles()
         autoConnect()
+        if (_state.value.explicitScan) probeNames(strongestByName.values)
+    }
+
+    /**
+     * The car's name is only readable over a connection, so a scan briefly connects to each
+     * unknown car once, which lets its row show the name without a tap. Capped like any link.
+     */
+    private fun probeNames(found: Collection<TeslaAdvert>) {
+        var active = links.values.count { it.phase in ACTIVE_PHASES }
+        for (device in found) {
+            if (active >= MAX_ACTIVE_LINKS) break
+            val name = device.name
+            if (!TeslaNames.isTeslaBleName(name) || vehicles.containsKey(name) || !nameProbes.add(name)) continue
+            if (links[name]?.phase in ACTIVE_PHASES) continue
+            ensureLink(name, device.address).connect()
+            active++
+        }
     }
 
     /**
@@ -1128,6 +1149,16 @@ class TeslaBleController(
             handler.postDelayed(reconnect, delay)
         }
 
+        /**
+         * Closes a link that only connected to read the car's name during a scan, so a car
+         * nobody opened does not stay connected. Returns whether it did.
+         */
+        fun endNameProbe(): Boolean {
+            if (bleName !in nameProbes || selectedBleName == bleName || vehicles.containsKey(bleName)) return false
+            close()
+            return true
+        }
+
         /** Brings a pending retry forward to the shortest wait and starts the backoff over. */
         fun resetBackoff() {
             if (reconnectAttempts == 0 || phase == ConnectionPhase.READY) return
@@ -1509,7 +1540,9 @@ class TeslaBleController(
                                 if (phase == ConnectionPhase.READY) null else it.disconnectedAtMillis,
                         )
                     }
-                    if (phase == ConnectionPhase.READY) {
+                    if (phase == ConnectionPhase.READY && endNameProbe()) {
+                        log("${name()}: name read; disconnecting until opened")
+                    } else if (phase == ConnectionPhase.READY) {
                         reconnectAttempts = 0
                         nextRetryAtMs = 0
                         lastAliveMillis = System.currentTimeMillis()
