@@ -28,7 +28,7 @@ that repo unless stated otherwise).
   pack voltage/current, cell voltages, module/pack temperatures, SoH/degradation,
   usable/full-pack capacity kWh, C-rate, motor power/torque (beyond coarse
   `DriveState.power`), odometer is present but **no trip energy**, no BMS
-  diagnostics. Dr.EV-style signals come from Fleet Telemetry (car → cloud
+  diagnostics. Pack-level signals come from Fleet Telemetry (car → cloud
   streaming), not from this protocol.
 - Interaction model is strictly **request/response polling**; there is no
   subscribe/notify/stream primitive in the pinned protos. The BLE notify
