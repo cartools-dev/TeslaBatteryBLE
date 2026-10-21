@@ -804,7 +804,7 @@ internal fun BatteryHistoryCard(
                     text =
                         "Last charge:\u00A0${formatPercent(
                             it.chargePercent(scale),
-                        )}% · ${formatDuration(now - it.sinceMillis)}\u00A0ago" +
+                        )}% · ${agoText(now - it.sinceMillis)}" +
                             energy?.let { e -> " · $e" }.orEmpty(),
                     style = MaterialTheme.typography.bodySmall,
                 )
@@ -862,16 +862,10 @@ internal fun formatTime(
         .atZone(ZoneId.systemDefault())
         .format(timeFormatter(showDate, is24Hour))
 
-private fun formatDuration(millis: Long): String {
-    val minutes = (millis / 60_000).coerceAtLeast(0)
-    val days = minutes / (24 * 60)
-    val hours = minutes % (24 * 60) / 60
-    return when {
-        days > 0 -> "${days}d\u00A0${hours}h"
-        hours > 0 -> "${hours}h\u00A0${minutes % 60}m"
-        else -> "${minutes}m"
-    }
-}
+/** "12 min ago" from an age in millis, "under a minute ago" below one. */
+@Composable
+private fun agoText(millis: Long): String =
+    stringResource(R.string.duration_ago, compactDuration(millis.coerceAtLeast(0L)) ?: stringResource(R.string.trip_under_a_minute))
 
 @Composable
 private fun formatDistance(miles: Float): String {

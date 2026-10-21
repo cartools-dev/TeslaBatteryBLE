@@ -110,7 +110,7 @@ class StatusDurationsTest {
         val short = assertNotNull(statusDurations(samples, "car", 10_000 + minute - 1)).asleepForMillis
         assertEquals(minute - 1, short)
         assertNull(compactDuration(short!!))
-        assertEquals("1m", compactDuration(assertNotNull(statusDurations(samples, "car", 10_000 + minute)).asleepForMillis!!))
+        assertEquals("1min", compactDuration(assertNotNull(statusDurations(samples, "car", 10_000 + minute)).asleepForMillis!!))
     }
 
     @Test
@@ -135,8 +135,8 @@ class StatusDurationsTest {
     @Test
     fun `compact durations`() {
         assertNull(compactDuration(59_999))
-        assertEquals("1m", compactDuration(minute))
-        assertEquals("59m", compactDuration(hour - 1))
+        assertEquals("1min", compactDuration(minute))
+        assertEquals("59min", compactDuration(hour - 1))
         assertEquals("1h", compactDuration(hour))
         assertEquals("1h\u00A012m", compactDuration(hour + 12 * minute))
         assertEquals("3h", compactDuration(3 * hour))
