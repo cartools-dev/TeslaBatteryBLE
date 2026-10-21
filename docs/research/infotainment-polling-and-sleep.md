@@ -41,7 +41,7 @@ Sources were read on 2026-10-08; quotes are short extracts.
 
 - Any Infotainment request restarts the car's own sleep countdown (about 10
   minutes; the project owner's premise, 2026-10-08; measured shorter on
-  2026-10-09, see "To measure"). A 30 s window for 11
+  2026-10-09, see "Real-car findings"). A 30 s window for 11
   minutes would keep the car awake about 21 minutes instead of 10, and 660 s
   idle reads could keep it awake indefinitely. So ADR-0009 drops both: 10 s
   while charging or driving, and for a short hold (1 min, or 10 min when the
@@ -57,16 +57,87 @@ Sources were read on 2026-10-08; quotes are short extracts.
   differs from the PR #213 comment above, so the real-car check should confirm
   which applies.
 
-## To measure
+## Real-car findings (2026-10-09)
 
-- Measured 2026-10-09 (`docs/research/real-car-log-2026-10-09.md`): the car
-  slept 0.5-2.5 minutes after the last read, and about 2 minutes after a BLE
-  wake with a single read. Reads keep it awake while they continue, but each
-  adds only a couple of minutes, not the ~10 assumed above, so the hold costs
-  less than ADR-0009 estimated.
-- First real-car log (2026-10-09, old build, unstable link):
-  `real-car-log-2026-10-09.md`. A repeat with a stable link is planned to show
-  whether reads hold the car awake.
+Owner test of the build before the Infotainment session gate fix, one car, about a day of
+logcat plus the status log. No VIN, car ID, BLE name or raw log is recorded here.
+
+### Link quality
+
+- The phone sat at the edge of BLE range inside the house: about 650
+  connect/disconnect cycles in a day. Link up median 15 s, down median 20 s.
+- Every drop happened at RSSI below -95 dBm. None happened near the car or in
+  it.
+- RSSI by position:
+
+  | Position           | RSSI (dBm)    |
+  | ------------------ | ------------- |
+  | In the house       | -104 to -110  |
+  | Approaching        | about -73 to -88 |
+  | In the car/driving | -40 to -55    |
+
+### VCSEC user presence
+
+- Readings with presence true: median -49 dBm. Presence false: median -107 dBm.
+- It turned on with a door open at about -82 dBm: someone getting in, not just
+  a phone key approaching.
+
+### Readings
+
+- `battery_range` moves in steps of 0.0816 mi (multiples seen: 0.1633,
+  0.2449, ...).
+
+### Sleep
+
+- With the old build reading every ~15 s, the car still fell asleep about 18
+  minutes after a wake (30 s after the last read), and 2-5 minutes after the
+  last lock or door change.
+- Caveat from the owner: the phone was walking away and the link dropping, so
+  this does not yet prove reads do not hold the car awake. A test with a stable
+  link is planned.
+
+### Wakes
+
+- Unexplained wakes at 02:15 and 03:32 UTC were likely the owner debugging, not
+  the app. The logcat buffer did not cover them, so they stay unattributed.
+- Auto-start after an app update worked (`MY_PACKAGE_REPLACED` in logcat).
+
+### Bug found: reads blocked for the whole morning
+
+The log held VCSEC status from the wake at 08:34:45 through unlock, doors and a
+20-minute drive, but no charge or drive read. Replaying the statuses through
+`InfotainmentPollPolicy` showed it asked for reads (due at the wake and
+repeatedly during the drive), so the controller blocked them. The controller
+passed `sessionReady = !chargeAfterSession && ...` to the policy; the flag was
+set when a read started the Infotainment handshake and cleared only when the
+session was established or the link closed. When the handshake never finished
+(retries ran out, the car went back to sleep, or the link dropped) the flag
+stayed set, the policy never got `sessionReady`, and no new handshake started.
+Fixed by `InfotainmentSessionGate`; see ADR-0009.
+
+### 2026-10-09 afternoon
+
+Follow-up tests with a stable link, which settle the caveat in "Sleep" above.
+
+- **Reads keep the car awake.** An old build reading every ~5 s held it awake
+  for 22 minutes (13:50 to 14:12 UTC). The car slept 2.5 minutes after the
+  reads stopped, in line with ADR-0009 (reads only on activity or in a hold).
+- **A second test:** the car slept 30 s after the last read, and 7.5 minutes
+  after a wake.
+- **Two apps on one phone:** with a second app running, the newer app's reads
+  mostly failed. The suspects are interleaved BLE writes or notifications from
+  the two apps. Run one app at a time.
+- **At wake the closures briefly read UNKNOWN.** The poll policy ignores that
+  correctly: UNKNOWN does not count as open, so it starts no hold.
+- **We could not tell the app's requests from the owner's.** Neither a wake nor
+  a request in these logs could be attributed to the app or to the owner, nor
+  could we tell whether the app was in the background. That led to the command
+  and app-state logs (`<vehicleId>.command.pblog` and `app.pblog`, ADR-0008).
+- **A remote wake alone is short.** The owner woke the car over BLE, took one
+  read and nothing more: it slept after about 2 minutes. It stays awake longer
+  only while reads continue or someone physically uses the car, so the car's
+  own countdown after a BLE wake is far shorter than the ~10 minutes ADR-0009
+  assumed for a read.
 
 ## Related
 
