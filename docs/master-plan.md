@@ -22,7 +22,7 @@ account, nothing leaves the phone."*
 | License | **AGPL-3.0-only** | Whole repo. Switching to `-or-later` is a one-line change until external contributions land; afterwards it is effectively frozen. |
 | Distribution | GitHub Releases + Obtainium now; F-Droid + IzzyOnDroid next; Play later | Signed releases are a prerequisite for F-Droid/IzzyOnDroid. |
 | Core library | `:protocol` module (ADR-0013); internal until v1, then publish to Maven Central as `io.github.dzid26:teslable-protocol` | Library-grade docs and API hygiene from now on. |
-| Platforms | Android-first; KMP (jvm + apple) at library release | Keep JVM-only dependencies out of `core`. |
+| Platforms | Android-first; JVM library first; KMP (jvm + apple) only if an iOS app becomes a goal (2026-10-21, ADR-0007) | Keep JVM-only dependencies out of `protocol` and `core`, so the switch stays cheap. |
 | Interop | Decisions weigh TeslaMate export/sync and the KMP path (2026-10-08) | Today's limits (20k-record cap, no INTERNET permission) are current choices, not commitments. The local log stays raw within its retention window (ADR-0012); filtering happens at export. |
 | UX | Phased product pass: P0 polish → P1 product features → P2 extras | |
 | Website | GitHub Pages landing for the app; library docs TBD at library release | |
@@ -133,7 +133,7 @@ A trustworthy shell around the existing protocol work. No user-facing features.
 
 ## 8. Phase 3 — v1.0 "Library & launch" (target: Q1 2027)
 
-- [ ] `core` → KMP (jvm + apple), expect/actual crypto, Dokka.
+- [ ] Dokka for the `protocol` library. (`protocol`/`core` → KMP is deferred until an iOS app is a goal; plan in ADR-0007.)
 - [ ] Publish the library (Maven Central, `io.github.dzid26:teslable-protocol`, ADR-0013); semver + binary compatibility validator; sample CLI; library documentation.
 - [ ] **Battery health v2 (tight, optional OBD)**: BLE OBD dongle support (ELM327/STN), model harness guidance, read-only pack PIDs (nominal/full pack capacity, brick voltage min/max + CAC, pack temperatures), real imbalance card. Purely optional and fully on-device.
 - [x] Decide monorepo vs separate library repo: same repo, `protocol-v*` tags (ADR-0013).
