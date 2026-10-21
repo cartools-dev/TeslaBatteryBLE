@@ -510,5 +510,4 @@ private fun ClearPairingCacheDialog(
     )
 }
 
-
 private val CURRENCY_FIELD_WIDTH = 140.dp

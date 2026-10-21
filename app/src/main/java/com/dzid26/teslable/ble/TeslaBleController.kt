@@ -1552,7 +1552,6 @@ class TeslaBleController(
             }
     }
 
-
     private companion object {
         const val LOG_MAX_LINES = 200
         const val COMMAND_EXPIRES_SECONDS = 5
