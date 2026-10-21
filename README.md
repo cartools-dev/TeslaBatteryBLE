@@ -27,145 +27,36 @@ Light and dark themes, side by side.
 
 ## Features
 
-- **Scan & connect** to nearby Teslas by advertised BLE name, with VIN-based hinting
-- **Pair a key** (CHARGING_MANAGER role by default) via Tesla's unsigned `addKey` flow: NFC card tap on the console + vehicle confirmation
-- **No extra BLE channel** — the car reserves one BLE channel per connected device, not per app. A dongle or keyfob always takes its own channel; the app shares your phone's link, so installed on the same phone as Tesla's phone-key app it adds no channel at all
-- **Read battery SOC** and charge state over an authenticated, encrypted session; a
-  reading is blue only while it is current (under 5 minutes old, the link up and the car
-  awake); after that, or as soon as the link drops or the car sleeps, it turns gray and
-  the car view, the list and the notification say how long ago the phone last read it ("78% 12m ago")
-- **How long each state has held** — the car view shows how long the car has been asleep and locked ("Asleep 1h 12m · Locked 3h · User away")
-  from the status history, and the notification shows how long the car has been asleep;
-  no duration is shown when the history does not reach back to the change
-- **Charge session cost** — set your home charging price per kWh in Settings (a new price applies from the start of the latest charge, so changing it mid-charge prices that whole charge) and the car view shows the energy added and what the session cost while it charges, then on the Last charge line once it ends; the currency is picked from a dropdown of common ones and defaults to your phone's
-- **Longest deep sleep** — the battery health card shows the longest stretch the car slept through between two parked readings (the same definition the parked-drain projection uses), and when it started
-- **Metric or imperial** — pick System default, Metric or Imperial in Settings; range and the health card show km or mi, and the rated constant reads as Wh/km, kWh/100 km or km/kWh (display only, the car reports miles)
-- **On-demand wake** — the car is only woken when you ask, never in the background
-- **Lets the car sleep** — while it is charging, driving, in Sentry mode or running the climate (the car stays
-  awake and draws power anyway), readings refresh every 10 s. Otherwise the app keeps
-  reading every 10 s for a short while after something happens (the car wakes, locks or unlocks, a door or the
-  charge port opens or closes, you tap refresh): one minute, or ten while someone is in or near the car. Then it
-  stops asking, so the car can fall asleep and the reading simply gets older. A car that stays awake for a reason
-  the app cannot see is read once every twenty minutes, which is longer than the car's own sleep timer, so
-  the app never keeps it awake.
-- **Background tracking** via a foreground service: SOC timeline and connection state while parked or charging.
-  Tracking resumes by itself after a reboot or an app update (once the phone is unlocked), as long as tracking
-  is on and a car is paired. Some phones (Xiaomi, Huawei, Oppo/Vivo, Samsung "sleeping apps") block this unless
-  you allow autostart for the app or set its battery usage to unrestricted. After a force stop, Android keeps
-  the app stopped until you open it again.
-- **History graph** (6 h / 24 h / 7 d / 30 d / all) with since-last-charge stats to a tenth of a percent once the full range is learned (touch or drag sideways across it for a cursor with the percent, range and time; it stays while you scroll and a tap elsewhere hides it), and a **drive graph** of battery percent over distance driven (last 10 / 50 / 100 km or 10 / 50 / 100 mi, or since the last charge) with regeneration marked in green and, under it, the percent used per mile or km, plus the efficiency, energy and cost at your home price once the full range and the rated constant are learned;
-  every measurement is a dot (dense samples form a thick band), and dashed
-  lines project the charge completion and the parked drain a round figure ahead
-  (3 h, 12 h, 3 days, a week for the 30 d range; stretches where the odometer moved, or the car was in gear, are left out). Both
-  are fitted on the rated range once the scale is learned, so they read in
-  fractions of a percent, and each carries a faint beam for how far the fit could
-  be off (for a charge also the supply-voltage swings seen in the session)
-- **Trip card** while the car navigates: a progress bar of the trip, the distance and time left and the trip's cost at your home price in big type, then the car's predicted arrival level (with the rated range it stands for once the full range is learned), with the trip's energy in place of the price when none is set. While navigating, the ongoing notification adds the same trip to its text (your level and the predicted arrival level on the collapsed line; the usual state line, then the distance and time left with traffic after a bold "Trip:", then the arrival with its range, when expanded), never the destination. The destination is not kept in any history view; the raw drive log on the phone still holds what the car sent (see ADR-0012 for what happens to it on export). The screen stays on and undimmed while the card shows.
-- **Past trips (N)** just above Battery health, titled with the number of trips: pick a navigation by name and start time (the one in progress is listed too; a new route started right after arriving is its own trip) to see the distance actually driven and the driving time and its price in big type (priced from the battery readings before and after the trip), then "Arrived with 56% (about 152 mi left)" or "Ended with ..." for a trip that stopped short, the energy per distance in your efficiency unit and the average speed. Kept in memory from the drive log, so the destination names appear only here.
-- **Local activity log** — the commands the app sends to the car (and why) and whether the screen was on and the
-  app in the foreground are kept on the phone only, so a wake or a read in the car's own history can be told
-  apart from yours
-- **Simulated car** in debug builds for development without a vehicle or hardware (demo/screenshot mode)
+- Scan for nearby Teslas, pair a key with an NFC card tap, then read the battery and charge state over an encrypted session
+- Battery history graph, drive graph, charge cost at your home price, trip card and past trips
+- Background tracking that lets the car sleep; the car is woken only when you ask
+- Metric or imperial units, light and dark themes
+- Everything is computed on-device; the app has no internet permission
 
-Everything is computed on-device. The app has no internet permission.
-
-## Coming next
-
-Local battery-health analytics (capacity estimation from charge sessions and rated
-range, charging-efficiency and parked-drain insights, habit cards), then an optional
-OBD path for pack-level data. See:
-
-- [`docs/master-plan.md`](docs/master-plan.md) — phases and scope
-- [`docs/research/feature-map.md`](docs/research/feature-map.md) — battery-health feature synthesis
+All features in detail: [`docs/features.md`](docs/features.md). What is planned: [`docs/master-plan.md`](docs/master-plan.md).
 
 ## Install
 
-### GitHub Releases
+Download the APK from [Releases](https://github.com/dzid26/TeslaBatteryBLE/releases) (prereleases are signed with the owner key), or let [Obtainium](https://github.com/ImranR98/Obtainium) keep it updated: add `https://github.com/dzid26/TeslaBatteryBLE`, and turn on **Include prereleases** to follow tagged betas.
 
-Install the APK from the latest [release](https://github.com/dzid26/TeslaBatteryBLE/releases).
-Releases are signed with the owner key and include prereleases such as betas.
+To follow `main`, every push that passes CI updates one prerelease titled **Preview of main**. Set Obtainium's release-title filter to `^Preview`, turn on **Include prereleases** and **Fall back to older releases**. Do not uninstall the app to switch signing keys, because that wipes the car pairing key. Details: [`docs/install.md`](docs/install.md).
 
-### Obtainium (auto-updates from GitHub)
-
-1. Open [Obtainium](https://github.com/ImranR98/Obtainium) → **Add App**
-2. URL: `https://github.com/dzid26/TeslaBatteryBLE`
-3. Obtainium tracks stable releases by default. To also follow tagged
-   pre-releases (for example betas), enable **Include prereleases**.
-4. Install and let Obtainium keep it updated
-
-To follow `main` instead of tagged releases, every push to `main` that passes CI
-updates one pre-release titled **Preview of main**: its tag is renamed to
-`main-<sha7>` and its APK replaced, signed with the release key. In the app's
-Obtainium settings:
-
-1. Turn on **Include prereleases**.
-2. Set the release-title filter to the regex `^Preview` so this app ignores
-   every other release.
-3. Turn on **Fall back to older releases**; without it Obtainium finds nothing
-   whenever a newer tagged release exists above the preview.
-4. Allow background updates and, on Android 12+, let Obtainium install silently
-   (Settings -> Apps -> Obtainium -> Install unknown apps).
-
-Users who follow tagged betas with **Include prereleases** and no title filter
-are not affected as long as a tagged pre-release is newer than the preview; to be
-sure, set the title filter to the inverted regex `^Preview` (Obtainium's invert
-switch).
-
-The preview is also debuggable (`adb run-as` can read its logs); tagged releases are
-not.
-
-The preview is signed with the release key, so it only updates an install signed
-with that key. A debug build you installed yourself uses the same package name
-but a different key; Android then offers to uninstall first. Do not accept that:
-uninstalling wipes the car pairing key. Install the preview next to a debug
-build only after the debug build is gone from the phone on purpose.
-
-No stable release has shipped yet. Signed stable releases and F-Droid are on the
-[roadmap](docs/master-plan.md).
+No stable release has shipped yet.
 
 ## Build from source
 
-Requirements: JDK 21 (Temurin recommended), Android SDK 37, Git.
+Requires JDK 21 and Android SDK 37.
 
 ```bash
-./gradlew :app:assembleDebug        # debug APK
-./gradlew :protocol:test :core:test # protocol and battery unit tests (no device needed)
-./gradlew :app:testDebugUnitTest    # app unit tests (simulated car)
-./gradlew :app:lintDebug            # Android lint
+./gradlew :app:assembleDebug        # debug APK in app/build/outputs/apk/debug/
+./gradlew :protocol:test :core:test # unit tests, no device needed
 ```
 
-On Windows, use `.\gradlew` instead of `./gradlew`. The debug APK lands in
-`app/build/outputs/apk/debug/`.
-
-CI (`.github/workflows/android.yml`) runs the core tests, app unit tests, lint, a
-debug build, a release smoke test (R8) that drives the simulated car on an
-emulator, a Go-fixture diff against `teslamotors/vehicle-command`, and publishes
-a draft of the next release; tag releases add the APK and emulator screenshots.
+On Windows, use `.\gradlew`. Test, lint and CI details: [`CONTRIBUTING.md`](CONTRIBUTING.md) and [`docs/ci.md`](docs/ci.md).
 
 ## Architecture
 
-| Module | Purpose |
-| --- | --- |
-| `protocol/` | Pure-JVM Kotlin Tesla BLE protocol: BLE framing, session handshake, pairing, VCSEC/Infotainment messages (Tesla protos via Wire). No Android dependencies and nothing app-specific, so it can become a standalone library. |
-| `core/` | Battery domain on top of `protocol`: history, charge and discharge projections, health estimates, the app's own log records. No Android dependencies. |
-| `app/` | Android UI (Compose), BLE integration (`BluetoothGatt`), foreground tracking service, history storage. |
-| `tools/go-fixtures` | Deterministic fixtures generated against the Go reference implementation and diffed in CI. |
-
-```mermaid
-flowchart LR
-    UI[Compose UI] --> Ctrl[TeslaBleController]
-    Svc[Foreground tracking service] --> Ctrl
-    Ctrl --> Core[core: history, health]
-    Ctrl --> Proto[protocol: framing, session, pairing]
-    Core --> Proto
-    Proto -- GATT write/notify --> Car[Tesla vehicle]
-    Ctrl --> Store[(Local history)]
-```
-
-Protocol details: [`docs/protocol/`](docs/protocol/). Architecture decisions:
-[`docs/adr/`](docs/adr/). Data availability:
-[`docs/reference/fleet-telemetry-vs-ble.md`](docs/reference/fleet-telemetry-vs-ble.md)
-— a live cloud-vs-BLE signal matrix of what can be read over BLE.
+Three modules: `protocol/` (pure-JVM Tesla BLE protocol), `core/` (battery domain, no Android) and `app/` (Compose UI, BLE, tracking service). See [`docs/architecture.md`](docs/architecture.md), [`docs/protocol/`](docs/protocol/) and [`docs/adr/`](docs/adr/).
 
 ## Contributing
 

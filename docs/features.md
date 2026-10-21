@@ -1,0 +1,45 @@
+# Features
+
+What the app does today, in detail. The short version is in the [README](../README.md).
+
+- **Scan & connect** to nearby Teslas by advertised BLE name, with VIN-based hinting
+- **Pair a key** (CHARGING_MANAGER role by default) via Tesla's unsigned `addKey` flow: NFC card tap on the console + vehicle confirmation
+- **No extra BLE channel** — the car reserves one BLE channel per connected device, not per app. A dongle or keyfob always takes its own channel; the app shares your phone's link, so installed on the same phone as Tesla's phone-key app it adds no channel at all
+- **Read battery SOC** and charge state over an authenticated, encrypted session; a
+  reading is blue only while it is current (under 5 minutes old, the link up and the car
+  awake); after that, or as soon as the link drops or the car sleeps, it turns gray and
+  the car view, the list and the notification say how long ago the phone last read it ("78% 12m ago")
+- **How long each state has held** — the car view shows how long the car has been asleep and locked ("Asleep 1h12m · Locked 3h · User away")
+  from the status history, and the notification shows how long the car has been asleep;
+  no duration is shown when the history does not reach back to the change
+- **Charge session cost** — set your home charging price per kWh in Settings (a new price applies from the start of the latest charge, so changing it mid-charge prices that whole charge) and the car view shows the energy added and what the session cost while it charges, then on the Last charge line once it ends; the currency is picked from a dropdown of common ones and defaults to your phone's
+- **Longest deep sleep** — the battery health card shows the longest stretch the car slept through between two parked readings (the same definition the parked-drain projection uses), and when it started
+- **Metric or imperial** — pick System default, Metric or Imperial in Settings; range and the health card show km or mi, and the rated constant reads as Wh/km, kWh/100km or km/kWh (display only, the car reports miles)
+- **On-demand wake** — the car is only woken when you ask, never in the background
+- **Lets the car sleep** — while it is charging, driving, in Sentry mode or running the climate (the car stays
+  awake and draws power anyway), readings refresh every 10s. Otherwise the app keeps
+  reading every 10s for a short while after something happens (the car wakes, locks or unlocks, a door or the
+  charge port opens or closes, you tap refresh): one minute, or ten while someone is in or near the car. Then it
+  stops asking, so the car can fall asleep and the reading simply gets older. A car that stays awake for a reason
+  the app cannot see is read once every twenty minutes, which is longer than the car's own sleep timer, so
+  the app never keeps it awake.
+- **Background tracking** via a foreground service: SOC timeline and connection state while parked or charging.
+  Tracking resumes by itself after a reboot or an app update (once the phone is unlocked), as long as tracking
+  is on and a car is paired. Some phones (Xiaomi, Huawei, Oppo/Vivo, Samsung "sleeping apps") block this unless
+  you allow autostart for the app or set its battery usage to unrestricted. After a force stop, Android keeps
+  the app stopped until you open it again.
+- **History graph** (6h / 24h / 7d / 30d / all) with since-last-charge stats to a tenth of a percent once the full range is learned (touch or drag sideways across it for a cursor with the percent, range and time; it stays while you scroll and a tap elsewhere hides it), and a **drive graph** of battery percent over distance driven (last 10 / 50 / 100km or 10 / 50 / 100mi, or since the last charge) with regeneration marked in green and, under it, the percent used per mile or km, plus the efficiency, energy and cost at your home price once the full range and the rated constant are learned;
+  every measurement is a dot (dense samples form a thick band), and dashed
+  lines project the charge completion and the parked drain a round figure ahead
+  (3h, 12h, 3 days, a week for the 30d range; stretches where the odometer moved, or the car was in gear, are left out). Both
+  are fitted on the rated range once the scale is learned, so they read in
+  fractions of a percent, and each carries a faint beam for how far the fit could
+  be off (for a charge also the supply-voltage swings seen in the session)
+- **Trip card** while the car navigates: a progress bar of the trip, the distance and time left and the trip's cost at your home price in big type, then the car's predicted arrival level (with the rated range it stands for once the full range is learned), with the trip's energy in place of the price when none is set. While navigating, the ongoing notification adds the same trip to its text (your level and the predicted arrival level on the collapsed line; the usual state line, then the distance and time left with traffic after a bold "Trip:", then the arrival with its range, when expanded), never the destination. The destination is not kept in any history view; the raw drive log on the phone still holds what the car sent (see ADR-0012 for what happens to it on export). The screen stays on and undimmed while the card shows.
+- **Past trips (N)** just above Battery health, titled with the number of trips: pick a navigation by name and start time (the one in progress is listed too; a new route started right after arriving is its own trip) to see the distance actually driven and the driving time and its price in big type (priced from the battery readings before and after the trip), then "Arrived with 56% (about 152mi left)" or "Ended with ..." for a trip that stopped short, the energy per distance in your efficiency unit and the average speed. Kept in memory from the drive log, so the destination names appear only here.
+- **Local activity log** — the commands the app sends to the car (and why) and whether the screen was on and the
+  app in the foreground are kept on the phone only, so a wake or a read in the car's own history can be told
+  apart from yours
+- **Simulated car** in debug builds for development without a vehicle or hardware (demo/screenshot mode)
+
+Everything is computed on-device. The app has no internet permission.

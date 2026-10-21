@@ -20,5 +20,6 @@ Where things go, so agents and humans file docs in the right place.
   place competitor names appear.
 - Screenshots live in [`website/images/`](../website/images/) — one set shared by
   the README and the landing page.
+- [`features.md`](features.md), [`install.md`](install.md) and [`architecture.md`](architecture.md) — what the app does, how to install it, how it is built.
 - [`compatibility.md`](compatibility.md), [`faq.md`](faq.md), and
   [`release-checklist.md`](release-checklist.md) — supporting docs.
