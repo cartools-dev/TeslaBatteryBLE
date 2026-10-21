@@ -251,6 +251,7 @@ class CardSnapshots {
                 charging_state = ChargeState.ChargingState(Charging = Void()),
                 charger_voltage = 240,
                 charger_actual_current = 16,
+                charge_rate_mph_float = 32.5f,
                 charge_current_request = 32,
             )
         snapCard("hero-card_charging") {

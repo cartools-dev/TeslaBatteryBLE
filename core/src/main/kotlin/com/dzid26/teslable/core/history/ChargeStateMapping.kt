@@ -2,6 +2,7 @@
 
 package com.dzid26.teslable.core.history
 
+import com.dzid26.teslable.protocol.chargingMph
 import com.dzid26.teslable.protocol.chargingStateKind
 import com.tesla.generated.carserver.vehicle.ChargeState
 
@@ -25,5 +26,6 @@ fun ChargeState.toBatterySample(vehicleId: String): BatterySample? {
         chargeEnergyAdded = charge_energy_added,
         chargeMilesAddedRated = charge_miles_added_rated,
         chargerVoltage = charger_voltage,
+        chargeRateMph = chargingMph,
     )
 }
