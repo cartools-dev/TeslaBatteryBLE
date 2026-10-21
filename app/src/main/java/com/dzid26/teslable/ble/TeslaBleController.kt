@@ -82,6 +82,9 @@ class TeslaBleController(
     private val handler = Handler(Looper.getMainLooper())
     private val clientAddress = TeslaCrypto.randomBytes(16)
     private var selectedBleName: String? = null
+
+    /** Cars a scan already connected to once, only to read their name; reset by each new scan. */
+    private val nameProbes = mutableSetOf<String>()
     private var uiVisible = false
     private var lastVisibilityEvent: AppState.Event? = null
 
@@ -188,6 +191,7 @@ class TeslaBleController(
             it.reconnectAttempts = 0
             it.nextRetryAtMs = 0
         }
+        nameProbes.clear()
         _state.update {
             it.copy(
                 scanning = true,
@@ -451,6 +455,28 @@ class TeslaBleController(
         }
         publishVehicles()
         autoConnect()
+        if (_state.value.explicitScan) probeNames(strongestByName.values)
+    }
+
+    private fun worthProbing(device: TeslaAdvert): Boolean =
+        (device.rssi ?: Int.MIN_VALUE) > NAME_PROBE_MIN_RSSI &&
+            TeslaNames.isTeslaBleName(device.name) &&
+            !vehicles.containsKey(device.name)
+
+    /**
+     * The car's name is only readable over a connection, so a scan briefly connects to each
+     * unknown car in range once, which lets its row show the name without a tap. Capped like any link.
+     */
+    private fun probeNames(found: Collection<TeslaAdvert>) {
+        var active = links.values.count { it.phase in ACTIVE_PHASES }
+        for (device in found) {
+            if (active >= MAX_ACTIVE_LINKS) break
+            val name = device.name
+            if (!worthProbing(device) || !nameProbes.add(name)) continue
+            if (links[name]?.phase in ACTIVE_PHASES) continue
+            ensureLink(name, device.address).connect()
+            active++
+        }
     }
 
     /**
@@ -1128,6 +1154,16 @@ class TeslaBleController(
             handler.postDelayed(reconnect, delay)
         }
 
+        /**
+         * Closes a link that only connected to read the car's name during a scan, so a car
+         * nobody opened does not stay connected. Returns whether it did.
+         */
+        fun endNameProbe(): Boolean {
+            if (bleName !in nameProbes || selectedBleName == bleName || vehicles.containsKey(bleName)) return false
+            close()
+            return true
+        }
+
         /** Brings a pending retry forward to the shortest wait and starts the backoff over. */
         fun resetBackoff() {
             if (reconnectAttempts == 0 || phase == ConnectionPhase.READY) return
@@ -1509,7 +1545,9 @@ class TeslaBleController(
                                 if (phase == ConnectionPhase.READY) null else it.disconnectedAtMillis,
                         )
                     }
-                    if (phase == ConnectionPhase.READY) {
+                    if (phase == ConnectionPhase.READY && endNameProbe()) {
+                        log("${name()}: name read; disconnecting until opened")
+                    } else if (phase == ConnectionPhase.READY) {
                         reconnectAttempts = 0
                         nextRetryAtMs = 0
                         lastAliveMillis = System.currentTimeMillis()
@@ -1577,6 +1615,9 @@ class TeslaBleController(
         const val WAKE_REFRESH_MS = 5000L
         const val WAKE_REFRESH_MAX_ATTEMPTS = 6
         const val MAX_ACTIVE_LINKS = 3
+
+        /** Weaker adverts (dBm) are too far for a connection to finish; a tap still reads the name. */
+        const val NAME_PROBE_MIN_RSSI = -103
         const val PREFS = "teslable"
         const val KEY_TRACKING_ENABLED = "tracking_enabled"
         const val KEY_SELECTED_VEHICLE = "selected_vehicle"
