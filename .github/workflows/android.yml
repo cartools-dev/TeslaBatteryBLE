@@ -582,14 +582,23 @@ jobs:
             echo "keyPassword=$SIGNING_KEY_PASSWORD"
           } > keystore.properties
 
-      - name: Build the signed release APK
-        run: ./gradlew :app:assembleRelease
+      # Debuggable (so `adb run-as` can pull logs) but still R8-shrunk and signed
+      # with the release key; tagged releases never set the property.
+      - name: Build the signed, debuggable release APK
+        run: ./gradlew :app:assembleRelease -PpreviewDebuggable=true
 
       - name: Stage the APK
         run: |
           set -euo pipefail
           apk=app/build/outputs/apk/release/app-release.apk
           [ -f "$apk" ] || { echo "::error::$apk missing (unsigned build?)"; exit 1; }
+          aapt2="$(ls -d "${ANDROID_HOME:-/usr/local/lib/android/sdk}"/build-tools/*/aapt2 2>/dev/null | sort -V | tail -n 1 || true)"
+          if [ -n "$aapt2" ]; then
+            "$aapt2" dump badging "$apk" | grep -q "application-debuggable" \
+              || { echo "::error::the preview APK is not debuggable"; exit 1; }
+          else
+            echo "::warning::aapt2 not found; skipped the debuggable check"
+          fi
           mkdir -p dist
           cp "$apk" dist/TeslaBatteryBLE-preview.apk
 

@@ -31,7 +31,7 @@ DESCRIBE="$(printf '%s' "$DESCRIBE" | sed -E 's/-g([0-9a-f]+)$/-\1/')"
 {
   echo "Preview build of \`main\` at [${SHA:0:7}](https://github.com/$REPO/commit/$SHA) (\`$DESCRIBE\`)."
   echo
-  echo "Signed with the release key, so it updates an installed release in place."
+  echo "Signed with the release key, so it updates an installed release in place. Debuggable, so logs can be pulled with \`adb run-as\`; tagged releases are not."
   echo "This one release is updated in place on every push to \`main\` that passes the tests, static analysis and the emulator smoke test: its tag is renamed to the new commit and the APK is replaced."
 } > preview-notes.md
 
