@@ -23,6 +23,7 @@ import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import androidx.core.app.ServiceCompat
 import androidx.core.content.ContextCompat
+import com.dzid26.teslable.BuildConfig
 import com.dzid26.teslable.MainActivity
 import com.dzid26.teslable.R
 import com.dzid26.teslable.core.history.AppState
@@ -363,7 +364,7 @@ class BleTrackingService : Service() {
             NotificationCompat
                 .Builder(this, CHANNEL_ID)
                 .setSmallIcon(R.drawable.ic_stat_tracking)
-                .setContentTitle(model.title)
+                .setContentTitle(withBuildLabel(model.title))
                 .setContentText(notificationText(model))
                 .setContentIntent(openAppIntent(model.bleName))
                 .setOngoing(true)
@@ -373,6 +374,10 @@ class BleTrackingService : Service() {
                 .setCategory(NotificationCompat.CATEGORY_STATUS)
                 .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
                 .setGroup(GROUP_KEY)
+        // One UI ignores setColor, so a CI (PR) build says what it is in text and by icon shape.
+        if (BuildConfig.BUILD_LABEL.isNotEmpty()) {
+            builder.setSubText(BuildConfig.BUILD_LABEL)
+        }
         if (groupSummary) {
             builder.setGroupSummary(true)
         }
@@ -454,13 +459,19 @@ class BleTrackingService : Service() {
         )
     }
 
+    /** "[PR 332] title" in CI (PR) builds so they read apart from the main app; unchanged elsewhere. */
+    private fun withBuildLabel(text: String): String {
+        val label = BuildConfig.BUILD_LABEL
+        return if (label.isEmpty()) text else "[$label] $text"
+    }
+
     private fun createChannel() {
         val manager = getSystemService(NotificationManager::class.java) ?: return
         if (manager.getNotificationChannel(CHANNEL_ID) != null) return
         val channel =
             NotificationChannel(
                 CHANNEL_ID,
-                getString(R.string.tracking_channel_name),
+                withBuildLabel(getString(R.string.tracking_channel_name)),
                 NotificationManager.IMPORTANCE_LOW,
             ).apply {
                 description = getString(R.string.tracking_channel_description)
