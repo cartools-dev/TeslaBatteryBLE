@@ -32,12 +32,38 @@ fun longestParked(
     samples: List<BatterySample>,
     drives: List<DriveSample>,
     scale: FullRangeScale? = null,
+): ParkedSpan? = longestRun(samples, drives, scale) { _, _ -> true }
+
+/**
+ * The longest stretch of consecutive pairs that were parked and quiet: nobody was seen at the car in any of
+ * them ([unattendedBetween]), awake or asleep. This is the sleep the parked-drain projection follows. Ties go
+ * to the later stretch.
+ *
+ * @param statuses the same vehicle's status log, oldest first.
+ * @see longestParked for the other parameters.
+ */
+fun longestSleep(
+    samples: List<BatterySample>,
+    drives: List<DriveSample>,
+    statuses: List<StatusSample>,
+    scale: FullRangeScale? = null,
+): ParkedSpan? = longestRun(samples, drives, scale) { a, b -> unattendedBetween(a, b, statuses) }
+
+/** The longest run of consecutive parked pairs of [samples] that [also] accepts. */
+private fun longestRun(
+    samples: List<BatterySample>,
+    drives: List<DriveSample>,
+    scale: FullRangeScale?,
+    also: (BatterySample, BatterySample) -> Boolean,
 ): ParkedSpan? {
     val readings = driveReadingsAt(samples, drives.filter { it.odometerInHundredthsOfAMile != null })
     var longest: ParkedSpan? = null
     var first = 0
     for (index in 1..samples.size) {
-        val continues = index < samples.size && parkedBetween(samples[index - 1], samples[index], readings[index - 1], readings[index])
+        val continues =
+            index < samples.size &&
+                parkedBetween(samples[index - 1], samples[index], readings[index - 1], readings[index]) &&
+                also(samples[index - 1], samples[index])
         if (continues) continue
         val span = parkedSpan(samples, first, index - 1, scale)
         if (span != null && span.durationMillis >= (longest?.durationMillis ?: 1L)) longest = span

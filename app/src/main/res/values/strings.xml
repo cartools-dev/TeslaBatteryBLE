@@ -160,6 +160,8 @@
     <string name="health_longest">Longest</string>
     <string name="health_parked_hint">Sitting still: the odometer unchanged, the car out of gear and not charging, asleep or awake. Gaps between readings count.</string>
     <string name="health_parked_term">parked</string>
+    <string name="health_sleep_hint">Parked, locked and left alone: no one seen at the car, asleep or awake. This is the drain the projection follows. Gaps between readings count.</string>
+    <string name="health_sleep_term">sleep</string>
     <string name="health_started">started %1$s</string>
     <string name="health_title">Battery stats</string>
     <string name="trip_arrival_range">Arrive with %1$d%% (about %2$s left)</string>

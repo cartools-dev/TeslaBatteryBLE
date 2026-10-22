@@ -73,6 +73,27 @@ class ParkedSpanTest {
         assertNull(longestParked(going, drives(going)))
     }
 
+    @Test
+    fun `sleep is the parked stretch with nobody seen at the car`() {
+        val samples = listOf(sample(0), sample(100), sample(200), sample(300), sample(700))
+        val statuses = listOf(status(150, attended = true), status(500))
+        val span = assertNotNull(longestSleep(samples, drives(samples), statuses))
+        assertEquals(200 * MINUTE, span.startMillis)
+        assertEquals(700 * MINUTE, span.endMillis)
+        assertEquals(700 * MINUTE, assertNotNull(longestParked(samples, drives(samples))).endMillis)
+    }
+
+    private fun status(
+        minutes: Long,
+        attended: Boolean = false,
+    ) = StatusSample(
+        timestampMillis = minutes * MINUTE,
+        vehicleId = "",
+        asleep = !attended,
+        userPresent = attended,
+        locked = !attended,
+    )
+
     private companion object {
         const val MINUTE = 60_000L
         const val ODOMETER = 1_234_500

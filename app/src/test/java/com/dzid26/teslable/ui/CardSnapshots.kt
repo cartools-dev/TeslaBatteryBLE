@@ -953,6 +953,8 @@ class CardSnapshots {
                 confidence = HealthConfidence.MEDIUM,
                 qualityNote = null,
                 // 28 h parked, 1.1 points lost.
+                // 22 h of it locked and alone, 0.7 points lost.
+                longestQuiet = ParkedSpan(startMillis = NOW - 38 * HOUR, endMillis = NOW - 16 * HOUR, dropPercent = 0.7),
                 longestParked = ParkedSpan(startMillis = NOW - 40 * HOUR, endMillis = NOW - 12 * HOUR, dropPercent = 1.1),
                 // 9 h 25 min, overnight two days back.
                 longestSleep =
