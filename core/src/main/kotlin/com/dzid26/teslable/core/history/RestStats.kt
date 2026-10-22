@@ -16,9 +16,7 @@ data class RestStats(
 }
 
 /**
- * The [RestStats] of what the logs hold within [range] of [nowMillis], the same window the battery chart shows:
- * only the readings inside it are looked at, so a stretch that began before it counts from its first reading
- * inside.
+ * The [RestStats] of everything the logs hold.
  *
  * @param samples one vehicle's battery samples, oldest first.
  * @param drives the same vehicle's drive samples, oldest first.
@@ -27,18 +25,10 @@ data class RestStats(
 fun restStats(
     samples: List<BatterySample>,
     drives: List<DriveSample>,
-    range: HistoryRange,
-    nowMillis: Long,
     context: ProjectionContext = ProjectionContext(),
-): RestStats {
-    val cutoff = range.durationMillis?.let { nowMillis - it } ?: Long.MIN_VALUE
-    val inSamples = samples.filter { it.timestampMillis >= cutoff }
-    val inDrives = drives.filter { it.timestampMillis >= cutoff }
-    val inStatuses = context.statuses.filter { it.timestampMillis >= cutoff }
-    val scale = context.scale
-    return RestStats(
-        parked = longestParked(inSamples, inDrives, scale),
-        sleep = longestSleep(inSamples, inDrives, inStatuses, scale),
-        deepSleep = longestDeepSleep(inSamples, inDrives, inStatuses, scale),
+): RestStats =
+    RestStats(
+        parked = longestParked(samples, drives, context.scale),
+        sleep = longestSleep(samples, drives, context.statuses, context.scale),
+        deepSleep = longestDeepSleep(samples, drives, context.statuses, context.scale),
     )
-}

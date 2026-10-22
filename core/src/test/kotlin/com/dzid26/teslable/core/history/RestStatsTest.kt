@@ -28,21 +28,16 @@ class RestStatsTest {
         )
 
     @Test
-    fun `only the selected range is looked at`() {
-        // Parked for two days: the day range sees only the last two hours of reads.
+    fun `the whole log is looked at`() {
         val samples = listOf(sample(0), sample(600), sample(2 * DAY - 120), sample(2 * DAY))
         val drives = samples.map { drive(it.timestampMillis / MINUTE) }
-        val now = 2 * DAY * MINUTE
-        val all = restStats(samples, drives, HistoryRange.ALL, now)
-        assertEquals(2 * DAY * MINUTE, assertNotNull(all.parked).durationMillis)
-        val day = restStats(samples, drives, HistoryRange.DAY, now)
-        assertEquals(120 * MINUTE, assertNotNull(day.parked).durationMillis)
+        assertEquals(2 * DAY * MINUTE, assertNotNull(restStats(samples, drives).parked).durationMillis)
     }
 
     @Test
     fun `no logs means nothing to show`() {
-        assertEquals(true, restStats(emptyList(), emptyList(), HistoryRange.ALL, 0L).isEmpty)
-        assertNull(restStats(emptyList(), emptyList(), HistoryRange.DAY, 0L).deepSleep)
+        assertEquals(true, restStats(emptyList(), emptyList()).isEmpty)
+        assertNull(restStats(emptyList(), emptyList()).deepSleep)
     }
 
     private companion object {

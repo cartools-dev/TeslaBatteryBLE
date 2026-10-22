@@ -403,7 +403,7 @@ class CardSnapshots {
                 samples = gapSamples,
                 drives = emptyList(),
                 nowMillis = NOW,
-                selection = RangeSelection(HistoryRange.ALL),
+                initialRange = HistoryRange.ALL,
             )
         }
     }
@@ -415,7 +415,7 @@ class CardSnapshots {
                 samples = preciseSamples,
                 drives = emptyList(),
                 nowMillis = NOW,
-                selection = RangeSelection(HistoryRange.DAY),
+                initialRange = HistoryRange.DAY,
             )
         }
     }
@@ -495,7 +495,7 @@ class CardSnapshots {
                 samples = chargingSamples,
                 drives = parkedSamples.map { parkedDrive(it) },
                 nowMillis = NOW,
-                selection = RangeSelection(HistoryRange.SIX_HOURS),
+                initialRange = HistoryRange.SIX_HOURS,
             )
         }
     }

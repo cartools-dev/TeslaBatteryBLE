@@ -166,12 +166,10 @@ internal fun CarScreen(
     val paired = isPaired(connection, vehicle)
     // Fitted once for every card below: the hero, the trip, both history charts.
     val scale = remember(vehicleHistory) { FullRangeScales.of(vehicleHistory) }
-    // The battery chart's range, shared with the stats card so both look at the same stretch of the logs.
-    var range by rememberSaveable { mutableStateOf(HistoryRange.DAY) }
-    val statsNow = nowMillis ?: System.currentTimeMillis()
+    // The stats card looks at the whole log, whatever range the battery chart shows.
     val rest =
-        remember(vehicleHistory, vehicleDrives, vehicleStatuses, range, scale) {
-            restStats(vehicleHistory, vehicleDrives, range, statsNow, ProjectionContext(scale, vehicleStatuses))
+        remember(vehicleHistory, vehicleDrives, vehicleStatuses, scale) {
+            restStats(vehicleHistory, vehicleDrives, ProjectionContext(scale, vehicleStatuses))
         }
     val health =
         remember(vehicleHistory) {
@@ -302,8 +300,7 @@ internal fun CarScreen(
                     BatteryHistoryCard(
                         vehicleHistory,
                         vehicleDrives,
-                        nowMillis = statsNow,
-                        selection = RangeSelection(range) { range = it },
+                        nowMillis = nowMillis ?: System.currentTimeMillis(),
                         statuses = vehicleStatuses,
                     )
                     DriveHistoryCard(vehicleHistory, vehicleDrives, scale = scale, ratedKwhPerMile = health.ratedKwhPerMile)
@@ -734,12 +731,6 @@ private fun ChargeProjectionLine(
     )
 }
 
-/** The battery chart's selected range and what to do when another is picked. */
-internal class RangeSelection(
-    val range: HistoryRange,
-    val onChange: (HistoryRange) -> Unit = {},
-)
-
 @Composable
 internal fun BatteryHistoryCard(
     samples: List<BatterySample>,
@@ -747,12 +738,12 @@ internal fun BatteryHistoryCard(
     // Injectable for the Paparazzi snapshots; production call sites use the
     // default, which is the same wall-clock read as before.
     nowMillis: Long = System.currentTimeMillis(),
-    // The selected range, shared with the stats card; the snapshots fix it.
-    selection: RangeSelection = RangeSelection(HistoryRange.DAY),
+    // Injectable for the Paparazzi snapshots; production opens on the day range.
+    initialRange: HistoryRange = HistoryRange.DAY,
     // The VCSEC status log: when the car slept, for the deep-sleep drain rate.
     statuses: List<StatusSample> = emptyList(),
 ) {
-    val range = selection.range
+    var range by rememberSaveable { mutableStateOf(initialRange) }
     val is24Hour = LocalIs24Hour.current ?: DateFormat.is24HourFormat(LocalContext.current)
     val now = nowMillis
     val visible = samples.within(range, now)
@@ -769,7 +760,7 @@ internal fun BatteryHistoryCard(
                 HistoryRange.entries.forEach { entry ->
                     FilterChip(
                         selected = range == entry,
-                        onClick = { selection.onChange(entry) },
+                        onClick = { range = entry },
                         label = { Text(entry.label()) },
                     )
                 }

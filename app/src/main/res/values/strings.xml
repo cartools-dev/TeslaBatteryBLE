@@ -159,7 +159,6 @@
     <string name="health_ended">ended %1$s</string>
     <string name="health_parked_hint">Parked: the odometer unchanged and not charging.</string>
     <string name="health_parked_label">Longest parked</string>
-    <string name="health_range_caption">In the range selected in Battery history</string>
     <string name="health_sleep_hint">Sleep: parked, locked, nobody at the car.</string>
     <string name="health_sleep_label">Longest sleep</string>
     <string name="health_started">started %1$s</string>

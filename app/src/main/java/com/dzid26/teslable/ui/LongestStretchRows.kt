@@ -13,15 +13,10 @@ import com.dzid26.teslable.R
 import com.dzid26.teslable.core.history.RestStats
 import com.dzid26.teslable.core.history.compactDuration
 
-/** The longest parked, sleep and deep sleep stretches in the selected range, each with its hint, when there are any. */
+/** The longest parked, sleep and deep sleep stretches each with its hint, when there are any. */
 @Composable
 internal fun LongestStretchRows(rest: RestStats) {
     if (rest.isEmpty) return
-    Text(
-        text = stringResource(R.string.health_range_caption),
-        style = MaterialTheme.typography.labelSmall,
-        color = MaterialTheme.colorScheme.onSurfaceVariant,
-    )
     rest.parked?.let { LongestStretchRow(Stretch(R.string.health_parked_label, it.startMillis, it.endMillis), it.percentPerHour) }
     rest.sleep?.let { LongestStretchRow(Stretch(R.string.health_sleep_label, it.startMillis, it.endMillis), it.percentPerHour) }
     rest.deepSleep?.let { LongestStretchRow(Stretch(R.string.health_deep_sleep_label, it.startMillis, it.endMillis), it.percentPerHour) }
