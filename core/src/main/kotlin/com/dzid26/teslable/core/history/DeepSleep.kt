@@ -2,10 +2,15 @@
 
 package com.dzid26.teslable.core.history
 
-/** What the battery lost while parked around a sleep: [percent] points over [spanMillis] between the two reads that bracket it. */
+/**
+ * What the battery lost while parked around a sleep: [percent] points over [spanMillis] between the two reads that
+ * bracket it. With [ceiling] the reads lie far from the sleep, so the span holds awake time too and the rate
+ * is an upper bound on the sleep's own.
+ */
 data class SleepDrop(
     val percent: Double,
     val spanMillis: Long,
+    val ceiling: Boolean = false,
 )
 
 /**
@@ -43,9 +48,10 @@ fun longestDeepSleep(
  * notion of a quiet parked car, holes included, is [unattendedBetween]. A run shorter than
  * [MIN_SLEEP_SPAN_MILLIS] is not a deep sleep.
  *
- * The drain is read from the last battery read at or before the sleep and the first at or after it, when both
- * lie within [DROP_SLACK_MILLIS] of the sleep's ends, neither is charging and the odometer and gear say the car
- * stayed parked. A sleep without such reads has no drain and feeds no rate.
+ * The drain is read from the last battery read at or before the sleep and the first at or after it, when the car
+ * stayed parked between them (no charge, the odometer and gear unchanged). When both reads lie within
+ * [DROP_SLACK_MILLIS] of the sleep's ends the drain stands for the sleep; further away it is marked
+ * [SleepDrop.ceiling]. A sleep without such reads has no drain.
  *
  * @param samples one vehicle's battery samples, oldest first.
  * @param drives the same vehicle's drive samples, oldest first.
@@ -94,13 +100,14 @@ private fun dropAround(
     scale: FullRangeScale?,
 ): SleepDrop? {
     val after = firstReadAtOrAfter(samples, sleep.endMillis)
-    if (after < 1 || after >= samples.size) return null
-    val a = samples[after - 1]
+    val before = firstReadAtOrAfter(samples, sleep.startMillis + 1) - 1
+    if (before < 0 || after >= samples.size || before >= after) return null
+    val a = samples[before]
     val b = samples[after]
-    val close = sleep.startMillis - readAt(a) in 0..DROP_SLACK_MILLIS && readAt(b) - sleep.endMillis <= DROP_SLACK_MILLIS
     val readings = driveReadingsAt(listOf(a, b), parkedDrives)
-    val parked = parkedBetween(a, b, readings[0], readings[1])
-    return if (close && parked) SleepDrop((a.soc(scale) - b.soc(scale)).toDouble(), readAt(b) - readAt(a)) else null
+    val close = sleep.startMillis - readAt(a) <= DROP_SLACK_MILLIS && readAt(b) - sleep.endMillis <= DROP_SLACK_MILLIS
+    return SleepDrop((a.soc(scale) - b.soc(scale)).toDouble(), readAt(b) - readAt(a), ceiling = !close)
+        .takeIf { parkedBetween(a, b, readings[0], readings[1]) }
 }
 
 /** The index of the first sample read at or after [millis], or the size when none was; samples are oldest first. */

@@ -34,6 +34,7 @@ internal fun LongestStretchRows(rest: RestStats) {
         LongestStretchRow(
             Stretch(R.string.health_deep_sleep_term, R.string.health_deep_sleep_hint, it.startMillis, it.endMillis),
             it.percentPerHour,
+            ceiling = it.drop?.ceiling == true,
         )
     }
 }
@@ -50,6 +51,7 @@ private class Stretch(
 private fun LongestStretchRow(
     stretch: Stretch,
     perHour: Double?,
+    ceiling: Boolean = false,
 ) {
     val is24Hour = LocalIs24Hour.current ?: DateFormat.is24HourFormat(LocalContext.current)
     EstimateRow(
@@ -66,7 +68,7 @@ private fun LongestStretchRow(
         },
         value = compactDuration(stretch.endMillis - stretch.startMillis).orEmpty(),
         detail = stringResource(R.string.health_ended, formatTime(stretch.endMillis, showDate = true, is24Hour = is24Hour)),
-        detailBold = drainLabel(perHour),
+        detailBold = drainLabel(perHour, ceiling),
         valueTip = stringResource(R.string.health_started, formatTime(stretch.startMillis, showDate = true, is24Hour = is24Hour)),
     )
 }
@@ -76,15 +78,25 @@ private fun LongestStretchRow(
  * over the stretch (within the readings' noise) reads as under 0.1%/week; null when there is no figure to give.
  */
 @Composable
-private fun drainLabel(percentPerHour: Double?): String? {
+private fun drainLabel(
+    percentPerHour: Double?,
+    ceiling: Boolean,
+): String? {
     val perHour = percentPerHour ?: return null
     val locale = LocalLocale.current.platformLocale
     val perDay = perDay(perHour, locale)
     val perWeek = perHour * HOURS_PER_WEEK
+    val tiny = perHour <= 0.0 || (perWeek * TENTHS).roundToInt() == 0
+    val figure =
+        if (perDay != null) {
+            stringResource(R.string.history_parked_rate, perDay)
+        } else {
+            stringResource(R.string.health_drain_week, "%.1f".format(locale, perWeek))
+        }
     return when {
-        perHour <= 0.0 || (perWeek * TENTHS).roundToInt() == 0 -> stringResource(R.string.health_drain_tiny_week)
-        perDay != null -> stringResource(R.string.history_parked_rate, perDay)
-        else -> stringResource(R.string.health_drain_week, "%.1f".format(locale, perWeek))
+        tiny -> stringResource(R.string.health_drain_tiny_week)
+        ceiling -> stringResource(R.string.health_drain_ceiling, figure)
+        else -> figure
     }
 }
 

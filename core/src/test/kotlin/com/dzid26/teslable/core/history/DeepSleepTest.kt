@@ -100,10 +100,12 @@ class DeepSleepTest {
     }
 
     @Test
-    fun `no drain when the reads are far from the sleep or the car moved or charged`() {
+    fun `far reads give a ceiling and no drain when the car moved or charged`() {
         val statuses = asleepFor(0, 700)
         val far = listOf(sample(-200, 70), sample(710, 68))
-        assertNull(assertNotNull(longestDeepSleep(far, drives(far), statuses)).drop)
+        val ceiling = assertNotNull(assertNotNull(longestDeepSleep(far, drives(far), statuses)).drop)
+        assertEquals(true, ceiling.ceiling)
+        assertEquals(2.0, ceiling.percent)
         val samples = listOf(sample(-5, 70), sample(710, 68))
         val moved = drives(samples) { if (it.timestampMillis < 0) ODOMETER else ODOMETER + 100 }
         assertNull(assertNotNull(longestDeepSleep(samples, moved, statuses)).drop)
