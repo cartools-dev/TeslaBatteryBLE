@@ -57,13 +57,10 @@ internal fun PermissionWizardHost(
 
     val launcher =
         rememberLauncherForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { results ->
-            val granted = results.values.all { it }
-            // Notifications are optional: answering that page, either way, ends onboarding.
-            val optionalOnly = results.keys == setOf(Manifest.permission.POST_NOTIFICATIONS)
             permissionsGranted = hasBlePermissions(context)
-            denied = !granted && !optionalOnly
+            denied = results.isDenial()
             deniedForever = denied && shouldOpenAppSettings(context)
-            if (permissionsGranted && (optionalOnly || missingOnboardingPermissions(context).isEmpty())) {
+            if (permissionsGranted && (results.isOptionalOnly() || missingOnboardingPermissions(context).isEmpty())) {
                 wizardOpen = false
                 locationServicesEnabled = isLocationEnabled(context)
                 onGranted()
@@ -151,3 +148,8 @@ private fun PermissionWizardSteps(
         )
     }
 }
+
+// Notifications are optional: answering that page, either way, ends onboarding.
+private fun Map<String, Boolean>.isOptionalOnly() = keys == setOf(Manifest.permission.POST_NOTIFICATIONS)
+
+private fun Map<String, Boolean>.isDenial() = !isOptionalOnly() && values.any { !it }
