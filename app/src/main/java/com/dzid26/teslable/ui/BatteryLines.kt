@@ -103,7 +103,8 @@ internal fun rememberAxisStyle(): AxisStyle {
     val muted = MaterialTheme.colorScheme.onSurfaceVariant
     val outline = Fill(MaterialTheme.colorScheme.outlineVariant)
     return AxisStyle(
-        label = rememberAxisLabelComponent(style = MaterialTheme.typography.labelSmall.copy(color = muted)),
+        // Two lines, so a date label wraps after the date on a narrow phone instead of being cut off.
+        label = rememberAxisLabelComponent(style = MaterialTheme.typography.labelSmall.copy(color = muted), lineCount = 2),
         line = rememberAxisLineComponent(fill = outline),
         tick = rememberAxisTickComponent(fill = outline),
         guideline = rememberAxisGuidelineComponent(fill = outline),
