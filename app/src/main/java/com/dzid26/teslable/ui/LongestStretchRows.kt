@@ -71,16 +71,19 @@ private fun LongestStretchRow(
     )
 }
 
-/** The drain as "0.7%/day", or per week when a day's worth would round to nothing; null when the battery lost nothing measurable. */
+/**
+ * The drain as "0.7%/day", or per week when a day's worth would round to nothing. A level that did not fall
+ * over the stretch (within the readings' noise) reads as under 0.1%/week; null when there is no figure to give.
+ */
 @Composable
 private fun drainLabel(percentPerHour: Double?): String? {
-    val perHour = percentPerHour?.takeIf { it > 0.0 } ?: return null
+    val perHour = percentPerHour ?: return null
     val locale = LocalLocale.current.platformLocale
     val perDay = perDay(perHour, locale)
     val perWeek = perHour * HOURS_PER_WEEK
     return when {
+        perHour <= 0.0 || (perWeek * TENTHS).roundToInt() == 0 -> stringResource(R.string.health_drain_tiny_week)
         perDay != null -> stringResource(R.string.history_parked_rate, perDay)
-        (perWeek * TENTHS).roundToInt() == 0 -> stringResource(R.string.health_drain_tiny_week)
         else -> stringResource(R.string.health_drain_week, "%.1f".format(locale, perWeek))
     }
 }
