@@ -239,7 +239,7 @@ private fun ratedMilesPerHour(
 /** The full rated range implied by one sample's range and level; null without both. */
 private fun impliedFullRangeMiles(sample: BatterySample): Float? {
     val miles = sample.ratedRangeMiles?.takeIf { it.isFinite() && it > 0f } ?: return null
-    return if (sample.batteryLevel > 0) miles / (sample.batteryLevel / 100f) else null
+    return if (sample.fitLevel > 0) miles / (sample.fitLevel / 100f) else null
 }
 
 private const val MIN_RATE_SPAN_MILLIS = 2 * 60_000L

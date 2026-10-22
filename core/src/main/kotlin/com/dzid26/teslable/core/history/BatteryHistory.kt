@@ -33,6 +33,11 @@ data class BatterySample(
     /** `charge_rate_mph`: the car's own charging speed in rated miles per hour; null when absent or not charging. */
     val chargeRateMph: Float? = null,
     /**
+     * `usable_battery_level`: the level the rated range stands for. The car holds back part of a cold
+     * battery, so it reads up to a point below [batteryLevel]; null when the car sent none.
+     */
+    val usableLevel: Int? = null,
+    /**
      * The phone's clock when the reply was read (the record's `device_timestamp`),
      * or null when the record has none. This is what "last read" means, and it
      * is the only time the app shows as a reading's age: [timestampMillis] is
@@ -90,6 +95,11 @@ data class ChargeStats(
     val currentLevel: Int,
     val minLevel: Int,
     val maxLevel: Int,
+    /** Points the displayed level sat above the usable one at each of those readings; 0 when the car sent no usable level. */
+    val chargeHeldBack: Int = 0,
+    val currentHeldBack: Int = 0,
+    val minHeldBack: Int = 0,
+    val maxHeldBack: Int = 0,
     /** The car's `charge_energy_added` on the newest charging sample: the kWh that session added; null when it reported none. */
     val energyKwh: Float? = null,
 ) {
@@ -97,14 +107,18 @@ data class ChargeStats(
     val usedMiles: Float?
         get() = if (chargeMiles != null && currentMiles != null) (chargeMiles - currentMiles).coerceAtLeast(0f) else null
 
-    /** The level the charge ended at, in percent: sub-percent with a pinned [scale], else the whole level. */
-    fun chargePercent(scale: FullRangeScale?): Float = scale?.socPercent(chargeMiles) ?: chargeLevel.toFloat()
+    /**
+     * The level the charge ended at, in percent: sub-percent with a pinned [scale], else the whole level.
+     * The figures stand for the displayed level: the scale reads the usable one, so the held-back points
+     * are added back, and a cold battery does not make the stats fall.
+     */
+    fun chargePercent(scale: FullRangeScale?): Float = scale?.socPercent(chargeMiles)?.plus(chargeHeldBack) ?: chargeLevel.toFloat()
 
-    fun currentPercent(scale: FullRangeScale?): Float = scale?.socPercent(currentMiles) ?: currentLevel.toFloat()
+    fun currentPercent(scale: FullRangeScale?): Float = scale?.socPercent(currentMiles)?.plus(currentHeldBack) ?: currentLevel.toFloat()
 
-    fun minPercent(scale: FullRangeScale?): Float = scale?.socPercent(minMiles) ?: minLevel.toFloat()
+    fun minPercent(scale: FullRangeScale?): Float = scale?.socPercent(minMiles)?.plus(minHeldBack) ?: minLevel.toFloat()
 
-    fun maxPercent(scale: FullRangeScale?): Float = scale?.socPercent(maxMiles) ?: maxLevel.toFloat()
+    fun maxPercent(scale: FullRangeScale?): Float = scale?.socPercent(maxMiles)?.plus(maxHeldBack) ?: maxLevel.toFloat()
 
     /** Percent used since the charge: the drained miles over the scale's miles per percent, else the level difference. */
     fun usedPercent(scale: FullRangeScale?): Float {
@@ -132,17 +146,22 @@ fun chargeStats(samples: List<BatterySample>): ChargeStats? {
     val newest = samples.maxByOrNull { it.timestampMillis } ?: return null
     if (newest.timestampMillis <= charged.timestampMillis) return null
     val tail = samples.filter { it.timestampMillis > charged.timestampMillis }
-    val tailMiles = tail.mapNotNull { it.ratedRangeMiles }
+    val lowest = tail.filter { it.ratedRangeMiles != null }.minByOrNull { it.ratedRangeMiles ?: Float.MAX_VALUE }
+    val highest = tail.filter { it.ratedRangeMiles != null }.maxByOrNull { it.ratedRangeMiles ?: Float.MIN_VALUE }
     return ChargeStats(
         sinceMillis = charged.timestampMillis,
         chargeMiles = charged.ratedRangeMiles,
         currentMiles = newest.ratedRangeMiles,
-        minMiles = tailMiles.minOrNull(),
-        maxMiles = tailMiles.maxOrNull(),
+        minMiles = lowest?.ratedRangeMiles,
+        maxMiles = highest?.ratedRangeMiles,
         chargeLevel = charged.batteryLevel,
         currentLevel = newest.batteryLevel,
         minLevel = tail.minOf { it.batteryLevel },
         maxLevel = tail.maxOf { it.batteryLevel },
+        chargeHeldBack = charged.heldBack,
+        currentHeldBack = newest.heldBack,
+        minHeldBack = lowest?.heldBack ?: 0,
+        maxHeldBack = highest?.heldBack ?: 0,
         energyKwh = charged.chargeEnergyAdded?.takeIf { it > 0f },
     )
 }

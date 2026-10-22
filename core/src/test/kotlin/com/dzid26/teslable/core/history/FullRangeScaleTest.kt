@@ -58,6 +58,25 @@ class FullRangeScaleTest {
     }
 
     @Test
+    fun `a cold battery does not move the scale or the plotted soc`() {
+        // The car holds back one point below 14 degrees: the range follows the usable level, the display does not.
+        val cold =
+            climb(270f, 0f, 40.1f, 70f) { it.roundToInt() }.map {
+                it.copy(
+                    usableLevel = it.batteryLevel - 1,
+                    ratedRangeMiles =
+                        it.ratedRangeMiles!! - 2.7f,
+                )
+            }
+        val scale = FullRangeScaleEstimator.estimate(cold)!!
+        assertEquals(2.7f, scale.milesPerPercent, 0.015f)
+        assertEquals(0f, scale.offsetMiles, 0.5f)
+        val sample = cold.first { it.batteryLevel == 55 }
+        assertEquals(1, sample.heldBack)
+        assertEquals(55f, sample.soc(scale), 0.5f)
+    }
+
+    @Test
     fun `fine soc comes from the miles not the integer level`() {
         val scale = FullRangeScaleEstimator.estimate(climb(270f, 0f, 40.1f, 70f) { it.roundToInt() })!!
         // 0.6 mi above the 50% boundary: ~50.2% on the displayed scale.
