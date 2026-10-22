@@ -111,28 +111,43 @@ internal fun PermissionWizardHost(
                 onDismiss = ::dismissWizard,
             )
         } else if (wizardOpen) {
-            val allSteps = permissionSteps(onboardingPermissions())
-            val nextStep =
-                allSteps.firstOrNull { step ->
-                    step.permissions.any { it in missingOnboardingPermissions(context) }
-                }
-            if (nextStep != null) {
-                PermissionWizardPage(
-                    step = nextStep,
-                    index = allSteps.indexOf(nextStep),
-                    total = allSteps.size,
-                    denied = denied,
-                    deniedForever = deniedForever,
-                    onAllow = {
-                        if (deniedForever) {
-                            context.startActivity(appSettingsIntent)
-                        } else {
-                            launcher.launch(nextStep.permissions.toTypedArray())
-                        }
-                    },
-                    onDismiss = ::dismissWizard,
-                )
-            }
+            PermissionWizardSteps(
+                denied = denied,
+                deniedForever = deniedForever,
+                onAllow = { permissions ->
+                    if (deniedForever) {
+                        context.startActivity(appSettingsIntent)
+                    } else {
+                        launcher.launch(permissions.toTypedArray())
+                    }
+                },
+                onDismiss = ::dismissWizard,
+            )
         }
+    }
+}
+
+/** The page for the first onboarding permission that is still missing, if any. */
+@Composable
+private fun PermissionWizardSteps(
+    denied: Boolean,
+    deniedForever: Boolean,
+    onAllow: (List<String>) -> Unit,
+    onDismiss: () -> Unit,
+) {
+    val context = LocalContext.current
+    val allSteps = permissionSteps(onboardingPermissions())
+    val missing = missingOnboardingPermissions(context)
+    val nextStep = allSteps.firstOrNull { step -> step.permissions.any { it in missing } }
+    if (nextStep != null) {
+        PermissionWizardPage(
+            step = nextStep,
+            index = allSteps.indexOf(nextStep),
+            total = allSteps.size,
+            denied = denied,
+            deniedForever = deniedForever,
+            onAllow = { onAllow(nextStep.permissions) },
+            onDismiss = onDismiss,
+        )
     }
 }
