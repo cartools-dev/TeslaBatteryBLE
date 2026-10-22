@@ -210,6 +210,6 @@ class DrivePointTest {
     private companion object {
         const val MINUTE = 60_000L
         val pinnedScale =
-            FullRangeScale(fullRangeMiles = 250f, offsetMiles = 0f, standardErrorMiles = 0.1f, samples = 10, pinned = true)
+            FullRangeScale(milesPerPercent = 2.5f, offsetMiles = 0f, standardErrorMiles = 0.1f, samples = 10, pinned = true)
     }
 }

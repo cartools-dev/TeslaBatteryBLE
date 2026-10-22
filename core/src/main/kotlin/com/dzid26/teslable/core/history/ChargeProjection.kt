@@ -2,6 +2,7 @@
 
 package com.dzid26.teslable.core.history
 
+import kotlin.math.hypot
 import kotlin.math.sqrt
 
 // Chart-only analysis kept in `core` so the drawing code stays free of the
@@ -35,29 +36,26 @@ data class ChargeProjection(
 /**
  * Projects when the charge limit is reached while charging.
  *
- * Miles first: when a live [chargeRateMph] is known and a miles-per-percent
- * basis exists (the learned [fullRangeMiles], else the current run's rated
- * range gain), the remaining time is `remainingPercent * milesPerPercent /
- * rateMph`. The percent-based average of the trailing run is the fallback
- * (integer SOC only). Returns null when the last sample is not charging, the
- * charge limit is unknown or already reached, the run has fewer than two
- * samples, the readings are less than [MIN_RATE_SPAN_MILLIS] apart, or the
- * chosen basis has no positive slope.
+ * Miles first: when the last sample carries the car's live
+ * [BatterySample.chargeRateMph] and a miles-per-percent basis exists (the
+ * learned [FullRangeScale.milesPerPercent], else the sample's own rated range
+ * over its level), the remaining time is `remainingPercent * milesPerPercent /
+ * rateMph`, and one reading is enough. Without a rate the trailing run's
+ * level gain stands in. Returns null when the last sample is not charging, the
+ * charge limit is unknown or already reached, or the run-based fallback has
+ * fewer than two samples, readings less than [MIN_RATE_SPAN_MILLIS] apart, or
+ * no positive slope.
  */
 fun chargeProjection(
     samples: List<BatterySample>,
-    chargeRateMph: Float? = null,
-    fullRangeMiles: Float? = null,
     scale: FullRangeScale? = null,
 ): ChargeProjection? {
-    val projection = baseChargeProjection(samples, chargeRateMph, fullRangeMiles, scale) ?: return null
+    val projection = baseChargeProjection(samples, scale) ?: return null
     return withBeam(projection, samples, scale)
 }
 
 private fun baseChargeProjection(
     samples: List<BatterySample>,
-    chargeRateMph: Float?,
-    fullRangeMiles: Float?,
     scale: FullRangeScale?,
 ): ChargeProjection? {
     val last = samples.lastOrNull() ?: return null
@@ -68,6 +66,8 @@ private fun baseChargeProjection(
     val lastSoc = last.soc(scale)
     if (target <= lastSoc) return null
 
+    liveRateProjection(last, target, lastSoc, scale)?.let { return it }
+
     val runStart = samples.indexOfLast { !it.isCharging } + 1
     val run = samples.subList(runStart, samples.size)
     if (run.size < 2) return null
@@ -76,22 +76,12 @@ private fun baseChargeProjection(
     if (elapsed < MIN_RATE_SPAN_MILLIS) return null
     val remaining = target - lastSoc
 
-    val milesPerPercent = milesPerPercent(first, last, fullRangeMiles)
-    val rate = chargeRateMph?.takeIf { it.isFinite() && it > 0f }
-    if (rate != null && milesPerPercent != null) {
-        return ChargeProjection(
-            from = last,
-            targetPercent = target,
-            completionMillis = last.timestampMillis + (remaining * milesPerPercent / rate * 3_600_000f).toLong(),
-        )
-    }
-
     val gained = lastSoc - first.soc(scale)
     if (gained <= 0f) {
         // The level has not ticked yet: the run's own rated-range slope keeps
         // moving on a slow charger.
         val milesRate = ratedMilesPerHour(first, last, elapsed)
-        val fullRange = fullRangeMiles?.takeIf { it.isFinite() && it > 0f } ?: impliedFullRangeMiles(last)
+        val fullRange = scale?.milesPerPercent?.takeIf { it.isFinite() && it > 0f }?.let { it * 100f } ?: impliedFullRangeMiles(last)
         if (milesRate != null && fullRange != null) {
             val remainingMiles = fullRange * remaining / 100f
             return ChargeProjection(
@@ -107,6 +97,25 @@ private fun baseChargeProjection(
         targetPercent = target,
         completionMillis = last.timestampMillis + (remaining.toDouble() / levelSlope(run, scale, elapsed, gained)).toLong(),
     )
+}
+
+/** The car's own rate over the miles left; null without a live rate or a miles-per-percent basis. */
+private fun liveRateProjection(
+    last: BatterySample,
+    target: Int,
+    lastSoc: Float,
+    scale: FullRangeScale?,
+): ChargeProjection? {
+    val rate = last.chargeRateMph?.takeIf { it.isFinite() && it > 0f } ?: return null
+    val milesPerPercent =
+        scale?.milesPerPercent?.takeIf { it.isFinite() && it > 0f } ?: impliedFullRangeMiles(last)?.div(100f)
+    return milesPerPercent?.let {
+        ChargeProjection(
+            from = last,
+            targetPercent = target,
+            completionMillis = last.timestampMillis + ((target - lastSoc) * it / rate * MILLIS_PER_HOUR).toLong(),
+        )
+    }
 }
 
 /**
@@ -184,11 +193,14 @@ private class LevelFit(
     val scatter: Double,
 )
 
-/** One standard error of the fitted level-over-time slope, as a share of the slope; null without a rising fit. */
+/**
+ * One standard error of the charge rate, as a share of the rate; null without a rising fit. It joins the scatter
+ * of the readings around the line with the scale's own slope error, which moves every level together.
+ */
 private fun relativeRateError(
     run: List<BatterySample>,
     scale: FullRangeScale?,
-): Double? = levelFit(run, scale)?.let { it.scatter / sqrt(it.sxx) / it.slope }
+): Double? = levelFit(run, scale)?.let { hypot(it.scatter / sqrt(it.sxx) / it.slope, scale.levelScaleError() ?: 0.0) }
 
 /** Fits the run's levels over time; null with too few readings or a line that does not rise. */
 private fun levelFit(
@@ -228,22 +240,6 @@ private fun ratedMilesPerHour(
 private fun impliedFullRangeMiles(sample: BatterySample): Float? {
     val miles = sample.ratedRangeMiles?.takeIf { it.isFinite() && it > 0f } ?: return null
     return if (sample.batteryLevel > 0) miles / (sample.batteryLevel / 100f) else null
-}
-
-/** Miles per displayed percent: the learned scale, else the run's rated-range gain. */
-private fun milesPerPercent(
-    first: BatterySample,
-    last: BatterySample,
-    fullRangeMiles: Float?,
-): Float? {
-    fullRangeMiles?.takeIf { it.isFinite() && it > 0f }?.let { return it / 100f }
-    val firstMiles = first.ratedRangeMiles ?: return null
-    val lastMiles = last.ratedRangeMiles ?: return null
-    val gainedPercent = last.batteryLevel - first.batteryLevel
-    if (gainedPercent <= 0) return null
-    val gainedMiles = lastMiles - firstMiles
-    if (!gainedMiles.isFinite() || gainedMiles <= 0f) return null
-    return gainedMiles / gainedPercent
 }
 
 private const val MIN_RATE_SPAN_MILLIS = 2 * 60_000L

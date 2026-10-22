@@ -30,6 +30,8 @@ data class BatterySample(
     val chargeMilesAddedRated: Float? = null,
     /** `charger_voltage`: the AC supply voltage in volts while charging; null when absent. */
     val chargerVoltage: Int? = null,
+    /** `charge_rate_mph`: the car's own charging speed in rated miles per hour; null when absent or not charging. */
+    val chargeRateMph: Float? = null,
     /**
      * The phone's clock when the reply was read (the record's `device_timestamp`),
      * or null when the record has none. This is what "last read" means, and it

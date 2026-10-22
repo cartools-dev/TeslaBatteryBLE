@@ -185,7 +185,7 @@ class DischargeProjectionTest {
         assertNull(project(listOf(sample(0, 80), sample(5, 79))))
     }
 
-    private val scale = FullRangeScale(fullRangeMiles = 300f, offsetMiles = 0f, standardErrorMiles = 0.3f, samples = 20, pinned = true)
+    private val scale = FullRangeScale(milesPerPercent = 3.0f, offsetMiles = 0f, standardErrorMiles = 0.3f, samples = 20, pinned = true)
 
     private fun ranged(
         minutes: Long,

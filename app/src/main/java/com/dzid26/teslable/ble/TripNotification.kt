@@ -13,12 +13,12 @@ import com.dzid26.teslable.UnitStore
 import com.dzid26.teslable.core.health.tripEstimate
 import com.dzid26.teslable.core.history.BatterySample
 import com.dzid26.teslable.core.history.FullRangeScale
-import com.dzid26.teslable.core.history.FullRangeScaleEstimator
 import com.dzid26.teslable.core.history.RouteSample
 import com.dzid26.teslable.core.history.activeRoute
 import com.dzid26.teslable.core.history.compactDuration
 import com.dzid26.teslable.core.history.trafficMinutes
 import com.dzid26.teslable.core.units.DistanceUnit
+import com.dzid26.teslable.history.FullRangeScales
 import java.text.DecimalFormatSymbols
 import kotlin.math.roundToInt
 
@@ -45,7 +45,7 @@ internal data class TripInputs(
 internal fun tripInputs(samples: List<BatterySample>): TripInputs =
     TripInputs(
         currentRatedMiles = samples.lastOrNull()?.ratedRangeMiles,
-        scale = FullRangeScaleEstimator.estimate(samples),
+        scale = FullRangeScales.of(samples),
     )
 
 /** The notice for a live [route], or null when it says nothing the shade could show. */

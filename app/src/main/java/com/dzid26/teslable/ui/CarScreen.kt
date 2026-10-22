@@ -80,7 +80,6 @@ import com.dzid26.teslable.core.history.BatterySample
 import com.dzid26.teslable.core.history.ChargeProjection
 import com.dzid26.teslable.core.history.DriveSample
 import com.dzid26.teslable.core.history.FullRangeScale
-import com.dzid26.teslable.core.history.FullRangeScaleEstimator
 import com.dzid26.teslable.core.history.HistoryRange
 import com.dzid26.teslable.core.history.ProjectionContext
 import com.dzid26.teslable.core.history.RouteSample
@@ -96,10 +95,13 @@ import com.dzid26.teslable.core.history.projectionHorizonMillis
 import com.dzid26.teslable.core.history.socTenths
 import com.dzid26.teslable.core.history.statusDurations
 import com.dzid26.teslable.core.history.within
+import com.dzid26.teslable.core.units.DistanceUnit
 import com.dzid26.teslable.health.healthSummary
+import com.dzid26.teslable.history.FullRangeScales
 import com.dzid26.teslable.protocol.ChargingStateKind
 import com.dzid26.teslable.protocol.PairingPhase
 import com.dzid26.teslable.protocol.asleep
+import com.dzid26.teslable.protocol.chargingMph
 import com.dzid26.teslable.protocol.chargingStateKind
 import com.tesla.generated.carserver.vehicle.ChargeState
 import kotlinx.coroutines.delay
@@ -159,12 +161,12 @@ internal fun CarScreen(
             statusHistory.filter { it.vehicleId == vehicle.bleName }
         }
     val paired = isPaired(connection, vehicle)
+    // Fitted once for every card below: the hero, the trip, both history charts.
+    val scale = remember(vehicleHistory) { FullRangeScales.of(vehicleHistory) }
     val health =
         remember(vehicleHistory, vehicleDrives, vehicleStatuses) {
             healthSummary(vehicleHistory, drives = vehicleDrives, statuses = vehicleStatuses)
         }
-    // Fitted once for every card below: the hero, the trip, both history charts.
-    val scale = remember(vehicleHistory) { FullRangeScaleEstimator.estimate(vehicleHistory) }
     // What a pull on this screen will do, and the feedback while it runs.
     val pullLabel =
         when {
@@ -319,7 +321,7 @@ internal fun HeroCard(
     // The owner's price per kWh, for the session cost; null shows none.
     pricePerKwh: Float? = null,
     // The fitted full-range scale; the car screen fits it once for all its cards.
-    scale: FullRangeScale? = remember(history) { FullRangeScaleEstimator.estimate(history) },
+    scale: FullRangeScale? = remember(history) { FullRangeScales.of(history) },
 ) {
     val context = LocalContext.current
     val display = connectionDisplay(connection, advert, vehicle = vehicle)
@@ -434,7 +436,10 @@ private fun heroStatusText(
     return offlineFor?.let { "Disconnected\u00A0$it" } ?: display.status
 }
 
-/** Charge limit · AC voltage and current · charging state, as one quiet line under the hero. */
+/**
+ * "Charging to 80%" while charging, else the charge limit and the charging state, with the AC voltage, current
+ * and speed between them: one quiet line under the hero.
+ */
 @Composable
 private fun ChargeDetails(
     charge: ChargeState?,
@@ -442,11 +447,16 @@ private fun ChargeDetails(
     showSession: Boolean,
 ) {
     if (charge == null) return
+    val charging = charge.chargingStateKind == ChargingStateKind.Charging
     val details =
         buildList {
-            charge.charge_limit_soc?.let { add("Charge limit\u00A0$it%") }
-            chargerElectricalText(charge)?.let { add(it) }
-            charge.chargingStateKind?.let { add(chargingStateText(it)) }
+            val limit = charge.charge_limit_soc
+            when {
+                charging -> add(limit?.let { "Charging to\u00A0$it%" } ?: chargingStateText(ChargingStateKind.Charging))
+                limit != null -> add("Charge limit\u00A0$limit%")
+            }
+            chargerElectricalText(charge, LocalDistanceUnit.current)?.let { add(it) }
+            if (!charging) charge.chargingStateKind?.let { add(chargingStateText(it)) }
             if (showSession) sessionEnergyText(charge.charge_energy_added, pricePerKwh, LocalCurrencyCode.current)?.let { add(it) }
         }
     if (details.isNotEmpty()) {
@@ -459,10 +469,14 @@ private fun ChargeDetails(
 }
 
 /**
- * "240 V · 16/32 A": the charger's voltage, then the actual current over the
- * requested limit. Shown only while charging, and each piece is dropped when the car reports none.
+ * "240V · 16/32A · 32mi/h": the charger's voltage, the actual current over the
+ * requested limit, then the car's charging speed in rated distance per hour. Shown only while
+ * charging, and each piece is dropped when the car reports none.
  */
-private fun chargerElectricalText(charge: ChargeState): String? {
+private fun chargerElectricalText(
+    charge: ChargeState,
+    unit: DistanceUnit,
+): String? {
     // Plugged in but idle, the car can still report the pilot's numbers; only a live charge is worth showing.
     if (charge.chargingStateKind != ChargingStateKind.Charging) return null
     val volts = charge.charger_voltage?.takeIf { it > 0 }
@@ -475,7 +489,8 @@ private fun chargerElectricalText(charge: ChargeState): String? {
             limit != null -> "${limit}A"
             else -> null
         }
-    return listOfNotNull(volts?.let { "${it}V" }, amps).takeIf { it.isNotEmpty() }?.joinToString(" · ")
+    val speed = charge.chargingMph?.let { "${unit.format(it)}/h" }
+    return listOfNotNull(volts?.let { "${it}V" }, amps, speed).takeIf { it.isNotEmpty() }?.joinToString(" · ")
 }
 
 /**
@@ -722,7 +737,7 @@ internal fun BatteryHistoryCard(
     val visible = samples.within(range, now)
     val stats = lastFinishedChargeStats(samples, now)
     // Fitted once: the stats, the projection and the chart all read it.
-    val scale = remember(samples) { FullRangeScaleEstimator.estimate(samples) }
+    val scale = remember(samples) { FullRangeScales.of(samples) }
 
     Card(modifier = Modifier.fillMaxWidth()) {
         Column(Modifier.padding(12.dp)) {
@@ -752,7 +767,7 @@ internal fun BatteryHistoryCard(
                     range.durationMillis
                         ?: (visible.last().timestampMillis - visible.first().timestampMillis)
                             .coerceAtLeast(1L)
-                val charge = chargeProjection(samples, fullRangeMiles = scale?.fullRangeMiles, scale = scale)
+                val charge = chargeProjection(samples, scale = scale)
                 // Parked drain: the drive samples' odometer marks the
                 // stretches the car moved. Shown next to the charge
                 // projection too: where the battery heads if unplugged now.
@@ -859,7 +874,7 @@ internal fun formatTime(
         .atZone(ZoneId.systemDefault())
         .format(timeFormatter(showDate, is24Hour))
 
-/** "12 min ago" from an age in millis, "under a minute ago" below one. */
+/** "12 min ago" from an age in millis, "<1min ago" below one. */
 @Composable
 private fun agoText(millis: Long): String =
     stringResource(R.string.duration_ago, compactDuration(millis.coerceAtLeast(0L)) ?: stringResource(R.string.trip_under_a_minute))

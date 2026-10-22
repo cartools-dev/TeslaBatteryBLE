@@ -32,6 +32,7 @@ import com.patrykandpatrick.vico.compose.cartesian.rememberVicoScrollState
 import com.patrykandpatrick.vico.compose.cartesian.rememberVicoZoomState
 import com.patrykandpatrick.vico.compose.common.ProvideVicoTheme
 import com.patrykandpatrick.vico.compose.m3.common.rememberM3VicoTheme
+import kotlin.math.abs
 import kotlin.math.roundToLong
 
 /** What a series of the battery chart draws; the line provider maps each kind to its look. */
@@ -114,13 +115,12 @@ internal fun BatteryChart(
     val lines = rememberBatteryLines(lineColor, chargingColor, parkedMuted = charge != null)
     val timeFormatter = rememberTimeFormatter(window, showDate, is24Hour)
     val xStep = spanHours / X_LABEL_STEPS
-    val lastMeasuredMillis = samples.last().timestampMillis
     val description = remember(samples, scale) { chartDescription(samples, scale) }
 
     val pin = rememberCursorPin()
 
     ProvideVicoTheme(rememberM3VicoTheme()) {
-        val cursor = rememberCursorMarker(window, axis, lastMeasuredMillis, scale)
+        val cursor = rememberCursorMarker(window, axis, samples, scale)
         val chart =
             rememberCartesianChart(
                 rememberLineCartesianLayer(
@@ -167,17 +167,25 @@ private fun rememberTimeFormatter(
 private fun rememberCursorMarker(
     window: Window,
     axis: TimeAxis,
-    lastMeasuredMillis: Long,
+    samples: List<BatterySample>,
     scale: FullRangeScale?,
 ): DefaultCartesianMarker {
     val unit = LocalDistanceUnit.current
     val describer =
-        remember(window, axis, lastMeasuredMillis, scale, unit) {
+        remember(window, axis, samples, scale, unit) {
+            val lastMeasuredMillis = samples.last().timestampMillis
             PointDescriber { x, y ->
                 val millis = window.start + (x * MILLIS_PER_HOUR).roundToLong()
-                // The rated range at that level, from the fitted full range; unknown until it is learned.
-                val range = scale?.takeIf { it.pinned }?.let { unit.format(y.toFloat() / PERCENT_FULL * it.fullRangeMiles) }
-                cursorText(y.toFloat(), millis > lastMeasuredMillis, formatTime(millis, axis.showDate, axis.is24Hour), range)
+                val projected = millis > lastMeasuredMillis
+                // A measured point has its own rated range; only a projection, which exists
+                // as a percent alone, goes through the fitted line (unknown until it pins).
+                val range =
+                    if (projected) {
+                        scale?.takeIf { it.pinned }?.ratedMilesAt(y.toFloat())
+                    } else {
+                        samples.minBy { abs(it.timestampMillis - millis) }.ratedRangeMiles
+                    }
+                cursorText(y.toFloat(), projected, formatTime(millis, axis.showDate, axis.is24Hour), range?.let(unit::format))
             }
         }
     return rememberChartCursor(describer)

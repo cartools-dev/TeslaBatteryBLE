@@ -43,7 +43,7 @@ fun tripEstimate(
     val percent = route.energyAtArrivalPercent?.takeIf { it.isFinite() && it in 0f..PERCENT_MAX }
     val arrivalMiles =
         if (percent != null && fullRange != null && fullRange.goodEnoughForTrips()) {
-            fullRange.offsetMiles + percent / PERCENT_MAX * fullRange.fullRangeMiles
+            fullRange.ratedMilesAt(percent)
         } else {
             null
         }
@@ -70,7 +70,7 @@ fun tripEstimate(
  * energy is a few kWh, so a slope that is off by a couple of percent does not matter, and the scale's
  * values move smoothly, where the pinned flag can flip on a single reading near its threshold.
  */
-fun FullRangeScale.goodEnoughForTrips(): Boolean = standardErrorMiles <= fullRangeMiles * TRIP_MAX_SCALE_ERROR
+fun FullRangeScale.goodEnoughForTrips(): Boolean = standardErrorMiles <= milesPerPercent * PERCENT_MAX * TRIP_MAX_SCALE_ERROR
 
 private const val TRIP_MAX_SCALE_ERROR = 0.03f
 private const val PERCENT_MAX = 100f
