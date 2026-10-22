@@ -34,7 +34,7 @@ fun permissionSteps(permissions: List<String>): List<PermissionStep> =
                     why = R.string.perm_location_why,
                 ),
             )
-        }        }
+        }
         if (Manifest.permission.POST_NOTIFICATIONS in permissions) {
             add(
                 PermissionStep(
