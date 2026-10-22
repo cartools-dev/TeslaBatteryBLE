@@ -49,16 +49,17 @@ fun missingBlePermissions(context: Context): List<String> =
 fun hasBlePermissions(context: Context): Boolean = missingBlePermissions(context).isEmpty()
 
 fun isLocationEnabled(context: Context): Boolean {
-    // Android 12+ scans without location, so the location switch is irrelevant.
-    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) return true
-    val locationManager = context.getSystemService(LocationManager::class.java) ?: return false
-    return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
-        locationManager.isLocationEnabled
-    } else {
+    val locationManager = context.getSystemService(LocationManager::class.java)
+    return when {
+        // Android 12+ scans without location, so the location switch is irrelevant.
+        Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> true
+        locationManager == null -> false
+        Build.VERSION.SDK_INT >= Build.VERSION_CODES.P -> locationManager.isLocationEnabled
         // LocationManager.isLocationEnabled requires API 28; on older versions
         // "location is on" is approximated by any provider being enabled.
-        locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER) ||
-            locationManager.isProviderEnabled(LocationManager.NETWORK_PROVIDER)
+        else ->
+            locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER) ||
+                locationManager.isProviderEnabled(LocationManager.NETWORK_PROVIDER)
     }
 }
 
