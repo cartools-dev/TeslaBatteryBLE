@@ -9,6 +9,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.unit.dp
+import com.patrykandpatrick.vico.compose.cartesian.CartesianDrawingContext
+import com.patrykandpatrick.vico.compose.cartesian.CartesianMeasuringContext
 import com.patrykandpatrick.vico.compose.cartesian.axis.Axis
 import com.patrykandpatrick.vico.compose.cartesian.axis.HorizontalAxis
 import com.patrykandpatrick.vico.compose.cartesian.axis.VerticalAxis
@@ -17,6 +19,7 @@ import com.patrykandpatrick.vico.compose.cartesian.axis.rememberAxisLabelCompone
 import com.patrykandpatrick.vico.compose.cartesian.axis.rememberAxisLineComponent
 import com.patrykandpatrick.vico.compose.cartesian.axis.rememberAxisTickComponent
 import com.patrykandpatrick.vico.compose.cartesian.data.CartesianValueFormatter
+import com.patrykandpatrick.vico.compose.cartesian.layer.CartesianLayerDimensions
 import com.patrykandpatrick.vico.compose.cartesian.layer.CartesianLayerPadding
 import com.patrykandpatrick.vico.compose.cartesian.layer.LineCartesianLayer
 import com.patrykandpatrick.vico.compose.cartesian.layer.rememberLine
@@ -145,3 +148,36 @@ internal fun rememberEdgePadding(): (ExtraStore) -> CartesianLayerPadding {
 }
 
 private const val EDGE_SHARE = 0.02f
+
+/**
+ * Drops the outer two labels, at the plot's edges, where they would need a wide
+ * margin to fit; the gridlines stay.
+ */
+internal class InteriorLabels(
+    private val placer: HorizontalAxis.ItemPlacer,
+) : HorizontalAxis.ItemPlacer by placer {
+    override fun getLabelValues(
+        context: CartesianDrawingContext,
+        visibleXRange: ClosedFloatingPointRange<Double>,
+        fullXRange: ClosedFloatingPointRange<Double>,
+        maxLabelWidth: Float,
+    ): List<Double> = placer.getLabelValues(context, visibleXRange, fullXRange, maxLabelWidth).interior()
+
+    override fun getWidthMeasurementLabelValues(
+        context: CartesianMeasuringContext,
+        layerDimensions: CartesianLayerDimensions,
+        fullXRange: ClosedFloatingPointRange<Double>,
+    ): List<Double> = placer.getWidthMeasurementLabelValues(context, layerDimensions, fullXRange).interior()
+
+    override fun getLineValues(
+        context: CartesianDrawingContext,
+        visibleXRange: ClosedFloatingPointRange<Double>,
+        fullXRange: ClosedFloatingPointRange<Double>,
+        maxLabelWidth: Float,
+    ): List<Double>? =
+        placer.getLineValues(context, visibleXRange, fullXRange, maxLabelWidth)
+            ?: placer.getLabelValues(context, visibleXRange, fullXRange, maxLabelWidth)
+
+    // The drive chart's range starts at 0 and ends on a label step, so the outer two labels are the edges.
+    private fun List<Double>.interior() = sorted().drop(1).dropLast(1)
+}

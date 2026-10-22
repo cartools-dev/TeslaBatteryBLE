@@ -144,7 +144,11 @@ internal fun RangeChart(
                         valueFormatter = yFormatter,
                         itemPlacer = remember(axes.yStep) { VerticalAxis.ItemPlacer.step({ axes.yStep }) },
                     ),
-                bottomAxis = HorizontalAxis.rememberBottom(valueFormatter = distanceFormatter),
+                bottomAxis =
+                    HorizontalAxis.rememberBottom(
+                        valueFormatter = distanceFormatter,
+                        itemPlacer = remember { InteriorLabels(HorizontalAxis.ItemPlacer.aligned(addExtremeLabelPadding = false)) },
+                    ),
                 decorations =
                     remember(regenBands, points, pin, cursor) {
                         listOf(
@@ -152,6 +156,7 @@ internal fun RangeChart(
                             ScrubCursor(pin, cursor, points.map { it.distance to it.value.toDouble() }, driveChartColor),
                         )
                     },
+                layerPadding = rememberEdgePadding(),
                 getXStep = { _, _, _ -> axes.xStep },
             )
         CartesianChartHost(
