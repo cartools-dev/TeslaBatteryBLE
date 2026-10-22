@@ -4,6 +4,7 @@ package com.dzid26.teslable.ui
 import android.text.format.DateFormat
 import android.widget.Toast
 import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -743,7 +744,8 @@ internal fun BatteryHistoryCard(
         Column(Modifier.padding(12.dp)) {
             Text("Battery history", style = MaterialTheme.typography.titleSmall)
             Spacer(Modifier.height(8.dp))
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            // Five chips overflow a narrow phone; they scroll sideways rather than squeeze.
+            Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 HistoryRange.entries.forEach { entry ->
                     FilterChip(
                         selected = range == entry,

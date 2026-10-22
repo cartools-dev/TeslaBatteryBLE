@@ -140,6 +140,7 @@ internal fun BatteryChart(
                     remember(shape.specs, shape.beams, pin, cursor, lineColor) {
                         listOf(Beams(shape.beams), ScrubCursor(pin, cursor, shape.specs.flatMap { it.xs.zip(it.ys) }, lineColor))
                     },
+                layerPadding = rememberEdgePadding(),
                 getXStep = { _, _, _ -> xStep },
             )
         CartesianChartHost(
@@ -329,7 +330,7 @@ private class Beams(
 }
 
 private const val MILLIS_PER_HOUR = 3_600_000.0
-private const val X_LABEL_STEPS = 1
+private const val X_LABEL_STEPS = 4
 
 private const val MILLIS_PER_MINUTE = 60_000L
 private const val PERCENT_FULL = 100f
