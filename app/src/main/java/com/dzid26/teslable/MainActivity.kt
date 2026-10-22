@@ -145,7 +145,7 @@ class MainActivity : ComponentActivity() {
                                     onOpenVehicle = controller::openVehicle,
                                     onOpenRequestConsumed = controller::consumeOpenVehicleRequest,
                                     onPairKey = controller::pairKey,
-                                    onSaveVin = controller::saveVin,
+                                    onSaveCar = controller::saveCar,
                                     onWake = { bleName -> controller.wakeVehicle(bleName) },
                                     onReadSoc = { controller.requestChargeState() },
                                     onOpenSettings = { screen = AppScreen.SETTINGS },

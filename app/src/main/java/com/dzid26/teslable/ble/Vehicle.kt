@@ -18,6 +18,8 @@ data class Vehicle(
     val displayName: String? = null,
     val vin: String? = null,
     val keySlot: Int? = null,
+    /** The rated range in miles when the car was new, the baseline for state of health; set by the owner. */
+    val factoryRangeMiles: Float? = null,
     val lastSeenMillis: Long = 0L,
 ) {
     /** What the UI calls this car: user-set name, then the car's own name. */

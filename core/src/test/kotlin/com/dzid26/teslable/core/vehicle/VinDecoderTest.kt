@@ -38,6 +38,18 @@ class VinDecoderTest {
     }
 
     @Test
+    fun `links the EPA search for the model and year`() {
+        assertEquals(
+            "https://www.fueleconomy.gov/feg/PowerSearch.do?action=noform&path=1&year1=2019&year2=2019" +
+                "&make=Tesla&baseModel=Model%203&srchtyp=ymm",
+            epaSearchUrl(decodeVin("5YJ3E1EA7KF123456")!!),
+        )
+        assertNull(epaSearchUrl(VinInfo(TeslaModel.ModelY, null)))
+        assertNull(epaSearchUrl(VinInfo(null, 2023)))
+        assertNull(epaSearchUrl(VinInfo(TeslaModel.Semi, 2023)))
+    }
+
+    @Test
     fun `needs seventeen characters`() {
         assertNull(decodeVin("XP7Y"))
     }

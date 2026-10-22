@@ -21,6 +21,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
@@ -133,6 +134,7 @@ internal fun CarScreen(
     // The finished navigations per car, for the past-trips card.
     trips: Map<String, List<Trip>> = emptyMap(),
     onBack: () -> Unit,
+    onEdit: () -> Unit,
     onPair: () -> Unit,
     onRefresh: () -> Unit,
     onOpenSettings: () -> Unit,
@@ -172,8 +174,8 @@ internal fun CarScreen(
             restStats(vehicleHistory, vehicleDrives, ProjectionContext(scale, vehicleStatuses))
         }
     val health =
-        remember(vehicleHistory) {
-            healthSummary(vehicleHistory)
+        remember(vehicleHistory, vehicle?.factoryRangeMiles) {
+            healthSummary(vehicleHistory, epaRatedRangeMiles = vehicle?.factoryRangeMiles)
         }
     // What a pull on this screen will do, and the feedback while it runs.
     val pullLabel =
@@ -209,9 +211,19 @@ internal fun CarScreen(
                 },
                 title = {
                     val vinLabel = remember(vehicle?.vin) { vehicle?.vin?.let(::decodeVin)?.label }
-                    Column {
-                        Text(vehicle?.title ?: connection?.gattDeviceName ?: advert?.name ?: "Car")
-                        vinLabel?.let { Text(it, style = MaterialTheme.typography.bodyMedium) }
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Column {
+                            Text(vehicle?.title ?: connection?.gattDeviceName ?: advert?.name ?: "Car")
+                            vinLabel?.let { Text(it, style = MaterialTheme.typography.bodyMedium) }
+                        }
+                        if (vehicle != null) {
+                            IconButton(onClick = onEdit) {
+                                Icon(
+                                    imageVector = Icons.Filled.Edit,
+                                    contentDescription = stringResource(R.string.car_edit_title),
+                                )
+                            }
+                        }
                     }
                 },
                 actions = {

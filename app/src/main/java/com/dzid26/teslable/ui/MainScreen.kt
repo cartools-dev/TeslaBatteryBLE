@@ -100,7 +100,7 @@ fun MainScreen(
     onOpenVehicle: (String) -> Unit,
     onOpenRequestConsumed: () -> Unit,
     onPairKey: (String) -> Unit,
-    onSaveVin: (String, String) -> Unit,
+    onSaveCar: (String, String?, Float?) -> Unit,
     onWake: (String?) -> Unit,
     onReadSoc: () -> Unit,
     onOpenSettings: () -> Unit,
@@ -150,6 +150,7 @@ fun MainScreen(
             routes = history.routes,
             trips = history.trips,
             onBack = { viewingBleName = null },
+            onEdit = { vinTarget = bleName },
             onPair = { onPairKey(address) },
             onRefresh = {
                 // One pull does the right thing for the current state: reconnect,
@@ -188,29 +189,30 @@ fun MainScreen(
         )
     }
 
-    VinEditor(
+    CarEditor(
         state = state,
         target = vinTarget,
-        onSaveVin = onSaveVin,
+        onSaveCar = onSaveCar,
         onDismiss = { vinTarget = null },
     )
 }
 
-/** The cars-list VIN editor; renders nothing unless a car is being edited. */
+/** The car editor, opened from the cars list or the car screen; renders nothing unless a car is being edited. */
 @Composable
-private fun VinEditor(
+private fun CarEditor(
     state: BleUiState,
     target: String?,
-    onSaveVin: (String, String) -> Unit,
+    onSaveCar: (String, String?, Float?) -> Unit,
     onDismiss: () -> Unit,
 ) {
     if (target == null) return
     val vehicle = state.vehicles.firstOrNull { it.bleName == target } ?: return
-    VinDialog(
+    CarDialog(
         bleName = target,
         initialVin = vehicle.vin ?: "",
-        onSave = { vin ->
-            onSaveVin(target, vin)
+        initialRangeMiles = vehicle.factoryRangeMiles,
+        onSave = { vin, range ->
+            onSaveCar(target, vin, range)
             onDismiss()
         },
         onDismiss = onDismiss,
