@@ -192,7 +192,7 @@ private fun parkedDrain(
         if (parkedBetween(a, b, readingA, readingB)) {
             drops += (a.soc(scale) - b.soc(scale)).toDouble()
             spans += b.timestampMillis - a.timestampMillis
-            quiet += unattendedBetween(a, b, statuses)
+            quiet += b.timestampMillis - a.timestampMillis >= MIN_SLEEP_PAIR_MILLIS && unattendedBetween(a, b, statuses)
         }
     }
     val drop = drops.sum()
@@ -266,6 +266,9 @@ private const val TWO_READINGS_VARIANCE = 2.0
 private const val MINUTE = 60_000L
 
 private const val HOUR = 60 * MINUTE
+
+/** A pair of reads at least this far apart is mostly sleep: a locked car stays awake only a while after the owner leaves. */
+private const val MIN_SLEEP_PAIR_MILLIS = HOUR
 
 /** Less parked time than this makes the rate too noisy to extrapolate. */
 private const val MIN_RATE_SPAN_MILLIS = 10 * MINUTE

@@ -288,6 +288,14 @@ class DischargeProjectionTest {
     }
 
     @Test
+    fun `short quiet pairs are an awake car and make no sleep rate`() {
+        // Locked and alone, but only minutes apart: the car was still awake, not sleeping.
+        val samples = listOf(sample(0, 80), sample(10, 79), sample(20, 78), sample(30, 77), sample(240, 76))
+        val projection = assertNotNull(project(samples, context = ProjectionContext(statuses = listOf(status(5))), rangeMillis = 24 * HOUR))
+        assertNull(projection.mixedPercentPerHour)
+    }
+
+    @Test
     fun `a charge that only just began does not cut off the parked stretch before it`() {
         val begun = sample(240, 77, ChargingStateKind.Charging).copy(chargeEnergyAdded = 0.02f)
         val samples = listOf(sample(0, 80), sample(120, 79), begun)

@@ -115,8 +115,11 @@ internal fun chargedBetween(
 }
 
 /**
- * True when nobody was seen at the car between two reads: no status reading strictly inside the gap says
- * unlocked or someone present. A gap with no status readings at all counts, since nothing contradicts it.
+ * True when nobody was at the car between two reads. The log writes a status only on a change and as a
+ * heartbeat, so a short gap usually holds none: the state carried in, the last reading at or before the
+ * first read, stands for it while it is no older than [STATUS_CHANGE_MAX_GAP_MILLIS]. It and every reading
+ * strictly inside the gap must say locked with nobody present. With no reading to go on (the phone was away),
+ * nothing contradicts it and the gap counts.
  *
  * @param statuses the vehicle's status log, oldest first.
  */
@@ -133,13 +136,13 @@ internal fun unattendedBetween(
         val middle = (low + high) / 2
         if (statuses[middle].timestampMillis > from) high = middle else low = middle + 1
     }
+    val carried = statuses.getOrNull(low - 1)?.takeIf { from - it.timestampMillis <= STATUS_CHANGE_MAX_GAP_MILLIS }
     var index = low
-    while (index < statuses.size && statuses[index].timestampMillis < to) {
-        if (!statuses[index].locked || statuses[index].userPresent) return false
-        index++
-    }
-    return true
+    while (index < statuses.size && statuses[index].timestampMillis < to) index++
+    return listOfNotNull(carried).plus(statuses.subList(low, index)).none { it.attended() }
 }
+
+private fun StatusSample.attended(): Boolean = !locked || userPresent
 
 /** A charge session this young at a read has only just begun: the energy added is still near zero. */
 private const val NEAR_ZERO_KWH = 0.1f

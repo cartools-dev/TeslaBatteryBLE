@@ -156,6 +156,8 @@
     <string name="duration_ago">%1$s ago</string>
     <string name="health_deep_sleep_hint">Asleep the whole time, watched by the phone without a gap.</string>
     <string name="health_deep_sleep_term">deep sleep</string>
+    <string name="health_drain_tiny_week" formatted="false">&lt;0.1%/week</string>
+    <string name="health_drain_week">%1$s%%/week</string>
     <string name="health_ended">ended %1$s</string>
     <string name="health_longest">Longest</string>
     <string name="health_parked_hint">The odometer unchanged and not charging.</string>

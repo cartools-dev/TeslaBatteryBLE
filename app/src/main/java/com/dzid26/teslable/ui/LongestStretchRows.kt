@@ -16,6 +16,7 @@ import androidx.compose.ui.unit.dp
 import com.dzid26.teslable.R
 import com.dzid26.teslable.core.history.RestStats
 import com.dzid26.teslable.core.history.compactDuration
+import kotlin.math.roundToInt
 
 /** The longest parked, sleep and deep sleep stretches, each with its term explained on a tap, when there are any. */
 @Composable
@@ -65,15 +66,24 @@ private fun LongestStretchRow(
         },
         value = compactDuration(stretch.endMillis - stretch.startMillis).orEmpty(),
         detail = stringResource(R.string.health_ended, formatTime(stretch.endMillis, showDate = true, is24Hour = is24Hour)),
-        detailBold = drainPerDay(perHour),
+        detailBold = drainLabel(perHour),
         valueTip = stringResource(R.string.health_started, formatTime(stretch.startMillis, showDate = true, is24Hour = is24Hour)),
     )
 }
 
-/** The drain as "0.7%/day"; null when the battery lost nothing measurable. */
+/** The drain as "0.7%/day", or per week when a day's worth would round to nothing; null when the battery lost nothing measurable. */
 @Composable
-private fun drainPerDay(percentPerHour: Double?): String? {
+private fun drainLabel(percentPerHour: Double?): String? {
     val perHour = percentPerHour?.takeIf { it > 0.0 } ?: return null
-    val perDay = perDay(perHour, LocalLocale.current.platformLocale)
-    return perDay?.let { stringResource(R.string.history_parked_rate, it) } ?: stringResource(R.string.history_parked_rate_tiny)
+    val locale = LocalLocale.current.platformLocale
+    val perDay = perDay(perHour, locale)
+    val perWeek = perHour * HOURS_PER_WEEK
+    return when {
+        perDay != null -> stringResource(R.string.history_parked_rate, perDay)
+        (perWeek * TENTHS).roundToInt() == 0 -> stringResource(R.string.health_drain_tiny_week)
+        else -> stringResource(R.string.health_drain_week, "%.1f".format(locale, perWeek))
+    }
 }
+
+private const val HOURS_PER_WEEK = 24 * 7
+private const val TENTHS = 10

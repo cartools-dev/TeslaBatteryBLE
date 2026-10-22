@@ -83,6 +83,19 @@ class ParkedSpanTest {
         assertEquals(700 * MINUTE, assertNotNull(longestParked(samples, drives(samples))).endMillis)
     }
 
+    @Test
+    fun `the state carried in from before the gap counts`() {
+        val a = sample(0)
+        val b = sample(1)
+        val before = status(-5, attended = true)
+        // No status inside a ten-second pair: the unlocked, present reading just before it still stands.
+        assertEquals(false, unattendedBetween(a, b, listOf(before)))
+        assertEquals(true, unattendedBetween(a, b, listOf(status(-5))))
+        // A carried reading older than a heartbeat is stale: the phone was away, nothing contradicts it.
+        assertEquals(true, unattendedBetween(a, b, listOf(status(-120, attended = true))))
+        assertEquals(true, unattendedBetween(a, b, emptyList()))
+    }
+
     private fun status(
         minutes: Long,
         attended: Boolean = false,
