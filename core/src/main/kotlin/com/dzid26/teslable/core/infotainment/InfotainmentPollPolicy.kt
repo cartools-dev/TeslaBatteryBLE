@@ -68,6 +68,9 @@ class InfotainmentPollPolicy {
     private var lastReadAtMs: Long? = null
     private var lastChangeAtMs: Long? = null
     private var lastTirePressureAtMs: Long? = null
+    private var startOdometer: Int? = null
+    private var moved = false
+    private var tireReadAfterMove = false
     private var userPresent = false
     private var started = false
     private var charging = false
@@ -95,6 +98,9 @@ class InfotainmentPollPolicy {
         started = true
         lastReadAtMs = null
         lastTirePressureAtMs = null
+        startOdometer = null
+        moved = false
+        tireReadAfterMove = false
         charging = false
         driving = false
         sentry = false
@@ -129,7 +135,14 @@ class InfotainmentPollPolicy {
     }
 
     /** The latest drive reading. Shift state D, R or N is activity. */
-    fun onDriveReading(shiftState: ShiftStateKind?) {
+    fun onDriveReading(
+        shiftState: ShiftStateKind?,
+        odometerHundredthsMile: Int? = null,
+    ) {
+        if (odometerHundredthsMile != null) {
+            val start = startOdometer ?: odometerHundredthsMile.also { startOdometer = it }
+            moved = odometerHundredthsMile - start >= MOVED_HUNDREDTHS_MILE
+        }
         driving = shiftState == ShiftStateKind.D || shiftState == ShiftStateKind.R || shiftState == ShiftStateKind.N
     }
 
@@ -147,18 +160,21 @@ class InfotainmentPollPolicy {
     fun wantsLocation(): Boolean = driving
 
     /**
-     * Whether the tire pressure read follows now: the first one after a fresh start, then once
+     * Whether the tire pressure read follows now: the first one after a fresh start, one more once
+     * the car has moved about 200 m since then (the sensors only report while rolling), then once
      * [TIRE_PRESSURE_INTERVAL_MS] has passed since the last one. Pressures change slowly, so most
      * reads skip it.
      */
     fun wantsTirePressure(nowMillis: Long): Boolean {
-        val last = lastTirePressureAtMs ?: return true
-        return nowMillis - last >= TIRE_PRESSURE_INTERVAL_MS - DUE_SLACK_MS
+        val last = lastTirePressureAtMs
+        val intervalPassed = last == null || nowMillis - last >= TIRE_PRESSURE_INTERVAL_MS - DUE_SLACK_MS
+        return intervalPassed || (moved && !tireReadAfterMove)
     }
 
     /** The tire pressure read went out at [nowMillis]. */
     fun onTirePressureRequested(nowMillis: Long) {
         lastTirePressureAtMs = nowMillis
+        if (moved) tireReadAfterMove = true
     }
 
     /**
@@ -251,6 +267,9 @@ class InfotainmentPollPolicy {
          * car that would sleep is asleep by then and is never kept awake by it. Tuned from the real-car check.
          */
         const val IDLE_SAFETY_INTERVAL_MS = 1_200_000L
+
+        /** About 200 m (0.124 mi) in the odometer's hundredths of a mile. */
+        const val MOVED_HUNDREDTHS_MILE = 13
 
         /** Between tire pressure reads: they follow a read only when this much time has passed. */
         const val TIRE_PRESSURE_INTERVAL_MS = 600_000L

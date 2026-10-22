@@ -176,7 +176,8 @@ identity), `docs/requirements/multi-phone.md`
   are the last follow-ups of a read, after climate, same awake-only,
   existing-session-only rules: location only when the latest drive reply shows
   D, R or N (so every 10 s read while driving), tire pressure on the first
-  read after a fresh start and then once 10 minutes have passed
+  read after a fresh start, once more after about 200 m of driving
+  (odometer), and then once 10 minutes have passed
   (`InfotainmentPollPolicy.wantsLocation` and `wantsTirePressure`). Neither
   feeds the poll policy, has a read model or reaches the debug log.
 - **Commands and app state** (owner, 2026-10-09). Three more payload kinds

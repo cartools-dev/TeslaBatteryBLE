@@ -560,6 +560,20 @@ class InfotainmentPollPolicyTest {
         assertTrue(policy.wantsTirePressure(now + 1), "a fresh start reads it again")
     }
 
+    @Test
+    fun tirePressureIsReadAgainOnceAfterAbout200mOfDriving() {
+        policy.onFreshStart(now)
+        policy.onDriveReading(ShiftStateKind.D, 10_000)
+        policy.onTirePressureRequested(now)
+        policy.onDriveReading(ShiftStateKind.D, 10_012)
+        assertFalse(policy.wantsTirePressure(now + TICK))
+        policy.onDriveReading(ShiftStateKind.D, 10_013)
+        assertTrue(policy.wantsTirePressure(now + TICK))
+        policy.onTirePressureRequested(now + TICK)
+        policy.onDriveReading(ShiftStateKind.D, 10_100)
+        assertFalse(policy.wantsTirePressure(now + 2 * TICK), "only once per fresh start")
+    }
+
     private companion object {
         const val TIRES = InfotainmentPollPolicy.TIRE_PRESSURE_INTERVAL_MS
         const val TICK = 10_000L

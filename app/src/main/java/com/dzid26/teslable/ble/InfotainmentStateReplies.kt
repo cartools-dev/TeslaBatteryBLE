@@ -46,7 +46,7 @@ internal class InfotainmentStateReplies(
         }
         historyStore.recordDrive(vehicleId, drive, deviceTimestamp, rssi())
         val shift = drive.shiftStateKind
-        policy.onDriveReading(shift)
+        policy.onDriveReading(shift, drive.odometer_in_hundredths_of_a_mile)
         if (shift != lastShiftState) {
             lastShiftState = shift
             log("shift state ${shift?.name ?: "unknown"}")
