@@ -10,15 +10,35 @@ import android.os.Build
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 
+/**
+ * Android 12+ scans with BLUETOOTH_SCAN (declared neverForLocation), so only
+ * Android 11 and older still need location, and there it must be fine location.
+ */
 fun requiredBlePermissions(): List<String> =
     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
         listOf(
             Manifest.permission.BLUETOOTH_SCAN,
             Manifest.permission.BLUETOOTH_CONNECT,
-            Manifest.permission.ACCESS_FINE_LOCATION,
         )
     } else {
         listOf(Manifest.permission.ACCESS_FINE_LOCATION)
+    }
+
+/**
+ * What the onboarding wizard walks through: the required permissions plus,
+ * on Android 13+, notifications. Notifications are optional, so they are not
+ * part of [requiredBlePermissions] and never block scanning.
+ */
+fun onboardingPermissions(): List<String> =
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+        requiredBlePermissions() + Manifest.permission.POST_NOTIFICATIONS
+    } else {
+        requiredBlePermissions()
+    }
+
+fun missingOnboardingPermissions(context: Context): List<String> =
+    onboardingPermissions().filter {
+        ContextCompat.checkSelfPermission(context, it) != PackageManager.PERMISSION_GRANTED
     }
 
 fun missingBlePermissions(context: Context): List<String> =
@@ -29,14 +49,17 @@ fun missingBlePermissions(context: Context): List<String> =
 fun hasBlePermissions(context: Context): Boolean = missingBlePermissions(context).isEmpty()
 
 fun isLocationEnabled(context: Context): Boolean {
-    val locationManager = context.getSystemService(LocationManager::class.java) ?: return false
-    return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
-        locationManager.isLocationEnabled
-    } else {
+    val locationManager = context.getSystemService(LocationManager::class.java)
+    return when {
+        // Android 12+ scans without location, so the location switch is irrelevant.
+        Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> true
+        locationManager == null -> false
+        Build.VERSION.SDK_INT >= Build.VERSION_CODES.P -> locationManager.isLocationEnabled
         // LocationManager.isLocationEnabled requires API 28; on older versions
         // "location is on" is approximated by any provider being enabled.
-        locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER) ||
-            locationManager.isProviderEnabled(LocationManager.NETWORK_PROVIDER)
+        else ->
+            locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER) ||
+                locationManager.isProviderEnabled(LocationManager.NETWORK_PROVIDER)
     }
 }
 

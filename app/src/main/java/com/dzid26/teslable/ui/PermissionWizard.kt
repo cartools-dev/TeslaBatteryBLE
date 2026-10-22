@@ -19,6 +19,7 @@ import androidx.compose.foundation.layout.systemBarsPadding
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Lock
+import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Place
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
@@ -98,7 +99,7 @@ fun PermissionWizardPage(
     BackHandler { onDismiss() }
     WizardPage {
         Spacer(Modifier.weight(1f))
-        IconBadge(stepIcon(step.permission))
+        IconBadge(stepIcon(step.permissions.first()))
         Spacer(Modifier.height(32.dp))
         Text(
             text = stringResource(step.title),
@@ -125,14 +126,16 @@ fun PermissionWizardPage(
             )
         }
         Spacer(Modifier.weight(1f))
-        StepDots(index = index, total = total)
-        Spacer(Modifier.height(12.dp))
-        Text(
-            text = stringResource(R.string.wizard_step_counter, index + 1, total),
-            style = MaterialTheme.typography.labelMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-        Spacer(Modifier.height(24.dp))
+        if (total > 1) {
+            StepDots(index = index, total = total)
+            Spacer(Modifier.height(12.dp))
+            Text(
+                text = stringResource(R.string.wizard_step_counter, index + 1, total),
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            Spacer(Modifier.height(24.dp))
+        }
         Button(
             onClick = onAllow,
             modifier = Modifier.fillMaxWidth().height(52.dp),
@@ -149,7 +152,7 @@ fun PermissionWizardPage(
             onClick = onDismiss,
             modifier = Modifier.fillMaxWidth(),
         ) {
-            Text(stringResource(R.string.wizard_not_now))
+            Text(stringResource(if (step.optional) R.string.wizard_skip else R.string.wizard_not_now))
         }
     }
 }
@@ -221,5 +224,6 @@ private fun stepIcon(permission: String): ImageVector =
         Manifest.permission.BLUETOOTH_SCAN -> Icons.Filled.Search
         Manifest.permission.BLUETOOTH_CONNECT -> Icons.Filled.Lock
         Manifest.permission.ACCESS_FINE_LOCATION -> Icons.Filled.Place
+        Manifest.permission.POST_NOTIFICATIONS -> Icons.Filled.Notifications
         else -> Icons.Filled.Settings
     }

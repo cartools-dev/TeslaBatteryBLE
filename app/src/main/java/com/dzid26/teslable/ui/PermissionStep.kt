@@ -5,38 +5,45 @@ import android.Manifest
 import androidx.annotation.StringRes
 import com.dzid26.teslable.R
 
-/** One permission the app needs, with the explanation shown before asking. */
+/**
+ * One wizard page: the permissions requested together, with the explanation
+ * shown before asking. Android 12+ groups scan and connect as "Nearby devices",
+ * so they share a single page and a single system dialog.
+ */
 data class PermissionStep(
-    val permission: String,
+    val permissions: List<String>,
     @StringRes val title: Int,
     @StringRes val why: Int,
+    val optional: Boolean = false,
 )
+
+private val NEARBY_DEVICES =
+    listOf(Manifest.permission.BLUETOOTH_SCAN, Manifest.permission.BLUETOOTH_CONNECT)
 
 /** Builds the wizard steps for the permissions this Android version needs. */
 fun permissionSteps(permissions: List<String>): List<PermissionStep> =
-    permissions.mapNotNull { permission ->
-        when (permission) {
-            Manifest.permission.BLUETOOTH_SCAN ->
+    buildList {
+        val nearby = permissions.filter { it in NEARBY_DEVICES }
+        if (nearby.isNotEmpty()) {
+            add(PermissionStep(nearby, R.string.perm_nearby_title, R.string.perm_nearby_why))
+        }
+        if (Manifest.permission.ACCESS_FINE_LOCATION in permissions) {
+            add(
                 PermissionStep(
-                    permission = permission,
-                    title = R.string.perm_scan_title,
-                    why = R.string.perm_scan_why,
-                )
-
-            Manifest.permission.BLUETOOTH_CONNECT ->
-                PermissionStep(
-                    permission = permission,
-                    title = R.string.perm_connect_title,
-                    why = R.string.perm_connect_why,
-                )
-
-            Manifest.permission.ACCESS_FINE_LOCATION ->
-                PermissionStep(
-                    permission = permission,
+                    permissions = listOf(Manifest.permission.ACCESS_FINE_LOCATION),
                     title = R.string.perm_location_title,
                     why = R.string.perm_location_why,
-                )
-
-            else -> null
+                ),
+            )
+        }
+        if (Manifest.permission.POST_NOTIFICATIONS in permissions) {
+            add(
+                PermissionStep(
+                    permissions = listOf(Manifest.permission.POST_NOTIFICATIONS),
+                    title = R.string.perm_notifications_title,
+                    why = R.string.perm_notifications_why,
+                    optional = true,
+                ),
+            )
         }
     }

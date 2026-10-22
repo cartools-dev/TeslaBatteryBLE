@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 package com.dzid26.teslable.ui
 
+import android.Manifest
+import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import android.provider.Settings
@@ -18,8 +20,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import com.dzid26.teslable.ble.hasBlePermissions
 import com.dzid26.teslable.ble.isLocationEnabled
-import com.dzid26.teslable.ble.missingBlePermissions
-import com.dzid26.teslable.ble.requiredBlePermissions
+import com.dzid26.teslable.ble.missingOnboardingPermissions
+import com.dzid26.teslable.ble.onboardingPermissions
 import com.dzid26.teslable.ble.shouldOpenAppSettings
 
 /**
@@ -43,7 +45,8 @@ internal fun PermissionWizardHost(
     var locationServicesEnabled by remember { mutableStateOf(isLocationEnabled(context)) }
     var wizardOpen by remember { mutableStateOf(false) }
     var introDone by remember { mutableStateOf(false) }
-    var denied by remember { mutableStateOf(false) }
+    // The step whose dialog was denied; a different step starts without an error.
+    var deniedStep by remember { mutableStateOf<List<String>?>(null) }
     var deniedForever by remember { mutableStateOf(false) }
 
     val appSettingsIntent =
@@ -55,11 +58,11 @@ internal fun PermissionWizardHost(
         }
 
     val launcher =
-        rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
+        rememberLauncherForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { results ->
             permissionsGranted = hasBlePermissions(context)
-            denied = !granted
-            deniedForever = !granted && shouldOpenAppSettings(context)
-            if (granted && missingBlePermissions(context).isEmpty()) {
+            deniedStep = results.deniedStep()
+            deniedForever = deniedStep != null && shouldOpenAppSettings(context)
+            if (results.finishesOnboarding(context)) {
                 wizardOpen = false
                 locationServicesEnabled = isLocationEnabled(context)
                 onGranted()
@@ -69,8 +72,18 @@ internal fun PermissionWizardHost(
     LaunchedEffect(refreshKey) {
         permissionsGranted = hasBlePermissions(context)
         locationServicesEnabled = isLocationEnabled(context)
-        if (wizardOpen && missingBlePermissions(context).isEmpty()) {
+        if (wizardOpen && missingOnboardingPermissions(context).isEmpty()) {
             wizardOpen = false
+            onGranted()
+        }
+    }
+
+    // Leaving after the required permissions were granted (only notifications
+    // skipped) must still start scanning, since the wizard's own finish never ran.
+    fun dismissWizard() {
+        wizardOpen = false
+        if (hasBlePermissions(context)) {
+            locationServicesEnabled = isLocationEnabled(context)
             onGranted()
         }
     }
@@ -83,7 +96,7 @@ internal fun PermissionWizardHost(
             // remains the fallback entry point whenever a permission is missing.
             wizardOpen = true
             introDone = false
-            denied = false
+            deniedStep = null
             deniedForever = false
         }
     }
@@ -94,31 +107,57 @@ internal fun PermissionWizardHost(
         if (wizardOpen && !introDone) {
             PermissionWizardGreeting(
                 onContinue = { introDone = true },
-                onDismiss = { wizardOpen = false },
+                onDismiss = ::dismissWizard,
             )
         } else if (wizardOpen) {
-            val allSteps = permissionSteps(requiredBlePermissions())
-            val nextStep =
-                allSteps.firstOrNull { step ->
-                    step.permission in missingBlePermissions(context)
-                }
-            if (nextStep != null) {
-                PermissionWizardPage(
-                    step = nextStep,
-                    index = allSteps.indexOf(nextStep),
-                    total = allSteps.size,
-                    denied = denied,
-                    deniedForever = deniedForever,
-                    onAllow = {
-                        if (deniedForever) {
-                            context.startActivity(appSettingsIntent)
-                        } else {
-                            launcher.launch(nextStep.permission)
-                        }
-                    },
-                    onDismiss = { wizardOpen = false },
-                )
-            }
+            PermissionWizardSteps(
+                deniedStep = deniedStep,
+                deniedForever = deniedForever,
+                onAllow = { permissions, openSettings ->
+                    if (openSettings) {
+                        context.startActivity(appSettingsIntent)
+                    } else {
+                        launcher.launch(permissions.toTypedArray())
+                    }
+                },
+                onDismiss = ::dismissWizard,
+            )
         }
     }
 }
+
+/** The page for the first onboarding permission that is still missing, if any. */
+@Composable
+private fun PermissionWizardSteps(
+    deniedStep: List<String>?,
+    deniedForever: Boolean,
+    onAllow: (permissions: List<String>, openSettings: Boolean) -> Unit,
+    onDismiss: () -> Unit,
+) {
+    val context = LocalContext.current
+    val allSteps = permissionSteps(onboardingPermissions())
+    val missing = missingOnboardingPermissions(context)
+    val nextStep = allSteps.firstOrNull { step -> step.permissions.any { it in missing } }
+    if (nextStep != null) {
+        val denied = deniedStep?.toSet() == nextStep.permissions.toSet()
+        PermissionWizardPage(
+            step = nextStep,
+            index = allSteps.indexOf(nextStep),
+            total = allSteps.size,
+            denied = denied,
+            deniedForever = denied && deniedForever,
+            onAllow = { onAllow(nextStep.permissions, denied && deniedForever) },
+            onDismiss = onDismiss,
+        )
+    }
+}
+
+// Notifications are optional: answering that page, either way, ends onboarding.
+private fun Map<String, Boolean>.isOptionalOnly() = keys == setOf(Manifest.permission.POST_NOTIFICATIONS)
+
+/** The denied step's permissions, or null when nothing the user must fix was denied. */
+private fun Map<String, Boolean>.deniedStep(): List<String>? =
+    keys.toList().takeIf { !isOptionalOnly() && values.any { granted -> !granted } }
+
+private fun Map<String, Boolean>.finishesOnboarding(context: Context) =
+    hasBlePermissions(context) && (isOptionalOnly() || missingOnboardingPermissions(context).isEmpty())

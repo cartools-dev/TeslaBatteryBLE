@@ -40,17 +40,18 @@
     <string name="settings_efficiency_inverse">%1$s per kWh</string>
     <string name="settings_price_per_kwh">Price per kWh (%1$s)</string>
     <string name="settings_version">TeslaBatteryBLE version: %1$s</string>
-    <string name="perm_scan_title">Allow Bluetooth scanning</string>
-    <string name="perm_scan_why">TeslaBatteryBLE scans for cars that advertise the Tesla BLE name. Android treats Bluetooth scanning as location-capable, but the app never reads or stores your location.</string>
-    <string name="perm_connect_title">Allow Bluetooth connections</string>
-    <string name="perm_connect_why">Needed to open the encrypted link to the car you select and read its battery state.</string>
+    <string name="perm_nearby_title">Allow nearby devices</string>
+    <string name="perm_nearby_why">Lets the app find your Tesla over Bluetooth and open the encrypted link to read its battery state. This is Android\'s "Nearby devices" permission; it does not use your location.</string>
     <string name="perm_location_title">Allow location access</string>
-    <string name="perm_location_why">This Android version requires location permission before apps can scan for Bluetooth devices. The app never reads your location, and nothing leaves the phone.</string>
+    <string name="perm_location_why">Android 11 and older only allow Bluetooth scanning with location permission. The app never reads your location, and nothing leaves the phone.</string>
+    <string name="perm_notifications_title">Allow notifications</string>
+    <string name="perm_notifications_why">Android shows a notification while the app tracks your car in the background. This one is optional, but without it tracking runs silently.</string>
     <string name="wizard_step_counter">Step %1$d of %2$d</string>
     <string name="wizard_denied_forever">Android will not show the permission dialog again. Open app settings to allow it.</string>
     <string name="wizard_denied">Permission denied. You can try again.</string>
     <string name="wizard_not_now">Not now</string>
-    <string name="wizard_title">Set up Bluetooth</string>
+    <string name="wizard_skip">Skip</string>
+    <string name="wizard_title">Set up</string>
     <string name="wizard_intro">TeslaBatteryBLE talks to your Tesla directly over Bluetooth. A few permissions are needed first; each one is explained as we go.</string>
     <string name="wizard_get_started">Get started</string>
     <string name="wizard_open_settings">Open app settings</string>
@@ -88,7 +89,7 @@
 
     <string name="main_pull_scan">Scan for cars</string>
     <string name="main_permission_title">Allow Bluetooth access</string>
-    <string name="main_permission_body">TeslaBatteryBLE finds and talks to your Tesla over Bluetooth. Android also requires location permission for BLE scans; the app never reads your location and nothing leaves the phone.</string>
+    <string name="main_permission_body">TeslaBatteryBLE finds and talks to your Tesla over Bluetooth, so it needs permission to see nearby devices. Nothing leaves the phone.</string>
     <string name="main_permission_button">Grant permissions</string>
     <string name="main_location_off">Location services are off. BLE scans return no results until it is enabled.</string>
     <string name="main_car_summary">%1$d car(s), %2$d connected</string>
