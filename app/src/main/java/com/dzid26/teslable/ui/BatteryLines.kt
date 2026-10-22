@@ -7,6 +7,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.unit.dp
 import com.patrykandpatrick.vico.compose.cartesian.axis.Axis
 import com.patrykandpatrick.vico.compose.cartesian.axis.HorizontalAxis
@@ -16,11 +17,13 @@ import com.patrykandpatrick.vico.compose.cartesian.axis.rememberAxisLabelCompone
 import com.patrykandpatrick.vico.compose.cartesian.axis.rememberAxisLineComponent
 import com.patrykandpatrick.vico.compose.cartesian.axis.rememberAxisTickComponent
 import com.patrykandpatrick.vico.compose.cartesian.data.CartesianValueFormatter
+import com.patrykandpatrick.vico.compose.cartesian.layer.CartesianLayerPadding
 import com.patrykandpatrick.vico.compose.cartesian.layer.LineCartesianLayer
 import com.patrykandpatrick.vico.compose.cartesian.layer.rememberLine
 import com.patrykandpatrick.vico.compose.common.Fill
 import com.patrykandpatrick.vico.compose.common.component.LineComponent
 import com.patrykandpatrick.vico.compose.common.component.TextComponent
+import com.patrykandpatrick.vico.compose.common.data.ExtraStore
 
 @Composable
 internal fun rememberBatteryLines(
@@ -118,7 +121,7 @@ internal fun rememberPercentAxis(): VerticalAxis<Axis.Position.Vertical.Start> {
     )
 }
 
-/** Two labels, at the window's start and end. */
+/** Two labels, a quarter in from each end: at the very edges a date label would need a wide margin to fit. */
 @Composable
 internal fun rememberTimeAxis(formatter: CartesianValueFormatter): HorizontalAxis<Axis.Position.Horizontal.Bottom> {
     val style = rememberAxisStyle()
@@ -128,8 +131,17 @@ internal fun rememberTimeAxis(formatter: CartesianValueFormatter): HorizontalAxi
         line = style.line,
         tick = style.tick,
         guideline = style.guideline,
-        itemPlacer = remember { HorizontalAxis.ItemPlacer.aligned(spacing = { 1 }, addExtremeLabelPadding = true) },
+        itemPlacer = remember { HorizontalAxis.ItemPlacer.aligned(spacing = { 2 }, offset = { 1 }, addExtremeLabelPadding = false) },
     )
 }
 
 private const val Y_GRIDLINES = 3
+
+/** The plot's inset at each side: a small share of the screen width, so the lines use nearly all of it. */
+@Composable
+internal fun rememberEdgePadding(): (ExtraStore) -> CartesianLayerPadding {
+    val edge = (LocalConfiguration.current.screenWidthDp * EDGE_SHARE).dp
+    return remember(edge) { { CartesianLayerPadding(unscalableStart = edge, unscalableEnd = edge) } }
+}
+
+private const val EDGE_SHARE = 0.02f
