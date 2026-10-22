@@ -205,8 +205,7 @@ internal fun CarScreen(
                     val vinLabel = remember(vehicle?.vin) { vehicle?.vin?.let(::decodeVin)?.label }
                     Column {
                         Text(vehicle?.title ?: connection?.gattDeviceName ?: advert?.name ?: "Car")
-                        // The title's large glyphs start a little right of the small ones: nudge the line to meet it.
-                        vinLabel?.let { Text(it, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.padding(start = 2.dp)) }
+                        vinLabel?.let { Text(it, style = MaterialTheme.typography.bodyMedium) }
                     }
                 },
                 actions = {
