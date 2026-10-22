@@ -542,11 +542,18 @@ class InfotainmentPollPolicyTest {
     @Test
     fun locationIsWantedOnlyWhileDriving() {
         freshStartAndFirstRead()
-        assertFalse(policy.wantsLocation())
-        policy.onDriveReading(ShiftStateKind.D)
-        assertTrue(policy.wantsLocation())
-        policy.onDriveReading(ShiftStateKind.P)
-        assertFalse(policy.wantsLocation())
+        assertFalse(policy.wantsLocation(now))
+        policy.onDriveReading(ShiftStateKind.D, 100)
+        assertTrue(policy.wantsLocation(now))
+        policy.onLocationRequested(now)
+        assertFalse(policy.wantsLocation(now + TICK), "odometer standing still")
+        policy.onDriveReading(ShiftStateKind.D, 101)
+        assertTrue(policy.wantsLocation(now + TICK), "odometer advanced")
+        policy.onLocationRequested(now + TICK)
+        assertFalse(policy.wantsLocation(now + 2 * TICK))
+        assertTrue(policy.wantsLocation(now + TICK + InfotainmentPollPolicy.LOCATION_MAX_INTERVAL_MS), "five minutes at most")
+        policy.onDriveReading(ShiftStateKind.P, 102)
+        assertFalse(policy.wantsLocation(now + 2 * TICK))
     }
 
     @Test

@@ -175,7 +175,8 @@ identity), `docs/requirements/multi-phone.md`
   (`tire_pressure_state`, field 13) to `<vehicleId>.tire-pressure.pblog`. They
   are the last follow-ups of a read, after climate, same awake-only,
   existing-session-only rules: location only when the latest drive reply shows
-  D, R or N (so every 10 s read while driving), tire pressure on the first
+  D, R or N and the odometer has advanced since the last location read (so every
+  10 s read while moving; a car stopped in gear gets one every 5 minutes), tire pressure on the first
   read after a fresh start, once more after about 200 m of driving
   (odometer), and then once 10 minutes have passed
   (`InfotainmentPollPolicy.wantsLocation` and `wantsTirePressure`). Neither

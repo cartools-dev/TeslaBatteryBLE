@@ -69,6 +69,9 @@ class InfotainmentPollPolicy {
     private var lastChangeAtMs: Long? = null
     private var lastTirePressureAtMs: Long? = null
     private var startOdometer: Int? = null
+    private var odometer: Int? = null
+    private var locationOdometer: Int? = null
+    private var lastLocationAtMs: Long? = null
     private var moved = false
     private var tireReadAfterMove = false
     private var userPresent = false
@@ -99,6 +102,9 @@ class InfotainmentPollPolicy {
         lastReadAtMs = null
         lastTirePressureAtMs = null
         startOdometer = null
+        odometer = null
+        locationOdometer = null
+        lastLocationAtMs = null
         moved = false
         tireReadAfterMove = false
         charging = false
@@ -140,6 +146,7 @@ class InfotainmentPollPolicy {
         odometerHundredthsMile: Int? = null,
     ) {
         if (odometerHundredthsMile != null) {
+            odometer = odometerHundredthsMile
             val start = startOdometer ?: odometerHundredthsMile.also { startOdometer = it }
             moved = odometerHundredthsMile - start >= MOVED_HUNDREDTHS_MILE
         }
@@ -156,8 +163,23 @@ class InfotainmentPollPolicy {
         climate = climateOn
     }
 
-    /** Whether the location read follows the climate reply: every read while driving, never otherwise. */
-    fun wantsLocation(): Boolean = driving
+    /**
+     * Whether the location read follows the climate reply: while driving, when the odometer has
+     * advanced since the last location read, and at the latest every [LOCATION_MAX_INTERVAL_MS]
+     * (a car stopped in gear). Reads come at most once per VCSEC tick, so never faster than 10 s.
+     */
+    fun wantsLocation(nowMillis: Long): Boolean {
+        if (!driving) return false
+        val last = lastLocationAtMs
+        val advanced = odometer != null && odometer != locationOdometer
+        return last == null || advanced || nowMillis - last >= LOCATION_MAX_INTERVAL_MS - DUE_SLACK_MS
+    }
+
+    /** The location read went out at [nowMillis]. */
+    fun onLocationRequested(nowMillis: Long) {
+        lastLocationAtMs = nowMillis
+        locationOdometer = odometer
+    }
 
     /**
      * Whether the tire pressure read follows now: the first one after a fresh start, one more once
@@ -267,6 +289,9 @@ class InfotainmentPollPolicy {
          * car that would sleep is asleep by then and is never kept awake by it. Tuned from the real-car check.
          */
         const val IDLE_SAFETY_INTERVAL_MS = 1_200_000L
+
+        /** A location read is at most this far apart while driving, even when the odometer stands still. */
+        const val LOCATION_MAX_INTERVAL_MS = 300_000L
 
         /** About 200 m (0.124 mi) in the odometer's hundredths of a mile. */
         const val MOVED_HUNDREDTHS_MILE = 13

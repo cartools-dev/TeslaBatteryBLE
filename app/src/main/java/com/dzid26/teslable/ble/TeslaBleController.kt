@@ -1452,7 +1452,9 @@ class TeslaBleController(
             when (kind) {
                 CommandKind.CLIMATE -> {
                     stateReplies.onClimate(plaintext, deviceTimestamp)
-                    if (infotainmentPolicy.wantsLocation()) {
+                    val now = System.currentTimeMillis()
+                    if (infotainmentPolicy.wantsLocation(now)) {
+                        infotainmentPolicy.onLocationRequested(now)
                         requestFollowUp(TeslaLocationTireCommands.buildLocationStateRequest(), CommandKind.LOCATION)
                     } else {
                         requestTirePressureIfDue()
