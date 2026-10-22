@@ -24,6 +24,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import com.dzid26.teslable.R
+import com.dzid26.teslable.core.history.RestStats
 import com.dzid26.teslable.health.HealthConfidence
 import com.dzid26.teslable.health.HealthSummary
 import java.text.DecimalFormatSymbols
@@ -36,7 +37,10 @@ import kotlin.math.roundToInt
  * cell-imbalance, pack-temperature, or lifespan claims.
  */
 @Composable
-internal fun BatteryHealthCard(summary: HealthSummary) {
+internal fun BatteryHealthCard(
+    summary: HealthSummary,
+    rest: RestStats = RestStats(),
+) {
     val unit = LocalDistanceUnit.current
     val efficiency = LocalEfficiencyUnit.current
     val separator = remember { DecimalFormatSymbols.getInstance().decimalSeparator }
@@ -81,7 +85,7 @@ internal fun BatteryHealthCard(summary: HealthSummary) {
                     detail = "fitted from ${summary.fullRangeSteps} percent steps",
                 )
             }
-            LongestStretchRows(summary)
+            LongestStretchRows(rest)
             if (summary.capacityKwh == null && summary.fullRangeMiles == null && summary.sohPercent == null) {
                 Text(
                     text = "No readings yet. Charge once with the app open, then read the battery.",

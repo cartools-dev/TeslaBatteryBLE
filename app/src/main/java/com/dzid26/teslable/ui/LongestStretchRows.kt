@@ -3,58 +3,44 @@ package com.dzid26.teslable.ui
 
 import android.text.format.DateFormat
 import androidx.annotation.StringRes
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.width
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLocale
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.unit.dp
 import com.dzid26.teslable.R
-import com.dzid26.teslable.core.history.DeepSleep
-import com.dzid26.teslable.core.history.ParkedSpan
+import com.dzid26.teslable.core.history.RestStats
 import com.dzid26.teslable.core.history.compactDuration
-import com.dzid26.teslable.health.HealthSummary
 
-/** The longest parked, sleep and deep sleep stretches, each shown when the logs have one. */
+/** The longest parked, sleep and deep sleep stretches in the selected range, each with its hint, when there are any. */
 @Composable
-internal fun LongestStretchRows(summary: HealthSummary) {
-    summary.longestParked?.let { LongestParkedRow(it) }
-    summary.longestQuiet?.let { LongestQuietRow(it) }
-    summary.longestSleep?.let { LongestSleepRow(it) }
-}
-
-@Composable
-private fun LongestParkedRow(span: ParkedSpan) {
-    LongestStretchRow(
-        stretch = Stretch(R.string.health_parked_term, R.string.health_parked_hint, span.startMillis, span.endMillis),
-        perHour = span.percentPerHour,
+internal fun LongestStretchRows(rest: RestStats) {
+    if (rest.isEmpty) return
+    Text(
+        text = stringResource(R.string.health_range_caption),
+        style = MaterialTheme.typography.labelSmall,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
     )
+    rest.parked?.let { LongestStretchRow(Stretch(R.string.health_parked_label, it.startMillis, it.endMillis), it.percentPerHour) }
+    rest.sleep?.let { LongestStretchRow(Stretch(R.string.health_sleep_label, it.startMillis, it.endMillis), it.percentPerHour) }
+    rest.deepSleep?.let { LongestStretchRow(Stretch(R.string.health_deep_sleep_label, it.startMillis, it.endMillis), it.percentPerHour) }
+    listOfNotNull(
+        R.string.health_parked_hint.takeIf { rest.parked != null },
+        R.string.health_sleep_hint.takeIf { rest.sleep != null },
+        R.string.health_deep_sleep_hint.takeIf { rest.deepSleep != null },
+    ).forEach {
+        Text(
+            text = stringResource(it),
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+    }
 }
 
-@Composable
-private fun LongestQuietRow(span: ParkedSpan) {
-    LongestStretchRow(
-        stretch = Stretch(R.string.health_sleep_term, R.string.health_sleep_hint, span.startMillis, span.endMillis),
-        perHour = span.percentPerHour,
-    )
-}
-
-@Composable
-private fun LongestSleepRow(sleep: DeepSleep) {
-    LongestStretchRow(
-        stretch = Stretch(R.string.health_deep_sleep_term, R.string.health_deep_sleep_hint, sleep.startMillis, sleep.endMillis),
-        perHour = sleep.percentPerHour,
-    )
-}
-
-/** What a "Longest ..." row says: the tapped term, its hint and the stretch's first and last moments. */
+/** What a "Longest ..." row says: its label and the stretch's first and last moments. */
 private class Stretch(
-    @StringRes val term: Int,
-    @StringRes val hint: Int,
+    @StringRes val label: Int,
     val startMillis: Long,
     val endMillis: Long,
 )
@@ -66,17 +52,7 @@ private fun LongestStretchRow(
 ) {
     val is24Hour = LocalIs24Hour.current ?: DateFormat.is24HourFormat(LocalContext.current)
     EstimateRow(
-        label = {
-            Row {
-                LabelText(stringResource(R.string.health_longest))
-                Spacer(Modifier.width(4.dp))
-                TipText(
-                    text = stringResource(stretch.term),
-                    tip = stringResource(stretch.hint),
-                    style = MaterialTheme.typography.bodySmall,
-                )
-            }
-        },
+        label = { LabelText(stringResource(stretch.label)) },
         value = compactDuration(stretch.endMillis - stretch.startMillis).orEmpty(),
         detail = stringResource(R.string.health_started, formatTime(stretch.startMillis, showDate = true, is24Hour = is24Hour)),
         detailBold = drainPerDay(perHour),

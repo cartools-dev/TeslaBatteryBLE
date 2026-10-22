@@ -93,6 +93,7 @@ import com.dzid26.teslable.core.history.compactDuration
 import com.dzid26.teslable.core.history.dischargeProjection
 import com.dzid26.teslable.core.history.markingLive
 import com.dzid26.teslable.core.history.projectionHorizonMillis
+import com.dzid26.teslable.core.history.restStats
 import com.dzid26.teslable.core.history.socTenths
 import com.dzid26.teslable.core.history.statusDurations
 import com.dzid26.teslable.core.history.within
@@ -165,9 +166,16 @@ internal fun CarScreen(
     val paired = isPaired(connection, vehicle)
     // Fitted once for every card below: the hero, the trip, both history charts.
     val scale = remember(vehicleHistory) { FullRangeScales.of(vehicleHistory) }
+    // The battery chart's range, shared with the stats card so both look at the same stretch of the logs.
+    var range by rememberSaveable { mutableStateOf(HistoryRange.DAY) }
+    val statsNow = nowMillis ?: System.currentTimeMillis()
+    val rest =
+        remember(vehicleHistory, vehicleDrives, vehicleStatuses, range, scale) {
+            restStats(vehicleHistory, vehicleDrives, range, statsNow, ProjectionContext(scale, vehicleStatuses))
+        }
     val health =
-        remember(vehicleHistory, vehicleDrives, vehicleStatuses) {
-            healthSummary(vehicleHistory, drives = vehicleDrives, statuses = vehicleStatuses)
+        remember(vehicleHistory) {
+            healthSummary(vehicleHistory)
         }
     // What a pull on this screen will do, and the feedback while it runs.
     val pullLabel =
@@ -294,7 +302,8 @@ internal fun CarScreen(
                     BatteryHistoryCard(
                         vehicleHistory,
                         vehicleDrives,
-                        nowMillis = nowMillis ?: System.currentTimeMillis(),
+                        nowMillis = statsNow,
+                        selection = RangeSelection(range) { range = it },
                         statuses = vehicleStatuses,
                     )
                     DriveHistoryCard(vehicleHistory, vehicleDrives, scale = scale, ratedKwhPerMile = health.ratedKwhPerMile)
@@ -305,7 +314,7 @@ internal fun CarScreen(
                         ratedKwhPerMile = health.ratedKwhPerMile,
                         pricePerKwh = pricePerKwh,
                     )
-                    BatteryHealthCard(health)
+                    BatteryHealthCard(health, rest)
                 }
             }
         }
@@ -725,6 +734,12 @@ private fun ChargeProjectionLine(
     )
 }
 
+/** The battery chart's selected range and what to do when another is picked. */
+internal class RangeSelection(
+    val range: HistoryRange,
+    val onChange: (HistoryRange) -> Unit = {},
+)
+
 @Composable
 internal fun BatteryHistoryCard(
     samples: List<BatterySample>,
@@ -732,12 +747,12 @@ internal fun BatteryHistoryCard(
     // Injectable for the Paparazzi snapshots; production call sites use the
     // default, which is the same wall-clock read as before.
     nowMillis: Long = System.currentTimeMillis(),
-    // Injectable for the Paparazzi snapshots; production opens on the day range.
-    initialRange: HistoryRange = HistoryRange.DAY,
+    // The selected range, shared with the stats card; the snapshots fix it.
+    selection: RangeSelection = RangeSelection(HistoryRange.DAY),
     // The VCSEC status log: when the car slept, for the deep-sleep drain rate.
     statuses: List<StatusSample> = emptyList(),
 ) {
-    var range by rememberSaveable { mutableStateOf(initialRange) }
+    val range = selection.range
     val is24Hour = LocalIs24Hour.current ?: DateFormat.is24HourFormat(LocalContext.current)
     val now = nowMillis
     val visible = samples.within(range, now)
@@ -754,7 +769,7 @@ internal fun BatteryHistoryCard(
                 HistoryRange.entries.forEach { entry ->
                     FilterChip(
                         selected = range == entry,
-                        onClick = { range = entry },
+                        onClick = { selection.onChange(entry) },
                         label = { Text(entry.label()) },
                     )
                 }

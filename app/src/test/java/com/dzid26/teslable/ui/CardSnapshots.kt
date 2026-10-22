@@ -31,6 +31,7 @@ import com.dzid26.teslable.core.history.DriveSample
 import com.dzid26.teslable.core.history.DriveWindow
 import com.dzid26.teslable.core.history.HistoryRange
 import com.dzid26.teslable.core.history.ParkedSpan
+import com.dzid26.teslable.core.history.RestStats
 import com.dzid26.teslable.core.history.RouteSample
 import com.dzid26.teslable.core.history.SleepDrop
 import com.dzid26.teslable.core.history.StatusSample
@@ -217,6 +218,7 @@ class CardSnapshots {
             CompositionLocalProvider(LocalDistanceUnit provides DistanceUnit.KILOMETERS) {
                 BatteryHealthCard(
                     healthSummary,
+                    restStatsFixture,
                 )
             }
         }
@@ -229,7 +231,7 @@ class CardSnapshots {
                 LocalDistanceUnit provides DistanceUnit.KILOMETERS,
                 LocalEfficiencyUnit provides EfficiencyUnit.ENERGY_PER_100_DISTANCE,
             ) {
-                BatteryHealthCard(healthSummary)
+                BatteryHealthCard(healthSummary, restStatsFixture)
             }
         }
     }
@@ -241,7 +243,7 @@ class CardSnapshots {
                 LocalDistanceUnit provides DistanceUnit.MILES,
                 LocalEfficiencyUnit provides EfficiencyUnit.DISTANCE_PER_ENERGY,
             ) {
-                BatteryHealthCard(healthSummary)
+                BatteryHealthCard(healthSummary, restStatsFixture)
             }
         }
     }
@@ -401,7 +403,7 @@ class CardSnapshots {
                 samples = gapSamples,
                 drives = emptyList(),
                 nowMillis = NOW,
-                initialRange = HistoryRange.ALL,
+                selection = RangeSelection(HistoryRange.ALL),
             )
         }
     }
@@ -413,7 +415,7 @@ class CardSnapshots {
                 samples = preciseSamples,
                 drives = emptyList(),
                 nowMillis = NOW,
-                initialRange = HistoryRange.DAY,
+                selection = RangeSelection(HistoryRange.DAY),
             )
         }
     }
@@ -493,7 +495,7 @@ class CardSnapshots {
                 samples = chargingSamples,
                 drives = parkedSamples.map { parkedDrive(it) },
                 nowMillis = NOW,
-                initialRange = HistoryRange.SIX_HOURS,
+                selection = RangeSelection(HistoryRange.SIX_HOURS),
             )
         }
     }
@@ -952,21 +954,14 @@ class CardSnapshots {
                 fullRangeSteps = 42,
                 confidence = HealthConfidence.MEDIUM,
                 qualityNote = null,
-                // 28 h parked, 1.1 points lost.
-                // 22 h of it locked and alone, 0.7 points lost.
-                longestQuiet = ParkedSpan(startMillis = NOW - 38 * HOUR, endMillis = NOW - 16 * HOUR, dropPercent = 0.7),
-                longestParked = ParkedSpan(startMillis = NOW - 40 * HOUR, endMillis = NOW - 12 * HOUR, dropPercent = 1.1),
-                // 9 h 25 min, overnight two days back.
-                longestSleep =
-                    DeepSleep(
-                        startMillis = NOW - 34 * HOUR,
-                        endMillis = NOW - 34 * HOUR + 565 * MINUTE,
-                        drop =
-                            SleepDrop(
-                                0.3,
-                                565 * MINUTE,
-                            ),
-                    ),
+            )
+
+        // 28 h parked (1.1 points lost), 22 h of it locked and alone, and a 9 h 25 min deep sleep two days back.
+        private val restStatsFixture =
+            RestStats(
+                parked = ParkedSpan(startMillis = NOW - 40 * HOUR, endMillis = NOW - 12 * HOUR, dropPercent = 1.1),
+                sleep = ParkedSpan(startMillis = NOW - 38 * HOUR, endMillis = NOW - 16 * HOUR, dropPercent = 0.7),
+                deepSleep = DeepSleep(NOW - 34 * HOUR, NOW - 34 * HOUR + 565 * MINUTE, SleepDrop(0.3, 565 * MINUTE)),
             )
 
         private val advert = TeslaAdvert(name = BLE_NAME, address = ADDRESS, rssi = -70)
