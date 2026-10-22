@@ -9,7 +9,7 @@ real hardware is marked "not verified" rather than assumed.
 | --- | --- |
 | Android version | 8.1+ (API 27) |
 | Radio | Bluetooth LE |
-| Permissions | Bluetooth scan/connect, fine location (required by Android for BLE scanning; device location is never read or stored), notifications, foreground service |
+| Permissions | Bluetooth scan/connect (Nearby devices); on Android 11 and older also fine location, which Android requires for BLE scanning (device location is never read or stored), notifications, foreground service |
 
 ## Vehicles
 

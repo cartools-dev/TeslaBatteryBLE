@@ -19,6 +19,7 @@ import androidx.compose.foundation.layout.systemBarsPadding
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Lock
+import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Place
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
@@ -98,7 +99,7 @@ fun PermissionWizardPage(
     BackHandler { onDismiss() }
     WizardPage {
         Spacer(Modifier.weight(1f))
-        IconBadge(stepIcon(step.permission))
+        IconBadge(stepIcon(step.permissions.first()))
         Spacer(Modifier.height(32.dp))
         Text(
             text = stringResource(step.title),
@@ -221,5 +222,6 @@ private fun stepIcon(permission: String): ImageVector =
         Manifest.permission.BLUETOOTH_SCAN -> Icons.Filled.Search
         Manifest.permission.BLUETOOTH_CONNECT -> Icons.Filled.Lock
         Manifest.permission.ACCESS_FINE_LOCATION -> Icons.Filled.Place
+        Manifest.permission.POST_NOTIFICATIONS -> Icons.Filled.Notifications
         else -> Icons.Filled.Settings
     }

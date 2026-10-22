@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 package com.dzid26.teslable.ui
 
+import android.Manifest
 import android.content.Intent
 import android.net.Uri
 import android.provider.Settings
@@ -18,8 +19,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import com.dzid26.teslable.ble.hasBlePermissions
 import com.dzid26.teslable.ble.isLocationEnabled
-import com.dzid26.teslable.ble.missingBlePermissions
-import com.dzid26.teslable.ble.requiredBlePermissions
+import com.dzid26.teslable.ble.missingOnboardingPermissions
+import com.dzid26.teslable.ble.onboardingPermissions
 import com.dzid26.teslable.ble.shouldOpenAppSettings
 
 /**
@@ -55,11 +56,14 @@ internal fun PermissionWizardHost(
         }
 
     val launcher =
-        rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
+        rememberLauncherForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { results ->
+            val granted = results.values.all { it }
+            // Notifications are optional: answering that page, either way, ends onboarding.
+            val optionalOnly = results.keys == setOf(Manifest.permission.POST_NOTIFICATIONS)
             permissionsGranted = hasBlePermissions(context)
-            denied = !granted
-            deniedForever = !granted && shouldOpenAppSettings(context)
-            if (granted && missingBlePermissions(context).isEmpty()) {
+            denied = !granted && !optionalOnly
+            deniedForever = denied && shouldOpenAppSettings(context)
+            if (permissionsGranted && (optionalOnly || missingOnboardingPermissions(context).isEmpty())) {
                 wizardOpen = false
                 locationServicesEnabled = isLocationEnabled(context)
                 onGranted()
@@ -69,8 +73,18 @@ internal fun PermissionWizardHost(
     LaunchedEffect(refreshKey) {
         permissionsGranted = hasBlePermissions(context)
         locationServicesEnabled = isLocationEnabled(context)
-        if (wizardOpen && missingBlePermissions(context).isEmpty()) {
+        if (wizardOpen && missingOnboardingPermissions(context).isEmpty()) {
             wizardOpen = false
+            onGranted()
+        }
+    }
+
+    // Leaving after the required permissions were granted (only notifications
+    // skipped) must still start scanning, since the wizard's own finish never ran.
+    fun dismissWizard() {
+        wizardOpen = false
+        if (hasBlePermissions(context)) {
+            locationServicesEnabled = isLocationEnabled(context)
             onGranted()
         }
     }
@@ -94,13 +108,13 @@ internal fun PermissionWizardHost(
         if (wizardOpen && !introDone) {
             PermissionWizardGreeting(
                 onContinue = { introDone = true },
-                onDismiss = { wizardOpen = false },
+                onDismiss = ::dismissWizard,
             )
         } else if (wizardOpen) {
-            val allSteps = permissionSteps(requiredBlePermissions())
+            val allSteps = permissionSteps(onboardingPermissions())
             val nextStep =
                 allSteps.firstOrNull { step ->
-                    step.permission in missingBlePermissions(context)
+                    step.permissions.any { it in missingOnboardingPermissions(context) }
                 }
             if (nextStep != null) {
                 PermissionWizardPage(
@@ -113,10 +127,10 @@ internal fun PermissionWizardHost(
                         if (deniedForever) {
                             context.startActivity(appSettingsIntent)
                         } else {
-                            launcher.launch(nextStep.permission)
+                            launcher.launch(nextStep.permissions.toTypedArray())
                         }
                     },
-                    onDismiss = { wizardOpen = false },
+                    onDismiss = ::dismissWizard,
                 )
             }
         }
