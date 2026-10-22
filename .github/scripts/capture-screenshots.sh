@@ -139,10 +139,38 @@ wait_for_text() {
   wait_for_literal "text=\"$1" "${2:-30}"
 }
 
+# Wait until the charge line under the hero shows: "Charge limit 80%" idle,
+# "Charging to 80%" while the demo car charges.
+wait_for_charge_line() {
+  local timeout="${1:-30}" waited=0
+  while [ "$waited" -lt "$timeout" ]; do
+    if ui_dump && grep -qE 'Charge limit|Charging to' "$DUMP"; then
+      return 0
+    fi
+    sleep 1
+    waited=$((waited + 1))
+  done
+  return 1
+}
+
 # Wait until the raw hierarchy contains a literal anywhere, for values embedded
 # in a composed line instead of starting their own text node.
 wait_for_contains() {
   wait_for_literal "$1" "${2:-30}"
+}
+
+# Pull to refresh until the charge line shows.
+pull_until_charge_line() {
+  local attempts="${1:-3}" timeout="${2:-15}" attempt
+  for attempt in $(seq 1 "$attempts"); do
+    pull_refresh
+    if wait_for_charge_line "$timeout"; then
+      return 0
+    fi
+    echo "  ... pull did not lead to the charge line (attempt $attempt)" >&2
+    sleep 1
+  done
+  return 1
 }
 
 # First <node> tag whose text starts with $1 (empty when there is none).
@@ -424,7 +452,7 @@ if tap_text "AA:BB:CC:DD:EE:01" 30; then
     # state is the status pill's own "Awake" text.
     pull_until_contains "Awake" 3 20 ||
       { echo "  ! car never reported awake" >&2; debug_dump "wake"; }
-    if pull_until_contains "Charge limit" 4 20; then
+    if pull_until_charge_line 4 20; then
       sleep 1
       # The health card sits under the history chart; frame it when present so
       # the shot shows the measured state.
@@ -508,11 +536,11 @@ if adb shell cmd uimode night yes > /dev/null 2>&1; then
 
     # 03 — the car detail; after a process restart the car is asleep again.
     if tap_text "Demo Tesla" 20; then
-      if ! wait_for_contains "Charge limit" 10; then
+      if ! wait_for_charge_line 10; then
         pull_until_contains "Awake" 3 20 || true
-        pull_until_contains "Charge limit" 4 20 || true
+        pull_until_charge_line 4 20 || true
       fi
-      if wait_for_contains "Charge limit" 20; then
+      if wait_for_charge_line 20; then
         sleep 1
         if wait_for_text "Battery health" 5; then
           scroll_to_text "Battery health" || true

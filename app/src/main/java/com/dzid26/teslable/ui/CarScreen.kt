@@ -95,11 +95,13 @@ import com.dzid26.teslable.core.history.projectionHorizonMillis
 import com.dzid26.teslable.core.history.socTenths
 import com.dzid26.teslable.core.history.statusDurations
 import com.dzid26.teslable.core.history.within
+import com.dzid26.teslable.core.units.DistanceUnit
 import com.dzid26.teslable.health.healthSummary
 import com.dzid26.teslable.history.FullRangeScales
 import com.dzid26.teslable.protocol.ChargingStateKind
 import com.dzid26.teslable.protocol.PairingPhase
 import com.dzid26.teslable.protocol.asleep
+import com.dzid26.teslable.protocol.chargingMph
 import com.dzid26.teslable.protocol.chargingStateKind
 import com.tesla.generated.carserver.vehicle.ChargeState
 import kotlinx.coroutines.delay
@@ -434,7 +436,10 @@ private fun heroStatusText(
     return offlineFor?.let { "Disconnected\u00A0$it" } ?: display.status
 }
 
-/** Charge limit · AC voltage and current · charging state, as one quiet line under the hero. */
+/**
+ * "Charging to 80%" while charging, else the charge limit and the charging state, with the AC voltage, current
+ * and speed between them: one quiet line under the hero.
+ */
 @Composable
 private fun ChargeDetails(
     charge: ChargeState?,
@@ -442,11 +447,16 @@ private fun ChargeDetails(
     showSession: Boolean,
 ) {
     if (charge == null) return
+    val charging = charge.chargingStateKind == ChargingStateKind.Charging
     val details =
         buildList {
-            charge.charge_limit_soc?.let { add("Charge limit\u00A0$it%") }
-            chargerElectricalText(charge)?.let { add(it) }
-            charge.chargingStateKind?.let { add(chargingStateText(it)) }
+            val limit = charge.charge_limit_soc
+            when {
+                charging -> add(limit?.let { "Charging to\u00A0$it%" } ?: chargingStateText(ChargingStateKind.Charging))
+                limit != null -> add("Charge limit\u00A0$limit%")
+            }
+            chargerElectricalText(charge, LocalDistanceUnit.current)?.let { add(it) }
+            if (!charging) charge.chargingStateKind?.let { add(chargingStateText(it)) }
             if (showSession) sessionEnergyText(charge.charge_energy_added, pricePerKwh, LocalCurrencyCode.current)?.let { add(it) }
         }
     if (details.isNotEmpty()) {
@@ -459,10 +469,14 @@ private fun ChargeDetails(
 }
 
 /**
- * "240 V · 16/32 A": the charger's voltage, then the actual current over the
- * requested limit. Shown only while charging, and each piece is dropped when the car reports none.
+ * "240V · 16/32A · 32mi/h": the charger's voltage, the actual current over the
+ * requested limit, then the car's charging speed in rated distance per hour. Shown only while
+ * charging, and each piece is dropped when the car reports none.
  */
-private fun chargerElectricalText(charge: ChargeState): String? {
+private fun chargerElectricalText(
+    charge: ChargeState,
+    unit: DistanceUnit,
+): String? {
     // Plugged in but idle, the car can still report the pilot's numbers; only a live charge is worth showing.
     if (charge.chargingStateKind != ChargingStateKind.Charging) return null
     val volts = charge.charger_voltage?.takeIf { it > 0 }
@@ -475,7 +489,8 @@ private fun chargerElectricalText(charge: ChargeState): String? {
             limit != null -> "${limit}A"
             else -> null
         }
-    return listOfNotNull(volts?.let { "${it}V" }, amps).takeIf { it.isNotEmpty() }?.joinToString(" · ")
+    val speed = charge.chargingMph?.let { "${unit.format(it)}/h" }
+    return listOfNotNull(volts?.let { "${it}V" }, amps, speed).takeIf { it.isNotEmpty() }?.joinToString(" · ")
 }
 
 /**

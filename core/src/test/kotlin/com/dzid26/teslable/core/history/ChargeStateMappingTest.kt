@@ -44,6 +44,7 @@ class ChargeStateMappingTest {
                 chargeEnergyAdded = 12.3f,
                 chargeMilesAddedRated = 41.5f,
                 chargerVoltage = 240,
+                chargeRateMph = 32.5f,
             )
         assertEquals(expected, record().toBatterySample("Se1f0941734830fe7C"))
     }
