@@ -4,6 +4,7 @@ import java.util.Properties
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.compose)
+    alias(libs.plugins.ksp)
     alias(libs.plugins.paparazzi)
     alias(libs.plugins.ktlint)
     alias(libs.plugins.detekt)
@@ -205,10 +206,20 @@ android {
         targetCompatibility = JavaVersion.VERSION_17
     }
 
+    testOptions {
+        // The history tests build a Room database on the JVM with a Context stub (ADR-0014).
+        unitTests.isReturnDefaultValues = true
+    }
+
     buildFeatures {
         compose = true
         buildConfig = true
     }
+}
+
+ksp {
+    // The schema is exported so a future migration can be tested against it (ADR-0014).
+    arg("room.schemaLocation", "$projectDir/schemas")
 }
 
 kotlin {
@@ -221,6 +232,8 @@ dependencies {
     implementation(project(":core"))
     implementation(project(":protocol"))
     implementation(libs.androidx.core.ktx)
+    implementation(libs.room.runtime)
+    ksp(libs.room.compiler)
     implementation(libs.androidx.activity.compose)
     implementation(platform(libs.androidx.compose.bom))
     implementation(libs.androidx.compose.ui)
@@ -233,6 +246,7 @@ dependencies {
     testImplementation(libs.junit)
     testImplementation(libs.material.kolor)
     testImplementation(libs.paparazzi)
+    testImplementation(libs.sqlite.bundled.jvm)
 }
 
 // Generated code (BuildConfig, etc.) follows its own conventions. The task
