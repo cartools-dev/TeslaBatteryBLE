@@ -2,6 +2,7 @@
 package com.dzid26.teslable.ui
 
 import android.Manifest
+import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import android.provider.Settings
@@ -59,9 +60,9 @@ internal fun PermissionWizardHost(
     val launcher =
         rememberLauncherForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { results ->
             permissionsGranted = hasBlePermissions(context)
-            deniedStep = if (results.isDenial()) results.keys.toList() else null
+            deniedStep = results.deniedStep()
             deniedForever = deniedStep != null && shouldOpenAppSettings(context)
-            if (permissionsGranted && (results.isOptionalOnly() || missingOnboardingPermissions(context).isEmpty())) {
+            if (results.finishesOnboarding(context)) {
                 wizardOpen = false
                 locationServicesEnabled = isLocationEnabled(context)
                 onGranted()
@@ -154,4 +155,9 @@ private fun PermissionWizardSteps(
 // Notifications are optional: answering that page, either way, ends onboarding.
 private fun Map<String, Boolean>.isOptionalOnly() = keys == setOf(Manifest.permission.POST_NOTIFICATIONS)
 
-private fun Map<String, Boolean>.isDenial() = !isOptionalOnly() && values.any { !it }
+/** The denied step's permissions, or null when nothing the user must fix was denied. */
+private fun Map<String, Boolean>.deniedStep(): List<String>? =
+    keys.toList().takeIf { !isOptionalOnly() && values.any { granted -> !granted } }
+
+private fun Map<String, Boolean>.finishesOnboarding(context: Context) =
+    hasBlePermissions(context) && (isOptionalOnly() || missingOnboardingPermissions(context).isEmpty())
