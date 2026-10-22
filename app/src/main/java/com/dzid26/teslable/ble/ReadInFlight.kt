@@ -3,11 +3,12 @@
 package com.dzid26.teslable.ble
 
 /**
- * Whether an Infotainment read (charge, drive, closures and climate, in sequence) is in
+ * Whether an Infotainment read (charge, drive, closures, climate, then location and tire pressure
+ * when due, in sequence) is in
  * flight for one car, for the spinner on its card. The VCSEC status poll does not count.
  *
  * It turns on when a read request goes out ([onSent]) and off at every exit: a reply that sends
- * no follow-up (the climate reply, a failure, a refusal, a reply without data, or a follow-up
+ * no follow-up (the last reply of the sequence,a failure, a refusal, a reply without data, or a follow-up
  * that could not be sent) via [onReply] with no [onSent] after it, the gate skipping the read
  * because the car is asleep ([onSkipped]), the link dropping ([onLinkDropped]), or no activity
  * for [TIMEOUT_MS] ([expire]), so it can never stay on.

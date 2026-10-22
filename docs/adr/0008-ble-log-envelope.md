@@ -168,6 +168,17 @@ identity), `docs/requirements/multi-phone.md`
   model yet; the derived flags `ClosuresState.sentryOn` and
   `ClimateState.climateOn` in `StateViews.kt` only feed the poll policy and
   the debug log (a change of either).
+- **Location and tire pressure are logged whole too.** `LocationState`
+  (`location_state`, field 12; coordinates, heading and the raw GPS elevation
+  `geo_elevation`, which no other category carries) goes to
+  `<vehicleId>.location.pblog`, and `TirePressureState`
+  (`tire_pressure_state`, field 13) to `<vehicleId>.tire-pressure.pblog`. They
+  are the last follow-ups of a read, after climate, same awake-only,
+  existing-session-only rules: location only when the latest drive reply shows
+  D, R or N (so every 10 s read while driving), tire pressure on the first
+  read after a fresh start and then once 10 minutes have passed
+  (`InfotainmentPollPolicy.wantsLocation` and `wantsTirePressure`). Neither
+  feeds the poll policy, has a read model or reaches the debug log.
 - **Commands and app state** (owner, 2026-10-09). Three more payload kinds
   tell the app's own actions from the owner's and from the car's:
   - `Command` (field 9): one row per request the app sent to the car, raw as

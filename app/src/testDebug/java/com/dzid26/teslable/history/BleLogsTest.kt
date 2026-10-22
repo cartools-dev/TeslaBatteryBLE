@@ -26,6 +26,8 @@ class BleLogsTest {
             ".drive.pblog",
             ".closures.pblog",
             ".climate.pblog",
+            ".location.pblog",
+            ".tire-pressure.pblog",
             ".connection.pblog",
             ".command.pblog",
         )

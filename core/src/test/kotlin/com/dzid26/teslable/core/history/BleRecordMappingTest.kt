@@ -17,7 +17,9 @@ import com.tesla.generated.carserver.vehicle.ChargeState
 import com.tesla.generated.carserver.vehicle.ClimateState
 import com.tesla.generated.carserver.vehicle.ClosuresState
 import com.tesla.generated.carserver.vehicle.DriveState
+import com.tesla.generated.carserver.vehicle.LocationState
 import com.tesla.generated.carserver.vehicle.ShiftState
+import com.tesla.generated.carserver.vehicle.TirePressureState
 import com.tesla.generated.universalmessage.Destination
 import com.tesla.generated.universalmessage.Domain
 import com.tesla.generated.universalmessage.MessageFault_E
@@ -114,6 +116,24 @@ class BleRecordMappingTest {
         assertEquals(9 shl 3 or lengthDelimited, tag(BleRecord(command = Command(reason = Command.Reason.USER_WAKE))))
         assertEquals(10 shl 3 or lengthDelimited, tag(BleRecord(command_result = CommandResult(timed_out = true))))
         assertEquals(11 shl 3 or lengthDelimited, tag(BleRecord(app_state = AppState(event = AppState.Event.SCREEN_ON))))
+        // Location and tire pressure took the next two.
+        assertEquals(12 shl 3 or lengthDelimited, tag(BleRecord(location_state = LocationState())))
+        assertEquals(13 shl 3 or lengthDelimited, tag(BleRecord(tire_pressure_state = TirePressureState())))
+    }
+
+    @Test
+    fun `location and tire pressure records round-trip through the log codec whole`() {
+        val location = LocationState(latitude = 52.25f, longitude = 21.0f, geo_elevation = 112.5f)
+        val tires = TirePressureState(tpms_pressure_fl = 2.9f)
+        val records =
+            listOf(
+                BleRecord(device_timestamp = ofEpochSecond(4_001, 0), rssi = -61, location_state = location),
+                BleRecord(device_timestamp = ofEpochSecond(4_002, 0), rssi = -62, tire_pressure_state = tires),
+            )
+        val decoded = ProtoLog.decode(ProtoLog.encode(records), BleRecord.ADAPTER)
+        assertEquals(records, decoded)
+        assertEquals(location, decoded[0].location_state)
+        assertEquals(tires, decoded[1].tire_pressure_state)
     }
 
     @Test

@@ -11,7 +11,9 @@ import com.tesla.generated.vcsec.ClosureStatuses
 import com.tesla.generated.vcsec.VehicleStatus
 
 /**
- * When to ask the car for its Infotainment state (charge, drive, closures and climate).
+ * When to ask the car for its Infotainment state (charge, drive, closures and climate; plus location
+ * while driving and tire pressure every [TIRE_PRESSURE_INTERVAL_MS], see [wantsLocation] and
+ * [wantsTirePressure]).
  *
  * Any Infotainment request restarts the car's own sleep countdown (about 10 minutes), so polling it
  * while the car is merely awake keeps it awake (ADR-0009, issue #112). VCSEC status does not, and
@@ -65,6 +67,7 @@ class InfotainmentPollPolicy {
 
     private var lastReadAtMs: Long? = null
     private var lastChangeAtMs: Long? = null
+    private var lastTirePressureAtMs: Long? = null
     private var userPresent = false
     private var started = false
     private var charging = false
@@ -91,6 +94,7 @@ class InfotainmentPollPolicy {
     fun onFreshStart(nowMillis: Long) {
         started = true
         lastReadAtMs = null
+        lastTirePressureAtMs = null
         charging = false
         driving = false
         sentry = false
@@ -137,6 +141,24 @@ class InfotainmentPollPolicy {
     /** The latest climate reading. Climate on, or a climate keeper mode, is activity. */
     fun onClimateReading(climateOn: Boolean) {
         climate = climateOn
+    }
+
+    /** Whether the location read follows the climate reply: every read while driving, never otherwise. */
+    fun wantsLocation(): Boolean = driving
+
+    /**
+     * Whether the tire pressure read follows now: the first one after a fresh start, then once
+     * [TIRE_PRESSURE_INTERVAL_MS] has passed since the last one. Pressures change slowly, so most
+     * reads skip it.
+     */
+    fun wantsTirePressure(nowMillis: Long): Boolean {
+        val last = lastTirePressureAtMs ?: return true
+        return nowMillis - last >= TIRE_PRESSURE_INTERVAL_MS - DUE_SLACK_MS
+    }
+
+    /** The tire pressure read went out at [nowMillis]. */
+    fun onTirePressureRequested(nowMillis: Long) {
+        lastTirePressureAtMs = nowMillis
     }
 
     /**
@@ -229,6 +251,9 @@ class InfotainmentPollPolicy {
          * car that would sleep is asleep by then and is never kept awake by it. Tuned from the real-car check.
          */
         const val IDLE_SAFETY_INTERVAL_MS = 1_200_000L
+
+        /** Between tire pressure reads: they follow a read only when this much time has passed. */
+        const val TIRE_PRESSURE_INTERVAL_MS = 600_000L
 
         /**
          * VCSEC statuses arrive about every 10 s give or take a few ms, so a read is due slightly

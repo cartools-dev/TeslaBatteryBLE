@@ -539,7 +539,29 @@ class InfotainmentPollPolicyTest {
         assertEquals(InfotainmentPollPolicy.Reason.FRESH_START, policy.lastReadReason)
     }
 
+    @Test
+    fun locationIsWantedOnlyWhileDriving() {
+        freshStartAndFirstRead()
+        assertFalse(policy.wantsLocation())
+        policy.onDriveReading(ShiftStateKind.D)
+        assertTrue(policy.wantsLocation())
+        policy.onDriveReading(ShiftStateKind.P)
+        assertFalse(policy.wantsLocation())
+    }
+
+    @Test
+    fun tirePressureIsWantedAfterAFreshStartThenEveryTenMinutes() {
+        policy.onFreshStart(now)
+        assertTrue(policy.wantsTirePressure(now))
+        policy.onTirePressureRequested(now)
+        assertFalse(policy.wantsTirePressure(now + TIRES - TICK))
+        assertTrue(policy.wantsTirePressure(now + TIRES))
+        policy.onFreshStart(now + 1)
+        assertTrue(policy.wantsTirePressure(now + 1), "a fresh start reads it again")
+    }
+
     private companion object {
+        const val TIRES = InfotainmentPollPolicy.TIRE_PRESSURE_INTERVAL_MS
         const val TICK = 10_000L
         const val HOLD_PRESENT = InfotainmentPollPolicy.HOLD_PRESENT_MS
         const val SAFETY = InfotainmentPollPolicy.IDLE_SAFETY_INTERVAL_MS
