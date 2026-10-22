@@ -43,6 +43,7 @@ Four AC sessions from one car's own logs (single phase, IEC cable, 8–10 A at 2
 
 - `charger_power` is an integer kW and truncates: 1.79 kW (8 A) reads 1, 2.02 kW (9 A) reads 2, 2.22 kW (10 A) reads 2. Integrating it under-counts by up to 1 kW per sample (ratios 1.07–1.49), so it cannot stand in for energy at these power levels.
 - Voltage × current (× phases) reproduces it: it is the AC power at the port, not battery-side power. Integrated, it exceeds `charge_energy_added` by 1–10 % (4.6 % over all four sessions, a floor: the skipped gaps lower the integral), so the charger's loss is roughly 5 % and `charge_energy_added` is measured after it, consistent with the AC note above.
+- Counters on the battery side of the charger: `charge_miles_added_rated` and `charge_rate_mph_float` follow `charge_energy_added`, so they are post-loss. Energy added over rated miles added was a steady 0.245 kWh/mi in all four sessions (0.2450–0.2468). `charge_rate_mph_float` has fine resolution (e.g. 7.61 mph) and integrates to 91–99 % of the session's rated miles added, so times that constant it is a smooth battery-side power in kW. Not compared sample by sample with V×I. The charge state has no instantaneous battery-side power field; `DriveState.power` is the signed traction power and was not checked while charging.
 - Not checked: DC charging (no session in the logs), three-phase (`charger_phases` was always 1).
 
 ### c) Coulomb counting (why BLE can't do it)
