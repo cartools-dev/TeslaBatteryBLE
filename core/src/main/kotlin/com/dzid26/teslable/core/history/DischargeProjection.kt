@@ -22,18 +22,18 @@ data class DischargeProjection(
     val fromSoc: Float = from.batteryLevel.toFloat(),
     /** The unrounded level one horizon ahead; [projectedPercent] is this, rounded. */
     val projectedSoc: Float = projectedPercent.toFloat(),
-    /** The lower edge of the beam at the horizon: two standard errors of the rate; null when the fit is too thin. */
-    val lowSoc: Float? = null,
-    /** The upper edge of the beam at the horizon; null like [lowSoc]. */
-    val highSoc: Float? = null,
+    /** The lowest percent expected at the projection date: two standard errors of the rate; null when the fit is too thin. */
+    val minSoc: Float? = null,
+    /** The highest percent expected at the projection date; null like [minSoc]. */
+    val maxSoc: Float? = null,
     /** The mixed rate (asleep and awake pairs together), percent per hour, when [percentPerHour] is the deep-sleep rate; else null. */
     val mixedPercentPerHour: Double? = null,
 ) {
     /** The beam's two edges together; null when the fit is too thin for one. */
     val beam: Pair<Float, Float>?
         get() {
-            val low = lowSoc ?: return null
-            val high = highSoc ?: return null
+            val low = minSoc ?: return null
+            val high = maxSoc ?: return null
             return low to high
         }
 }
@@ -120,8 +120,8 @@ fun dischargeProjection(
         percentPerHour = mainRate * HOUR,
         fromSoc = fromSoc,
         projectedSoc = projectedSoc,
-        lowSoc = if (hasBeam) low.coerceIn(0f, FULL_PERCENT) else null,
-        highSoc = if (hasBeam) high.coerceIn(0f, minOf(fromSoc, FULL_PERCENT)) else null,
+        minSoc = if (hasBeam) low.coerceIn(0f, FULL_PERCENT) else null,
+        maxSoc = if (hasBeam) high.coerceIn(0f, minOf(fromSoc, FULL_PERCENT)) else null,
         mixedPercentPerHour = if (sleepRate != null) mixedRate * HOUR else null,
     )
 }

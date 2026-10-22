@@ -252,7 +252,7 @@ internal fun yBounds(
     charge: ChargeProjection?,
     discharge: DischargeProjection?,
 ): Pair<Int, Int> {
-    val minPercent = minOf(socs.min(), discharge?.let { it.lowSoc ?: it.projectedSoc } ?: PERCENT_FULL)
+    val minPercent = minOf(socs.min(), discharge?.let { it.minSoc ?: it.projectedSoc } ?: PERCENT_FULL)
     val maxPercent = maxOf(socs.max(), (charge?.targetPercent ?: 0).toFloat())
     val yMin = ((minPercent - Y_MARGIN).toInt().coerceAtLeast(0) / AXIS_ROUND) * AXIS_ROUND
     val yMax = (((maxPercent + Y_MARGIN).toInt().coerceAtMost(PERCENT_FULL.toInt()) + AXIS_ROUND - 1) / AXIS_ROUND) * AXIS_ROUND

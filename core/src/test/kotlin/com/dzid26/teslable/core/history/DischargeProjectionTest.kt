@@ -229,12 +229,12 @@ class DischargeProjectionTest {
                 ranged(360, 80, 238.8f),
             )
         val twoPairs = steady.take(3)
-        assertNull(assertNotNull(project(twoPairs, context = ProjectionContext(scale = scale), rangeMillis = 24 * HOUR)).lowSoc)
+        assertNull(assertNotNull(project(twoPairs, context = ProjectionContext(scale = scale), rangeMillis = 24 * HOUR)).minSoc)
 
         val tidy = assertNotNull(project(steady, context = ProjectionContext(scale = scale), rangeMillis = 24 * HOUR))
         val loose = assertNotNull(project(noisy, context = ProjectionContext(scale = scale), rangeMillis = 24 * HOUR))
-        val tidyWidth = tidy.highSoc!! - tidy.lowSoc!!
-        val looseWidth = loose.highSoc!! - loose.lowSoc!!
+        val tidyWidth = tidy.maxSoc!! - tidy.minSoc!!
+        val looseWidth = loose.maxSoc!! - loose.minSoc!!
         assertEquals(true, tidyWidth > 0f)
         assertEquals(true, looseWidth > tidyWidth)
     }
@@ -261,7 +261,7 @@ class DischargeProjectionTest {
         assertEquals(5.0 / 6.0, projection.mixedPercentPerHour!!, 1e-9)
         // 12 h at 0.5 %/h from 75 is 69; the beam's lower edge reaches the mixed line, 65.
         assertEquals(69f, projection.projectedSoc, 0.01f)
-        assertTrue(projection.lowSoc!! <= 65f)
+        assertTrue(projection.minSoc!! <= 65f)
         // A single slept-through pair is not enough to call a rate.
         val one = listOf(sample(0, 80), sample(120, 79), sample(240, 76))
         val oneAsleep = listOf(status(60, asleep = true), status(180, asleep = false))

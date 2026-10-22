@@ -36,8 +36,8 @@ internal fun dischargeProjected(
     val from = TimePoint(target.from.timestampMillis, target.fromSoc)
     val end = TimePoint(target.projectedAtMillis, target.projectedSoc)
     val spec = projectionSpec(SeriesKind.DISCHARGE_PROJECTION, from, end, window)
-    val low = target.lowSoc
-    val high = target.highSoc
+    val low = target.minSoc
+    val high = target.maxSoc
     val beam =
         if (low != null && high != null) {
             Beam(
