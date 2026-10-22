@@ -91,8 +91,6 @@ data class ChargeStats(
     /** The displayed whole-percent levels, the fallback for the percent figures. */
     val chargeLevel: Int,
     val currentLevel: Int,
-    /** Points the displayed level sat above the usable one when the charge ended; 0 when the car sent no usable level. */
-    val chargeHeldBack: Int = 0,
     /** The car's `charge_energy_added` on the newest charging sample: the kWh that session added; null when it reported none. */
     val energyKwh: Float? = null,
 ) {
@@ -100,11 +98,8 @@ data class ChargeStats(
     val usedMiles: Float?
         get() = if (chargeMiles != null && currentMiles != null) (chargeMiles - currentMiles).coerceAtLeast(0f) else null
 
-    /**
-     * The level the charge ended at, in percent: sub-percent with a pinned [scale], else the whole level. It stands
-     * for the displayed level: the scale reads the usable one, so the held-back points are added back.
-     */
-    fun chargePercent(scale: FullRangeScale?): Float = scale?.socPercent(chargeMiles)?.plus(chargeHeldBack) ?: chargeLevel.toFloat()
+    /** The level the charge ended at, in percent: sub-percent with a pinned [scale], else the whole level. */
+    fun chargePercent(scale: FullRangeScale?): Float = scale?.socPercent(chargeMiles) ?: chargeLevel.toFloat()
 
     fun currentPercent(scale: FullRangeScale?): Float = scale?.socPercent(currentMiles) ?: currentLevel.toFloat()
 
@@ -139,7 +134,6 @@ fun chargeStats(samples: List<BatterySample>): ChargeStats? {
         currentMiles = newest.ratedRangeMiles,
         chargeLevel = charged.batteryLevel,
         currentLevel = newest.batteryLevel,
-        chargeHeldBack = charged.batteryLevel - charged.usableLevel,
         energyKwh = charged.chargeEnergyAdded?.takeIf { it > 0f },
     )
 }

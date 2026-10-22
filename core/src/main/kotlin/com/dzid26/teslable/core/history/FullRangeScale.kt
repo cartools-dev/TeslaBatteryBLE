@@ -179,12 +179,11 @@ object FullRangeScaleEstimator {
 }
 
 /**
- * The sample's SOC for plotting and stats: sub-percent from the fitted [scale] when it is pinned, else the integer level.
- * It stands for the displayed level. The scale reads the usable one, which a cold battery lowers for a while, so the
- * held-back points are added back and a cold morning does not read as a drain.
+ * The sample's SOC for plotting: sub-percent from the fitted [scale] when it is pinned, else the integer level. The
+ * scale reads the usable level, so a cold battery's held-back share lowers it. Adding the whole-point gap between the
+ * displayed and usable levels back would step the line by a point wherever the two roundings disagree.
  */
-fun BatterySample.soc(scale: FullRangeScale?): Float =
-    scale?.socPercent(ratedRangeMiles)?.plus(batteryLevel - usableLevel) ?: batteryLevel.toFloat()
+fun BatterySample.soc(scale: FullRangeScale?): Float = scale?.socPercent(ratedRangeMiles) ?: batteryLevel.toFloat()
 
 /** The shared error of the levels read through [this] scale; null without a pinned one, which reads the integer level instead. */
 fun FullRangeScale?.levelScaleError(): Double? = this?.takeIf { it.pinned }?.relativeError

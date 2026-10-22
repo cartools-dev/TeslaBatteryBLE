@@ -58,22 +58,18 @@ class FullRangeScaleTest {
     }
 
     @Test
-    fun `a cold battery does not move the scale or the plotted soc`() {
-        // The car holds back one point below 14 degrees: the range follows the usable level, the display does not.
+    fun `a cold battery does not move the scale or step the plotted soc`() {
+        // The car holds back one point while cold: the range follows the usable level, the display does not.
         val cold =
             climb(270f, 0f, 40.1f, 70f) { it.roundToInt() }.map {
-                it.copy(
-                    usableLevel = it.batteryLevel - 1,
-                    ratedRangeMiles =
-                        it.ratedRangeMiles!! - 2.7f,
-                )
+                it.copy(usableLevel = it.batteryLevel - 1, ratedRangeMiles = it.ratedRangeMiles!! - 2.7f)
             }
         val scale = FullRangeScaleEstimator.estimate(cold)!!
         assertEquals(2.7f, scale.milesPerPercent, 0.015f)
         assertEquals(0f, scale.offsetMiles, 0.5f)
-        val sample = cold.first { it.batteryLevel == 55 }
-        assertEquals(1, sample.batteryLevel - sample.usableLevel)
-        assertEquals(55f, sample.soc(scale), 0.5f)
+        // The plotted line is smooth: neighbouring samples differ by their own range step, not by a point.
+        val socs = cold.map { it.soc(scale) }
+        assertTrue(socs.zipWithNext().all { (a, b) -> kotlin.math.abs(b - a) < 0.5f })
     }
 
     @Test
