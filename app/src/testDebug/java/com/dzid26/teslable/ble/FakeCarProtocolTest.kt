@@ -36,7 +36,7 @@ import org.junit.Test
  * production parsers.
  */
 class FakeCarProtocolTest {
-    private val vin = "5YJ3DEMO000000001"
+    private val vin = "5YJ3DEMO0P0000001"
     private val client = TeslaKeys.generate()
     private val protocol = FakeCarProtocol(vin)
 

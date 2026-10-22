@@ -97,6 +97,7 @@ import com.dzid26.teslable.core.history.socTenths
 import com.dzid26.teslable.core.history.statusDurations
 import com.dzid26.teslable.core.history.within
 import com.dzid26.teslable.core.units.DistanceUnit
+import com.dzid26.teslable.core.vehicle.decodeVin
 import com.dzid26.teslable.health.healthSummary
 import com.dzid26.teslable.history.FullRangeScales
 import com.dzid26.teslable.protocol.ChargingStateKind
@@ -201,7 +202,11 @@ internal fun CarScreen(
                     }
                 },
                 title = {
-                    Text(vehicle?.title ?: connection?.gattDeviceName ?: advert?.name ?: "Car")
+                    val vinLabel = remember(vehicle?.vin) { vehicle?.vin?.let(::decodeVin)?.label }
+                    Column {
+                        Text(vehicle?.title ?: connection?.gattDeviceName ?: advert?.name ?: "Car")
+                        vinLabel?.let { Text(it, style = MaterialTheme.typography.bodyMedium) }
+                    }
                 },
                 actions = {
                     TrackingToggle(
