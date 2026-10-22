@@ -163,8 +163,11 @@ android {
     buildTypes {
         debug {
             // Every build shares the stable signing identity, so preview,
-            // release and local builds update each other in place.
-            signingConfigs.findByName("release")?.let { signingConfig = it }
+            // release and local builds update each other in place. PR builds
+            // (-PciDebugBuild=true) keep the debug key instead: CI signs them with
+            // the shared CI debug key, and a local PR build only updates a CI one
+            // when ~/.android/debug.keystore holds that same key.
+            if (!ciDebugBuild) signingConfigs.findByName("release")?.let { signingConfig = it }
             if (ciDebugBuild) {
                 applicationIdSuffix = ".pr"
                 manifestPlaceholders["appLabel"] = "TeslaBatteryBLE PR$ciPrNumber"
