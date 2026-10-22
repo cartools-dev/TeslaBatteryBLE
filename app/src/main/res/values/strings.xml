@@ -50,7 +50,8 @@
     <string name="wizard_denied_forever">Android will not show the permission dialog again. Open app settings to allow it.</string>
     <string name="wizard_denied">Permission denied. You can try again.</string>
     <string name="wizard_not_now">Not now</string>
-    <string name="wizard_title">Set up Bluetooth</string>
+    <string name="wizard_skip">Skip</string>
+    <string name="wizard_title">Set up</string>
     <string name="wizard_intro">TeslaBatteryBLE talks to your Tesla directly over Bluetooth. A few permissions are needed first; each one is explained as we go.</string>
     <string name="wizard_get_started">Get started</string>
     <string name="wizard_open_settings">Open app settings</string>

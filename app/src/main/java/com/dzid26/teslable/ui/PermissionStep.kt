@@ -14,6 +14,7 @@ data class PermissionStep(
     val permissions: List<String>,
     @StringRes val title: Int,
     @StringRes val why: Int,
+    val optional: Boolean = false,
 )
 
 private val NEARBY_DEVICES =
@@ -41,6 +42,7 @@ fun permissionSteps(permissions: List<String>): List<PermissionStep> =
                     permissions = listOf(Manifest.permission.POST_NOTIFICATIONS),
                     title = R.string.perm_notifications_title,
                     why = R.string.perm_notifications_why,
+                    optional = true,
                 ),
             )
         }

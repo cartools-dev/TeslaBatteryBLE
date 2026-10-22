@@ -126,14 +126,16 @@ fun PermissionWizardPage(
             )
         }
         Spacer(Modifier.weight(1f))
-        StepDots(index = index, total = total)
-        Spacer(Modifier.height(12.dp))
-        Text(
-            text = stringResource(R.string.wizard_step_counter, index + 1, total),
-            style = MaterialTheme.typography.labelMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-        Spacer(Modifier.height(24.dp))
+        if (total > 1) {
+            StepDots(index = index, total = total)
+            Spacer(Modifier.height(12.dp))
+            Text(
+                text = stringResource(R.string.wizard_step_counter, index + 1, total),
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            Spacer(Modifier.height(24.dp))
+        }
         Button(
             onClick = onAllow,
             modifier = Modifier.fillMaxWidth().height(52.dp),
@@ -150,7 +152,7 @@ fun PermissionWizardPage(
             onClick = onDismiss,
             modifier = Modifier.fillMaxWidth(),
         ) {
-            Text(stringResource(R.string.wizard_not_now))
+            Text(stringResource(if (step.optional) R.string.wizard_skip else R.string.wizard_not_now))
         }
     }
 }
