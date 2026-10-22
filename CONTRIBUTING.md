@@ -65,7 +65,9 @@ artifact).
 1. Download the zip from the PR's screenshot comment, or from the Android CI run
    on the PR's **Checks** page (GitHub sign-in needed), and install the APK inside.
 2. It installs next to the release app as **TeslaBatteryBLE PR**
-   (`com.dzid26.teslable.pr`), with its own data.
+   (`com.dzid26.teslable.pr`), with its own data. Its notifications carry a
+   "[PR n]" title prefix, a "PR n" subtext and a hollow battery icon, so they
+   read apart from the release app's.
 3. It needs its own pairing: one key-card tap, and it takes its own key slot on
    the car.
 4. Unless the repository has the shared CI debug key below, every run signs with

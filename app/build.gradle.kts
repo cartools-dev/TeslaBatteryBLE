@@ -132,6 +132,8 @@ android {
             "DEMO_CAR",
             (project.findProperty("demoCar") as String?) ?: "false",
         )
+        // Short tag for notifications of CI debug builds ("PR 332"); empty elsewhere.
+        buildConfigField("String", "BUILD_LABEL", "\"\"")
         // android:label in the manifest; CI debug builds override it below.
         manifestPlaceholders["appLabel"] = "@string/app_name"
     }
@@ -166,6 +168,7 @@ android {
             if (ciDebugBuild) {
                 applicationIdSuffix = ".pr"
                 manifestPlaceholders["appLabel"] = "TeslaBatteryBLE PR$ciPrNumber"
+                buildConfigField("String", "BUILD_LABEL", "\"${if (ciPrNumber.isEmpty()) "PR build" else "PR $ciPrNumber"}\"")
             }
         }
         release {
