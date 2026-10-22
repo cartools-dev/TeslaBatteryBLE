@@ -10,7 +10,7 @@ import com.dzid26.teslable.BuildConfig
  * and always use the real GATT transport.
  */
 object DemoMode {
-    const val DEMO_VIN = "5YJ3DEMO000000001"
+    const val DEMO_VIN = "5YJ3DEMO0P0000001"
     const val DEMO_ADDRESS = "AA:BB:CC:DD:EE:01"
     const val OTHER_ADDRESS = "AA:BB:CC:DD:EE:02"
 
