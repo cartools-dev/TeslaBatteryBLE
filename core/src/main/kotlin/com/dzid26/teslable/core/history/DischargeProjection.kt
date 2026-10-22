@@ -182,20 +182,21 @@ private fun parkedDrain(
 ): ParkedDrain {
     val drops = mutableListOf<Double>()
     val spans = mutableListOf<Long>()
+    val quiet = mutableListOf<Boolean>()
     val readings = driveReadingsAt(samples, drives)
     for (index in 1 until samples.size) {
         val a = samples[index - 1]
         val b = samples[index]
         val readingA = readings[index - 1]
         val readingB = readings[index]
-        if (stayedParked(readingA, readingB) && !a.isCharging && !b.isCharging) {
+        if (parkedBetween(a, b, readingA, readingB)) {
             drops += (a.soc(scale) - b.soc(scale)).toDouble()
             spans += b.timestampMillis - a.timestampMillis
+            quiet += unattendedBetween(a, b, statuses)
         }
     }
     val drop = drops.sum()
     val millis = spans.sum()
-    val sleepDrops = deepSleeps(samples, drives, statuses, scale).mapNotNull { it.drop }
     if (millis <= 0L) return ParkedDrain(drop, millis, drops.size, 0.0)
     val rate = drop / millis
     var squared = 0.0
@@ -215,11 +216,9 @@ private fun parkedDrain(
         squared,
         rounding,
         SleepSpan(
-            sleepDrops.sumOf {
-                it.percent
-            },
-            sleepDrops.sumOf { it.spanMillis },
-            sleepDrops.size,
+            drops.filterIndexed { index, _ -> quiet[index] }.sum(),
+            spans.filterIndexed { index, _ -> quiet[index] }.sum(),
+            quiet.count { it },
         ),
     )
 }

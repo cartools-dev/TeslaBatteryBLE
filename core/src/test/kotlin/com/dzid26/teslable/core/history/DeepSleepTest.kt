@@ -68,11 +68,11 @@ class DeepSleepTest {
     }
 
     @Test
-    fun `a hole between asleep readings is bridged`() {
-        val statuses = asleepFor(0, 100, wake = false) + asleepFor(400, 420)
+    fun `a hole between asleep readings splits the run`() {
+        val statuses = asleepFor(0, 100, wake = false) + asleepFor(400, 560)
         val sleep = assertNotNull(longestDeepSleep(emptyList(), emptyList(), statuses))
-        assertEquals(0L, sleep.startMillis)
-        assertEquals(425 * MINUTE, sleep.endMillis)
+        assertEquals(400 * MINUTE, sleep.startMillis)
+        assertEquals(565 * MINUTE, sleep.endMillis)
     }
 
     @Test

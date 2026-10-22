@@ -9,8 +9,10 @@ import com.dzid26.teslable.core.health.chargeSessions
 import com.dzid26.teslable.core.history.BatterySample
 import com.dzid26.teslable.core.history.DeepSleep
 import com.dzid26.teslable.core.history.DriveSample
+import com.dzid26.teslable.core.history.ParkedSpan
 import com.dzid26.teslable.core.history.StatusSample
 import com.dzid26.teslable.core.history.longestDeepSleep
+import com.dzid26.teslable.core.history.longestParked
 import com.dzid26.teslable.history.FullRangeScales
 import kotlin.math.roundToInt
 
@@ -45,6 +47,8 @@ data class HealthSummary(
     val qualityNote: String?,
     /** The longest stretch the car slept through in the logs, by the parked projection's definition; null when none. */
     val longestSleep: DeepSleep? = null,
+    /** The longest stretch the car sat parked (odometer unchanged, not charged), holes in the reads included; null when none. */
+    val longestParked: ParkedSpan? = null,
 )
 
 /**
@@ -111,6 +115,7 @@ fun healthSummary(
         confidence = confidenceFor(sessions.size),
         qualityNote = qualityNote(backboneSession ?: energySession ?: lastSession),
         longestSleep = longestDeepSleep(samples, drives, statuses, scale),
+        longestParked = longestParked(samples, drives, scale),
     )
 }
 

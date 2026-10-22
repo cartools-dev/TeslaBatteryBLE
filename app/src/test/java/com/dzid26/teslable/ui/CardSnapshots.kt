@@ -30,6 +30,7 @@ import com.dzid26.teslable.core.history.DeepSleep
 import com.dzid26.teslable.core.history.DriveSample
 import com.dzid26.teslable.core.history.DriveWindow
 import com.dzid26.teslable.core.history.HistoryRange
+import com.dzid26.teslable.core.history.ParkedSpan
 import com.dzid26.teslable.core.history.RouteSample
 import com.dzid26.teslable.core.history.SleepDrop
 import com.dzid26.teslable.core.history.StatusSample
@@ -457,9 +458,9 @@ class CardSnapshots {
 
     @Test
     fun historyCardParkedSleep() {
-        // Three short awake bursts (a read every 20 min, about 1 %/h) with the car asleep
-        // between them (a status inside each gap): the line follows the mixed rate, the text
-        // adds the gentler asleep rate, and the beam's upper edge reaches the asleep line.
+        // Three short attended bursts (a read every 20 min, about 1 %/h) with the car locked and alone
+        // between them (no unlocked or present status inside a gap): the line follows the sleep rate, the text
+        // adds the mixed rate, and the beam reaches down to the mixed line.
         snapCard("history-card_parked-sleep") {
             BatteryHistoryCard(
                 samples = sleepParkedSamples,
@@ -835,16 +836,25 @@ class CardSnapshots {
                     }
             }
 
+        // Someone at the car (unlocked, present) mid-way through each awake burst; locked and alone in the gaps,
+        // with a heartbeat reading every quarter hour. The gaps are the sleep the dashed line follows.
         private val sleepStatuses =
-            sleepBursts.dropLast(1).zip(sleepBursts.drop(1)).map { (from, to) ->
-                StatusSample(
-                    timestampMillis = NOW - ((from - 40 + to) / 2) * MINUTE,
-                    vehicleId = BLE_NAME,
-                    asleep = true,
-                    userPresent = false,
-                    locked = true,
-                )
+            sleepBursts.dropLast(1).zip(sleepBursts.drop(1)).flatMap { (from, to) ->
+                val attended = listOf(from - 10, from - 30).map { sleepStatus(it, attended = true) }
+                val alone = generateSequence(from - 55) { it - 15 }.takeWhile { it > to + 5 }.map { sleepStatus(it, attended = false) }
+                attended + alone.toList()
             }
+
+        private fun sleepStatus(
+            minutesAgo: Long,
+            attended: Boolean,
+        ) = StatusSample(
+            timestampMillis = NOW - minutesAgo * MINUTE,
+            vehicleId = BLE_NAME,
+            asleep = !attended,
+            userPresent = attended,
+            locked = !attended,
+        )
 
         // 21 h parked, 68 -> 66.6 % (about 1.6 %/day), a read every 20 min.
         private val rangeParkedSamples =
@@ -942,6 +952,8 @@ class CardSnapshots {
                 fullRangeSteps = 42,
                 confidence = HealthConfidence.MEDIUM,
                 qualityNote = null,
+                // 28 h parked, 1.1 points lost.
+                longestParked = ParkedSpan(startMillis = NOW - 40 * HOUR, endMillis = NOW - 12 * HOUR, dropPercent = 1.1),
                 // 9 h 25 min, overnight two days back.
                 longestSleep =
                     DeepSleep(
