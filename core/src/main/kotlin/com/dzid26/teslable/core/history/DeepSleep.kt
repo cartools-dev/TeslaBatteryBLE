@@ -3,15 +3,19 @@
 package com.dzid26.teslable.core.history
 
 /**
- * What the battery lost while parked around a sleep: [percent] points over [spanMillis] between the two reads that
- * bracket it. With [ceiling] the reads lie far from the sleep, so the span holds awake time too and the rate
- * is an upper bound on the sleep's own.
+ * What the battery lost while parked around a sleep: from [fromPercent] to [toPercent] over [spanMillis], between
+ * the two reads that bracket it. With [ceiling] the reads lie far from the sleep, so the span holds awake time too
+ * and the rate is an upper bound on the sleep's own.
  */
 data class SleepDrop(
-    val percent: Double,
+    val fromPercent: Double,
+    val toPercent: Double,
     val spanMillis: Long,
     val ceiling: Boolean = false,
-)
+) {
+    /** The points lost, negative when the level rose. */
+    val percent: Double get() = fromPercent - toPercent
+}
 
 /**
  * One deep sleep: the status log first said asleep at [startMillis] and said awake (or was last heard asleep)
@@ -106,7 +110,7 @@ private fun dropAround(
     val b = samples[after]
     val readings = driveReadingsAt(listOf(a, b), parkedDrives)
     val close = sleep.startMillis - readAt(a) <= DROP_SLACK_MILLIS && readAt(b) - sleep.endMillis <= DROP_SLACK_MILLIS
-    return SleepDrop((a.soc(scale) - b.soc(scale)).toDouble(), readAt(b) - readAt(a), ceiling = !close)
+    return SleepDrop(a.soc(scale).toDouble(), b.soc(scale).toDouble(), readAt(b) - readAt(a), ceiling = !close)
         .takeIf { parkedBetween(a, b, readings[0], readings[1]) }
 }
 

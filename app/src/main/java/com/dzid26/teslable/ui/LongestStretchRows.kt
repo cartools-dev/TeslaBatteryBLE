@@ -14,7 +14,9 @@ import androidx.compose.ui.platform.LocalLocale
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.dzid26.teslable.R
+import com.dzid26.teslable.core.history.DeepSleep
 import com.dzid26.teslable.core.history.RestStats
+import com.dzid26.teslable.core.history.SleepDrop
 import com.dzid26.teslable.core.history.compactDuration
 import kotlin.math.roundToInt
 
@@ -35,6 +37,7 @@ internal fun LongestStretchRows(rest: RestStats) {
             Stretch(R.string.health_deep_sleep_term, R.string.health_deep_sleep_hint, it.startMillis, it.endMillis),
             it.percentPerHour,
             ceiling = it.drop?.ceiling == true,
+            drainTip = it.drop?.let { drop -> drainTip(it, drop) },
         )
     }
 }
@@ -52,6 +55,7 @@ private fun LongestStretchRow(
     stretch: Stretch,
     perHour: Double?,
     ceiling: Boolean = false,
+    drainTip: String? = null,
 ) {
     val is24Hour = LocalIs24Hour.current ?: DateFormat.is24HourFormat(LocalContext.current)
     EstimateRow(
@@ -68,8 +72,24 @@ private fun LongestStretchRow(
         },
         value = compactDuration(stretch.endMillis - stretch.startMillis).orEmpty(),
         detail = stringResource(R.string.health_ended, formatTime(stretch.endMillis, showDate = true, is24Hour = is24Hour)),
-        detailBold = drainLabel(perHour, ceiling),
+        figure = drainLabel(perHour, ceiling)?.let { Figure(it, drainTip) },
         valueTip = stringResource(R.string.health_started, formatTime(stretch.startMillis, showDate = true, is24Hour = is24Hour)),
+    )
+}
+
+/** Where a deep sleep's drain figure comes from: the two levels, the span between them and how much of it was not deep sleep. */
+@Composable
+private fun drainTip(
+    sleep: DeepSleep,
+    drop: SleepDrop,
+): String {
+    val locale = LocalLocale.current.platformLocale
+    return stringResource(
+        R.string.health_drain_hint,
+        "%.1f".format(locale, drop.fromPercent),
+        "%.1f".format(locale, drop.toPercent),
+        compactDuration(drop.spanMillis).orEmpty(),
+        compactDuration((drop.spanMillis - sleep.durationMillis).coerceAtLeast(0L)).orEmpty(),
     )
 }
 

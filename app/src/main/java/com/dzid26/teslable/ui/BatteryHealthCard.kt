@@ -135,12 +135,35 @@ private fun boldPart(
 @Composable
 internal fun LabelText(text: String) = Text(text, style = MaterialTheme.typography.bodySmall)
 
+/** A figure closing a row's detail line, in bold; with a [tip] it is underlined and explains itself on a tap. */
+internal class Figure(
+    val text: String,
+    val tip: String? = null,
+)
+
+@Composable
+private fun DetailLine(
+    detail: String,
+    figure: Figure?,
+) {
+    val style = MaterialTheme.typography.labelSmall
+    val color = MaterialTheme.colorScheme.onSurfaceVariant
+    if (figure?.tip == null) {
+        Text(text = boldPart(detail, figure?.text), style = style, color = color)
+    } else {
+        Row {
+            Text(text = "$detail \u00B7 ", style = style, color = color)
+            HintText(figure.text, figure.tip, color, style = style.copy(fontWeight = FontWeight.Bold))
+        }
+    }
+}
+
 @Composable
 internal fun EstimateRow(
     label: @Composable () -> Unit,
     value: String,
     detail: String,
-    detailBold: String? = null,
+    figure: Figure? = null,
     valueTip: String? = null,
 ) {
     Row(
@@ -152,11 +175,7 @@ internal fun EstimateRow(
     ) {
         Column(Modifier.weight(1f)) {
             label()
-            Text(
-                text = boldPart(detail, detailBold),
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
+            DetailLine(detail, figure)
         }
         if (valueTip != null) {
             TipText(

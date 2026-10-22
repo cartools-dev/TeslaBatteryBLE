@@ -157,6 +157,7 @@
     <string name="health_deep_sleep_hint">Asleep the whole time, watched by the phone without a gap.</string>
     <string name="health_deep_sleep_term">deep sleep</string>
     <string name="health_drain_ceiling">≤%1$s</string>
+    <string name="health_drain_hint">From %1$s%% to %2$s%% between the nearest readings, over %3$s. %4$s of that was not deep sleep.</string>
     <string name="health_drain_tiny_week" formatted="false">&lt;0.1%/week</string>
     <string name="health_drain_week">%1$s%%/week</string>
     <string name="health_ended">ended %1$s</string>
