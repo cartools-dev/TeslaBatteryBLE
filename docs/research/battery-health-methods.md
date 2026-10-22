@@ -30,6 +30,22 @@ Formula: `SoH ≈ (displayed_range / SOC_fraction) / EPA_range_when_new`. Best a
 
 Formula: `Capacity_now = energy_added_kWh / SOC_delta_fraction`; `SoH = Capacity_now / Capacity_when_new`. Example: 26.25 kWh for 20→60% → 65.6 kWh usable; vs 75 kWh new → 87.5% [4]. Works with BLE charge sessions (energy added + SOC start/end already tracked). Accuracy improves with large SOC swings, stable SOC endpoints (rested, no sentry/climate load), and averaging; single sessions carry charging-loss and SOC-reporting error (AC `charge_energy_added` is charger-measured; DC variant is battery-measured). Best practice from community calculators: average the range-method and charge-method estimates and flag gaps >5 pp as mismatch [4].
 
+#### Measured: `charger_power` against `charge_energy_added` (2026-10-21)
+
+Four AC sessions from one car's own logs (single phase, IEC cable, 8–10 A at 215–231 V, no DC session in the data), each integrated over consecutive `device_timestamp`s, skipping gaps over 5 min:
+
+| Session | Added (kWh) | ∫ V×I (kWh) | Added / ∫ V×I | ∫ `charger_power` (kWh) |
+|---|---|---|---|---|
+| Oct 9 | 7.28 | 8.10 | 0.90 | 5.12 |
+| Oct 10 | 19.00 | 20.05 | 0.95 | 17.70 |
+| Oct 15 | 31.26 | 31.71 | 0.99 | 29.07 |
+| Oct 20 | 26.22 | 27.94 | 0.94 | 17.59 |
+
+- `charger_power` is an integer kW and truncates: 1.79 kW (8 A) reads 1, 2.02 kW (9 A) reads 2, 2.22 kW (10 A) reads 2. Integrating it under-counts by up to 1 kW per sample (ratios 1.07–1.49), so it cannot stand in for energy at these power levels.
+- Voltage × current (× phases) reproduces it: it is the AC power at the port, not battery-side power. Integrated, it exceeds `charge_energy_added` by 1–10 % (4.6 % over all four sessions, a floor: the skipped gaps lower the integral), so the charger's loss is roughly 5 % and `charge_energy_added` is measured after it, consistent with the AC note above.
+- Counters on the battery side of the charger: `charge_miles_added_rated` and `charge_rate_mph_float` follow `charge_energy_added`, so they are post-loss. Energy added over rated miles added was a steady 0.245 kWh/mi in all four sessions (0.2450–0.2468). `charge_rate_mph_float` has fine resolution (e.g. 7.61 mph) and integrates to 91–99 % of the session's rated miles added, so times that constant it is a smooth battery-side power in kW. Not compared sample by sample with V×I. The charge state has no instantaneous battery-side power field; `DriveState.power` is the signed traction power and was not checked while charging.
+- Not checked: DC charging (no session in the logs), three-phase (`charger_phases` was always 1).
+
 ### c) Coulomb counting (why BLE can't do it)
 
 Integrate current over time (Ah in/out); over 100→0% gives usable capacity directly [6]. Drift from sensor bias/noise and <100% coulombic efficiency forces OCV rest recalibration or Kalman/particle-filter observers (dual-EKF standard in BMS literature) [6]. BLE exposes no current signal — only SOC, range, energy-added, power. Current lives on CAN (`pack current`, motor currents) and in Fleet Telemetry (`PackCurrent` at HV contactors, `DiMotorCurrent*`, `DCChargingPower`). So local coulomb counting requires the OBD path.
