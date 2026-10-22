@@ -88,13 +88,9 @@ data class ChargeStats(
     /** The rated range at the end of the charge (the newest charging sample); null when it has none. */
     val chargeMiles: Float?,
     val currentMiles: Float?,
-    val minMiles: Float?,
-    val maxMiles: Float?,
     /** The displayed whole-percent levels, the fallback for the percent figures. */
     val chargeLevel: Int,
     val currentLevel: Int,
-    val minLevel: Int,
-    val maxLevel: Int,
     /** Points the displayed level sat above the usable one when the charge ended; 0 when the car sent no usable level. */
     val chargeHeldBack: Int = 0,
     /** The car's `charge_energy_added` on the newest charging sample: the kWh that session added; null when it reported none. */
@@ -111,10 +107,6 @@ data class ChargeStats(
     fun chargePercent(scale: FullRangeScale?): Float = scale?.socPercent(chargeMiles)?.plus(chargeHeldBack) ?: chargeLevel.toFloat()
 
     fun currentPercent(scale: FullRangeScale?): Float = scale?.socPercent(currentMiles) ?: currentLevel.toFloat()
-
-    fun minPercent(scale: FullRangeScale?): Float = scale?.socPercent(minMiles) ?: minLevel.toFloat()
-
-    fun maxPercent(scale: FullRangeScale?): Float = scale?.socPercent(maxMiles) ?: maxLevel.toFloat()
 
     /** Percent used since the charge: the drained miles over the scale's miles per percent, else the level difference. */
     fun usedPercent(scale: FullRangeScale?): Float {
@@ -141,18 +133,12 @@ fun chargeStats(samples: List<BatterySample>): ChargeStats? {
     val charged = samples.filter { it.isCharging }.maxByOrNull { it.timestampMillis } ?: return null
     val newest = samples.maxByOrNull { it.timestampMillis } ?: return null
     if (newest.timestampMillis <= charged.timestampMillis) return null
-    val tail = samples.filter { it.timestampMillis > charged.timestampMillis }
-    val tailMiles = tail.mapNotNull { it.ratedRangeMiles }
     return ChargeStats(
         sinceMillis = charged.timestampMillis,
         chargeMiles = charged.ratedRangeMiles,
         currentMiles = newest.ratedRangeMiles,
-        minMiles = tailMiles.minOrNull(),
-        maxMiles = tailMiles.maxOrNull(),
         chargeLevel = charged.batteryLevel,
         currentLevel = newest.batteryLevel,
-        minLevel = tail.minOf { it.batteryLevel },
-        maxLevel = tail.maxOf { it.batteryLevel },
         chargeHeldBack = charged.batteryLevel - charged.usableLevel,
         energyKwh = charged.chargeEnergyAdded?.takeIf { it > 0f },
     )
