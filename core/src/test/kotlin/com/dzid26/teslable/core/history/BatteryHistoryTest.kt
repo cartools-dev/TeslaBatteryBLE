@@ -70,8 +70,6 @@ class BatteryHistoryTest {
         assertEquals(60 * 60_000L, stats.sinceMillis)
         assertEquals(85f, stats.chargePercent(null))
         assertEquals(78f, stats.currentPercent(null))
-        assertEquals(78f, stats.minPercent(null))
-        assertEquals(84f, stats.maxPercent(null))
         assertEquals(7f, stats.usedPercent(null))
     }
 

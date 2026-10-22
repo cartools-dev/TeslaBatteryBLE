@@ -121,17 +121,17 @@ object FullRangeScaleEstimator {
         val usable =
             samples.filter {
                 val miles = it.ratedRangeMiles
-                miles != null && miles.isFinite() && miles > 0f && it.batteryLevel in 1..100
+                miles != null && miles.isFinite() && miles > 0f && it.usableLevel in 1..100
             }
         val result = mutableListOf<Boundary>()
         for ((before, after) in usable.zipWithNext()) {
-            if (abs(after.batteryLevel - before.batteryLevel) != 1) continue
+            if (abs(after.usableLevel - before.usableLevel) != 1) continue
             val a = before.ratedRangeMiles!!
             val b = after.ratedRangeMiles!!
             val gap = abs(b - a)
             // A uniform position inside the gap has standard deviation gap / sqrt(12).
             val sigma = maxOf(gap / UNIFORM_SPREAD_DIVISOR, MIN_SIGMA_MILES)
-            val level = minOf(before.batteryLevel, after.batteryLevel) + STEP_MIDPOINT
+            val level = minOf(before.usableLevel, after.usableLevel) + STEP_MIDPOINT
             result += Boundary(level, (a + b) / 2f, sigma)
         }
         return result
@@ -178,8 +178,13 @@ object FullRangeScaleEstimator {
     }
 }
 
-/** The sample's SOC for plotting: sub-percent from the fitted [scale] when it is pinned, else the integer level. */
-fun BatterySample.soc(scale: FullRangeScale?): Float = scale?.socPercent(ratedRangeMiles) ?: batteryLevel.toFloat()
+/**
+ * The sample's SOC for plotting and stats: sub-percent from the fitted [scale] when it is pinned, else the integer level.
+ * It stands for the displayed level. The scale reads the usable one, which a cold battery lowers for a while, so the
+ * held-back points are added back and a cold morning does not read as a drain.
+ */
+fun BatterySample.soc(scale: FullRangeScale?): Float =
+    scale?.socPercent(ratedRangeMiles)?.plus(batteryLevel - usableLevel) ?: batteryLevel.toFloat()
 
 /** The shared error of the levels read through [this] scale; null without a pinned one, which reads the integer level instead. */
 fun FullRangeScale?.levelScaleError(): Double? = this?.takeIf { it.pinned }?.relativeError

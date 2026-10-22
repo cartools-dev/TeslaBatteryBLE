@@ -45,6 +45,7 @@ class ChargeStateMappingTest {
                 chargeMilesAddedRated = 41.5f,
                 chargerVoltage = 240,
                 chargeRateMph = 32.5f,
+                usableLevel = 77,
             )
         assertEquals(expected, record().toBatterySample("Se1f0941734830fe7C"))
     }
@@ -53,6 +54,7 @@ class ChargeStateMappingTest {
     fun theSampleTakesTheDisplayedLevelNotTheUsableOne() {
         val sample = record().copy(battery_level = 80, usable_battery_level = 79).toBatterySample("car")
         assertEquals(80, sample?.batteryLevel)
+        assertEquals(79, sample?.usableLevel)
     }
 
     @Test

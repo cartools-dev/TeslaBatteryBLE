@@ -27,5 +27,6 @@ fun ChargeState.toBatterySample(vehicleId: String): BatterySample? {
         chargeMilesAddedRated = charge_miles_added_rated,
         chargerVoltage = charger_voltage,
         chargeRateMph = chargingMph,
+        usableLevel = usable_battery_level ?: level,
     )
 }
