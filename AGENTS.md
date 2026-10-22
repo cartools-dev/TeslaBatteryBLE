@@ -48,6 +48,11 @@ detekt runs at default thresholds (`config/detekt/detekt.yml` only sets `MaxLine
 - Never baseline a new finding (`detekt-baseline-*.xml` only shrinks).
 - After rebasing on a merged PR that touched your files, re-run the checks: two green PRs can still break `main` together.
 
+## Installing PR builds on the phone
+
+- PR CI builds install as `com.dzid26.teslable.pr`, one shared slot, signed with the shared CI debug key (`CI_DEBUG_KEYSTORE_BASE64`) and versioned `1_000_000_000 + run number`, so each one updates the last. A local Gradle build on the PC signs with the release key instead, and Android refuses to update across the two keys.
+- Install the PR's CI APK (`gh run download <run> -n teslable-debug-apk`, then `adb install -r`), never a local `.pr` build. If the slot already holds a release-key build, `adb uninstall com.dzid26.teslable.pr` once; never uninstall `com.dzid26.teslable` (it holds the car pairing key).
+
 ## Do not
 
 - Commit secrets, keystores, or `local.properties`.
