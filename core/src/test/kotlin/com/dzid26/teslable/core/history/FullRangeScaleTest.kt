@@ -72,7 +72,7 @@ class FullRangeScaleTest {
         assertEquals(2.7f, scale.milesPerPercent, 0.015f)
         assertEquals(0f, scale.offsetMiles, 0.5f)
         val sample = cold.first { it.batteryLevel == 55 }
-        assertEquals(1, sample.heldBack)
+        assertEquals(1, sample.batteryLevel - sample.usableLevel)
         assertEquals(55f, sample.soc(scale), 0.5f)
     }
 
