@@ -177,7 +177,7 @@
     <string name="stats_lowest_drain_term">drain</string>
     <string name="stats_parked_hint">The odometer unchanged and not charging.</string>
     <string name="stats_parked_term">parked</string>
-    <string name="stats_sleep_hint">Parked with Sentry and climate off.</string>
+    <string name="stats_sleep_hint">Parked, nobody in the car, Sentry and climate off.</string>
     <string name="stats_sleep_term">sleep</string>
     <string name="stats_started">started %1$s</string>
     <string name="stats_title">Battery stats</string>

@@ -128,8 +128,8 @@ fun dischargeProjection(
 /**
  * What refines the parked rate beyond the raw samples: the fitted rated-range
  * [scale] (null reads the integer level), the vehicle's VCSEC [statuses], oldest first,
- * which say when the car slept, and its Sentry and climate [activity] readings, oldest
- * first, which say when it was kept busy.
+ * which say when the car slept and when someone was in it, and its Sentry and climate
+ * [activity] readings, oldest first, which say when it was kept busy.
  */
 data class ProjectionContext(
     val scale: FullRangeScale? = null,

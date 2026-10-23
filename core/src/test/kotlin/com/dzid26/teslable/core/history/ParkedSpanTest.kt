@@ -74,10 +74,10 @@ class ParkedSpanTest {
     }
 
     @Test
-    fun `sleep is the parked stretch with Sentry and climate off`() {
+    fun `sleep is the parked stretch with nobody in the car and Sentry and climate off`() {
         val samples = listOf(sample(0), sample(100), sample(200), sample(300), sample(700))
-        val climate = listOf(ActivitySample(150 * MINUTE, "", ActivityKind.CLIMATE, true))
-        val span = assertNotNull(longestSleep(samples, drives(samples), ProjectionContext(activity = climate)))
+        val present = listOf(status(150, present = true))
+        val span = assertNotNull(longestSleep(samples, drives(samples), ProjectionContext(statuses = present)))
         assertEquals(200 * MINUTE, span.startMillis)
         assertEquals(700 * MINUTE, span.endMillis)
         assertEquals(700 * MINUTE, assertNotNull(longestParked(samples, drives(samples))).endMillis)
@@ -103,6 +103,18 @@ class ParkedSpanTest {
     }
 
     @Test
+    fun `someone in the car keeps it from counting as sleep, locked or not`() {
+        val a = sample(0)
+        val b = sample(1)
+        // The reading carried in from before a short gap stands for it; being locked or not is not looked at.
+        assertEquals(false, idleBetween(a, b, ProjectionContext(statuses = listOf(status(-5, present = true)))))
+        assertEquals(true, idleBetween(a, b, ProjectionContext(statuses = listOf(status(-5, present = false, locked = false)))))
+        // A reading older than a heartbeat is stale: the phone was away, nothing contradicts it.
+        assertEquals(true, idleBetween(a, b, ProjectionContext(statuses = listOf(status(-120, present = true)))))
+        assertEquals(false, idleBetween(a, sample(60), ProjectionContext(statuses = listOf(status(30, present = true)))))
+    }
+
+    @Test
     fun `sentry or climate running keeps a car from counting as sleep`() {
         val a = sample(0)
         val b = sample(60)
@@ -121,6 +133,18 @@ class ParkedSpanTest {
         // A reading older than a heartbeat is stale.
         assertEquals(true, idleBetween(a, b, ProjectionContext(activity = listOf(reading(-120, ActivityKind.CLIMATE, true)))))
     }
+
+    private fun status(
+        minutes: Long,
+        present: Boolean,
+        locked: Boolean = true,
+    ) = StatusSample(
+        timestampMillis = minutes * MINUTE,
+        vehicleId = "",
+        asleep = false,
+        userPresent = present,
+        locked = locked,
+    )
 
     private companion object {
         const val MINUTE = 60_000L

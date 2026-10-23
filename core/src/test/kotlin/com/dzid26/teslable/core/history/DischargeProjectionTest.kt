@@ -279,6 +279,19 @@ class DischargeProjectionTest {
     }
 
     @Test
+    fun `someone in the car makes a gap no sleep`() {
+        val samples = listOf(sample(0, 80), sample(120, 79), sample(240, 78), sample(360, 75))
+        // Present in both of the first two gaps: only the unlocked-and-away last pair would be left, one pair.
+        val statuses =
+            listOf(
+                StatusSample(60 * MINUTE, "", asleep = false, userPresent = true, locked = false),
+                StatusSample(180 * MINUTE, "", asleep = false, userPresent = true, locked = false),
+            )
+        val projection = assertNotNull(project(samples, context = ProjectionContext(statuses = statuses), rangeMillis = 24 * HOUR))
+        assertNull(projection.mixedPercentPerHour)
+    }
+
+    @Test
     fun `sentry running makes a long locked gap no sleep`() {
         val samples = listOf(sample(0, 80), sample(120, 79), sample(240, 78), sample(360, 75))
         val sentry = listOf(ActivitySample(-5 * MINUTE, "", ActivityKind.SENTRY, true))

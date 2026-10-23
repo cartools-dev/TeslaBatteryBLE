@@ -35,11 +35,11 @@ fun longestParked(
 ): ParkedSpan? = longestRun(samples, drives, scale) { _, _ -> true }
 
 /**
- * The longest stretch of consecutive pairs that were parked and idle: neither Sentry nor the climate was
- * running in any of them ([idleBetween]), awake or asleep. This is the sleep the parked-drain projection follows. Ties go
+ * The longest stretch of consecutive pairs that were parked and idle: nobody in the car and neither Sentry nor the
+ * climate running in any of them ([idleBetween]), awake or asleep. This is the sleep the parked-drain projection follows. Ties go
  * to the later stretch.
  *
- * @param context the fitted scale and the vehicle's Sentry and climate readings.
+ * @param context the fitted scale, the vehicle's status log and its Sentry and climate readings.
  * @see longestParked for the other parameters.
  */
 fun longestSleep(
@@ -119,13 +119,14 @@ internal fun chargedBetween(
 }
 
 /**
- * True when nothing kept the car busy between two reads: no Sentry or climate reading says it was running. The
- * logs write a reading only while the car is awake and read, so a short gap usually holds none: the reading carried
- * in, the last one at or before the first read, stands for it while it is no older than
- * [STATUS_CHANGE_MAX_GAP_MILLIS]. A signal with no reading to go on (the phone was away) is not held against the gap.
- * Whether anyone is at the car does not matter: only what draws power does.
+ * True when nobody was in the car and nothing kept it busy between two reads: the status log never says someone
+ * was present, and no Sentry or climate reading says it was running. The logs write a reading only on a change, as
+ * a heartbeat, or while the car is awake and read, so a short gap usually holds none: the reading carried in, the
+ * last one at or before the first read, stands for it while it is no older than [STATUS_CHANGE_MAX_GAP_MILLIS]. A
+ * signal with no reading to go on (the phone was away) is not held against the gap. Whether the car is locked does
+ * not matter: only a person in it and what draws power do.
  *
- * @param context the vehicle's Sentry and climate readings, oldest first.
+ * @param context the vehicle's status log and its Sentry and climate readings, oldest first.
  */
 internal fun idleBetween(
     a: BatterySample,
@@ -134,7 +135,8 @@ internal fun idleBetween(
 ): Boolean {
     val from = readAt(a)
     val to = readAt(b)
-    return !busyBetween(context.sentryReadings, from, to, ActivitySample::timestampMillis) { it.on } &&
+    return !busyBetween(context.statuses, from, to, StatusSample::timestampMillis) { it.userPresent } &&
+        !busyBetween(context.sentryReadings, from, to, ActivitySample::timestampMillis) { it.on } &&
         !busyBetween(context.climateReadings, from, to, ActivitySample::timestampMillis) { it.on }
 }
 
