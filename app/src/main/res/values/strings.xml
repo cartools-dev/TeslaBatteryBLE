@@ -162,7 +162,7 @@
     <string name="stats_drain_tiny_week" formatted="false">&lt;0.1%/week</string>
     <string name="stats_drain_week">%1$s%%/week</string>
     <string name="stats_ended">ended %1$s</string>
-    <string name="stats_extrapolated_note">* Extrapolated to a day from less than a day.</string>
+    <string name="stats_extrapolated_note">* Extrapolated from less than 24h</string>
     <string name="stats_longest">Longest</string>
     <string name="stats_lowest">Lowest</string>
     <string name="stats_lowest_detail">over %1$s, ended %2$s</string>
