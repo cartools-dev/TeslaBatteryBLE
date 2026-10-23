@@ -28,12 +28,14 @@ import com.dzid26.teslable.core.health.PriceChange
 import com.dzid26.teslable.core.history.ActivityKind
 import com.dzid26.teslable.core.history.ActivitySample
 import com.dzid26.teslable.core.history.BatterySample
+import com.dzid26.teslable.core.history.CurrentRest
 import com.dzid26.teslable.core.history.DeepSleep
 import com.dzid26.teslable.core.history.DriveSample
 import com.dzid26.teslable.core.history.DriveWindow
 import com.dzid26.teslable.core.history.HistoryRange
 import com.dzid26.teslable.core.history.ParkedSpan
 import com.dzid26.teslable.core.history.ProjectionContext
+import com.dzid26.teslable.core.history.RestKind
 import com.dzid26.teslable.core.history.RestStats
 import com.dzid26.teslable.core.history.RouteSample
 import com.dzid26.teslable.core.history.SleepDrop
@@ -252,7 +254,7 @@ class CardSnapshots {
     @Test
     fun statsCard() {
         snapCard("stats-card") {
-            DrainStatsCard(restStatsFixture)
+            DrainStatsCard(restStatsFixture, CurrentRest(RestKind.SLEEPING, NOW - 3 * HOUR))
         }
     }
 

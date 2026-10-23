@@ -275,7 +275,7 @@ private const val MINUTE = 60_000L
 private const val HOUR = 60 * MINUTE
 
 /** A pair of reads at least this far apart is mostly sleep: a locked car stays awake only a while after the owner leaves. */
-private const val MIN_SLEEP_PAIR_MILLIS = HOUR
+internal const val MIN_SLEEP_PAIR_MILLIS = HOUR
 
 /** Less parked time than this makes the rate too noisy to extrapolate. */
 private const val MIN_RATE_SPAN_MILLIS = 10 * MINUTE

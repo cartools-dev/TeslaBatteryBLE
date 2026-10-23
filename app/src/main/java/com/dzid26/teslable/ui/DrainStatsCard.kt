@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 package com.dzid26.teslable.ui
 
+import android.text.format.DateFormat
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -13,6 +14,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.SpanStyle
@@ -21,19 +23,25 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import com.dzid26.teslable.R
+import com.dzid26.teslable.core.history.CurrentRest
+import com.dzid26.teslable.core.history.RestKind
 import com.dzid26.teslable.core.history.RestStats
 
 /**
- * How the car rests, over the whole log: the longest parked, sleep and deep sleep stretches
- * and the lowest drain. Shown only when the logs hold any.
+ * How the car rests: its state now (parked or sleeping, since when) and, over the whole log, the longest
+ * parked, sleep and deep sleep stretches and the lowest drain. Shown only when there is anything to say.
  */
 @Composable
-internal fun DrainStatsCard(rest: RestStats) {
-    if (rest.isEmpty) return
+internal fun DrainStatsCard(
+    rest: RestStats,
+    current: CurrentRest? = null,
+) {
+    if (rest.isEmpty && current == null) return
     Card(modifier = Modifier.fillMaxWidth()) {
         Column(Modifier.padding(12.dp)) {
             Text(text = stringResource(R.string.stats_title), style = MaterialTheme.typography.titleSmall)
             Spacer(Modifier.height(8.dp))
+            current?.let { NowRow(it) }
             LongestStretchRows(rest)
             if (rest.extrapolatesToADay()) {
                 Text(
@@ -118,4 +126,17 @@ internal fun StatRow(
             )
         }
     }
+}
+
+/** Whether the car is parked or sleeping now and since when, with the rule for it on a tap of the state. */
+@Composable
+private fun NowRow(current: CurrentRest) {
+    val is24Hour = LocalIs24Hour.current ?: DateFormat.is24HourFormat(LocalContext.current)
+    val sleeping = current.kind == RestKind.SLEEPING
+    StatRow(
+        label = { StatLabel(stringResource(R.string.stats_now)) },
+        value = stringResource(if (sleeping) R.string.stats_sleeping_now else R.string.stats_parked_now),
+        detail = stringResource(R.string.stats_since, formatTime(current.sinceMillis, showDate = true, is24Hour = is24Hour)),
+        valueTip = stringResource(if (sleeping) R.string.stats_sleep_hint else R.string.stats_parked_hint),
+    )
 }

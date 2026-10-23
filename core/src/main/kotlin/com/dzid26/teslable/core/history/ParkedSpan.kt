@@ -140,6 +140,15 @@ internal fun idleBetween(
         !busyBetween(context.climateReadings, from, to, ActivitySample::timestampMillis) { it.on }
 }
 
+/** True when nobody is in the car and neither Sentry nor the climate is running at [nowMillis], by the readings carried in. */
+internal fun idleAt(
+    nowMillis: Long,
+    context: ProjectionContext,
+): Boolean =
+    !busyBetween(context.statuses, nowMillis, nowMillis, StatusSample::timestampMillis) { it.userPresent } &&
+        !busyBetween(context.sentryReadings, nowMillis, nowMillis, ActivitySample::timestampMillis) { it.on } &&
+        !busyBetween(context.climateReadings, nowMillis, nowMillis, ActivitySample::timestampMillis) { it.on }
+
 /** True when [busy] holds for the reading carried in at [from] or for any reading strictly inside the gap to [to]. */
 private fun <T> busyBetween(
     readings: List<T>,
