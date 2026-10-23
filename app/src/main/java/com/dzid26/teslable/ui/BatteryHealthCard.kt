@@ -100,8 +100,12 @@ internal fun BatteryHealthCard(summary: HealthSummary) {
             Spacer(Modifier.height(4.dp))
             Text(
                 text =
-                    "Measured on this phone from your own readings. A state-of-health " +
-                        "percentage appears once the car's factory range is set.",
+                    if (summary.sohPercent == null) {
+                        "Measured on this phone from your own readings. A state-of-health " +
+                            "percentage appears once the car's factory range is set."
+                    } else {
+                        "Measured on this phone from your own readings."
+                    },
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -137,10 +141,12 @@ private fun EstimateRow(
             )
         }
         val style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold)
+        // A gap so a long detail never touches the figure.
+        val gap = Modifier.padding(start = 8.dp)
         if (valueHint != null) {
-            HintText(text = value, hint = valueHint, color = LocalContentColor.current, style = style)
+            HintText(text = value, hint = valueHint, color = LocalContentColor.current, style = style, modifier = gap)
         } else {
-            Text(text = value, style = style)
+            Text(text = value, style = style, modifier = gap)
         }
     }
 }
