@@ -259,6 +259,13 @@ class CardSnapshots {
     }
 
     @Test
+    fun statsCardParked() {
+        snapCard("stats-card_parked") {
+            DrainStatsCard(restStatsFixture, CurrentRest(RestKind.PARKED, NOW - 20 * 60_000L))
+        }
+    }
+
+    @Test
     fun heroCardCharging() {
         val charging =
             learntCharge.copy(

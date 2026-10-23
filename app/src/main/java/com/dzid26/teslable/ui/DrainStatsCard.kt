@@ -70,8 +70,9 @@ private fun DetailLine(
     if (figure?.tip == null) {
         Text(text = boldPart(detail, figure?.text), style = style, color = color)
     } else {
+        // The detail line gives way first, so a narrow screen wraps it, never the figure in the middle.
         Row {
-            Text(text = "$detail \u00B7 ", style = style, color = color)
+            Text(text = "$detail \u00B7 ", style = style, color = color, modifier = Modifier.weight(1f, fill = false))
             HintText(figure.text, figure.tip, color, style = style.copy(fontWeight = FontWeight.Bold))
         }
     }
