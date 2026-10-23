@@ -2,12 +2,16 @@
 package com.dzid26.teslable.ui
 
 import android.text.format.DateFormat
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.material3.Card
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -60,6 +64,7 @@ internal class Figure(
     val tip: String? = null,
 )
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun DetailLine(
     detail: String,
@@ -70,10 +75,14 @@ private fun DetailLine(
     if (figure?.tip == null) {
         Text(text = boldPart(detail, figure?.text), style = style, color = color)
     } else {
-        // The detail line gives way first, so a narrow screen wraps it, never the figure in the middle.
-        Row {
-            Text(text = "$detail \u00B7 ", style = style, color = color, modifier = Modifier.weight(1f, fill = false))
-            HintText(figure.text, figure.tip, color, style = style.copy(fontWeight = FontWeight.Bold))
+        // The figure and its separator move as one piece, so a narrow screen wraps the line before them and never
+        // leaves a separator behind or breaks the figure in the middle.
+        FlowRow(verticalArrangement = Arrangement.Center) {
+            Text(text = "$detail ", style = style, color = color)
+            Row {
+                Text(text = "· ", style = style, color = color)
+                HintText(figure.text, figure.tip, color, style = style.copy(fontWeight = FontWeight.Bold))
+            }
         }
     }
 }
@@ -113,6 +122,8 @@ internal fun StatRow(
             label()
             DetailLine(detail, figure)
         }
+        // Air between the detail line and the value, so an underlined figure never touches it.
+        Spacer(Modifier.width(8.dp))
         if (valueTip != null) {
             TipText(
                 text = value,
