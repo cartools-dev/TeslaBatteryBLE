@@ -82,6 +82,31 @@ class CurrentRestTest {
     }
 
     @Test
+    fun `a short pause in a charge does not restart since, a long one does`() {
+        val paused =
+            listOf(
+                sample(0, ChargingStateKind.Charging),
+                sample(50, ChargingStateKind.Charging),
+                sample(52, ChargingStateKind.Stopped),
+                sample(58, ChargingStateKind.Charging),
+            )
+        assertEquals(0L, assertNotNull(currentRest(paused, drives(paused), 59 * MINUTE)).sinceMillis)
+        val long =
+            listOf(sample(0, ChargingStateKind.Charging), sample(10, ChargingStateKind.NoPower), sample(30, ChargingStateKind.Charging))
+        assertEquals(30 * MINUTE, assertNotNull(currentRest(long, drives(long), 31 * MINUTE)).sinceMillis)
+    }
+
+    @Test
+    fun `an old drive reading in gear next to fresh battery reads says nothing of now`() {
+        val samples = listOf(sample(0), sample(100), sample(200))
+        val old = drives(listOf(samples.first()), shift = { ShiftStateKind.D })
+        assertNull(currentRest(samples, old, 201 * MINUTE))
+        // With a fresh drive reading beside the newest read the car is driving again.
+        val fresh = old + drives(listOf(samples.last()), shift = { ShiftStateKind.D })
+        assertEquals(RestKind.DRIVING, assertNotNull(currentRest(samples, fresh, 201 * MINUTE)).kind)
+    }
+
+    @Test
     fun `no drive reading or no samples is no state`() {
         val parked = listOf(sample(0), sample(100))
         assertNull(currentRest(parked, emptyList(), 101 * MINUTE))

@@ -266,6 +266,20 @@ class CardSnapshots {
     }
 
     @Test
+    fun statsCardCharging() {
+        snapCard("stats-card_charging") {
+            DrainStatsCard(RestStats(), CurrentRest(RestKind.CHARGING, NOW - 45 * 60_000L))
+        }
+    }
+
+    @Test
+    fun statsCardDriving() {
+        snapCard("stats-card_driving") {
+            DrainStatsCard(restStatsFixture, CurrentRest(RestKind.DRIVING, NOW - 12 * 60_000L))
+        }
+    }
+
+    @Test
     fun heroCardCharging() {
         val charging =
             learntCharge.copy(

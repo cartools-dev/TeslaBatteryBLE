@@ -173,7 +173,7 @@ internal fun driveReadingsAt(
 }
 
 /** A drive sample this close to a battery sample gives its odometer; a drive read follows each charge read. */
-private const val DRIVE_MATCH_MILLIS = 2 * 60_000L
+internal const val DRIVE_MATCH_MILLIS = 2 * 60_000L
 
 private const val HUNDREDTHS_PER_MILE = 100.0
 
