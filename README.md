@@ -2,8 +2,8 @@
 
 Android app that tracks Tesla battery statistics directly over Bluetooth LE
 
-[![Android CI](https://github.com/dzid26/TeslaBatteryBLE/actions/workflows/android.yml/badge.svg)](https://github.com/dzid26/TeslaBatteryBLE/actions/workflows/android.yml)
-[![Website](https://img.shields.io/badge/website-live-brightgreen.svg)](https://dzid26.github.io/TeslaBatteryBLE/)
+[![Android CI](https://github.com/cartools-dev/TeslaBatteryBLE/actions/workflows/android.yml/badge.svg)](https://github.com/cartools-dev/TeslaBatteryBLE/actions/workflows/android.yml)
+[![Website](https://img.shields.io/badge/website-live-brightgreen.svg)](https://cartools-dev.github.io/TeslaBatteryBLE/)
 [![License: AGPL-3.0-only](https://img.shields.io/badge/license-AGPL--3.0--only-blue.svg)](LICENSE)
 ![Platform: Android 8.1+](https://img.shields.io/badge/platform-Android%208.1%2B%20(API%2027)-green.svg)
 [![Status: beta](https://img.shields.io/badge/status-beta-orange.svg)](docs/master-plan.md)
@@ -37,7 +37,7 @@ All features in detail: [`docs/features.md`](docs/features.md). What is planned:
 
 ## Install
 
-Download the APK from [Releases](https://github.com/dzid26/TeslaBatteryBLE/releases) (prereleases are signed with the owner key), or let [Obtainium](https://github.com/ImranR98/Obtainium) keep it updated: add `https://github.com/dzid26/TeslaBatteryBLE`, and turn on **Include prereleases** to follow tagged betas.
+Download the APK from [Releases](https://github.com/cartools-dev/TeslaBatteryBLE/releases) (prereleases are signed with the owner key), or let [Obtainium](https://github.com/ImranR98/Obtainium) keep it updated: add `https://github.com/cartools-dev/TeslaBatteryBLE`, and turn on **Include prereleases** to follow tagged betas.
 
 To follow `main`, every push that passes CI updates one prerelease titled **Preview of main**. Set Obtainium's release-title filter to `^Preview`, turn on **Include prereleases** and **Fall back to older releases**. Do not uninstall the app to switch signing keys, because that wipes the car pairing key. Details: [`docs/install.md`](docs/install.md).
 

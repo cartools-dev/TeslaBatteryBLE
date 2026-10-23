@@ -80,5 +80,5 @@ backup copy, if any, is managed by your device and Google account settings.
 
 ## Contact
 
-Questions or concerns: open a [security advisory](https://github.com/dzid26/TeslaBatteryBLE/security/advisories/new)
+Questions or concerns: open a [security advisory](https://github.com/cartools-dev/TeslaBatteryBLE/security/advisories/new)
 for sensitive matters, or a regular issue otherwise.
