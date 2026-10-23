@@ -842,13 +842,8 @@ internal fun BatteryHistoryCard(
                     Spacer(Modifier.height(6.dp))
                     ParkedProjectionLine(
                         projection = it,
-                        // The measured line's colour; muted while a charge is the main story.
-                        color =
-                            if (charge != null) {
-                                MaterialTheme.colorScheme.onSurfaceVariant
-                            } else {
-                                MaterialTheme.colorScheme.primary
-                            },
+                        // The chart's measured line colour, as the charging line matches its green.
+                        color = MaterialTheme.colorScheme.primary,
                     )
                 }
             }
