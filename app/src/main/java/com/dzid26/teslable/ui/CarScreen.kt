@@ -77,6 +77,7 @@ import com.dzid26.teslable.ble.connectionDisplay
 import com.dzid26.teslable.ble.vehicleStatusText
 import com.dzid26.teslable.core.health.PriceChange
 import com.dzid26.teslable.core.health.chargeSessionOpen
+import com.dzid26.teslable.core.health.chargeSessions
 import com.dzid26.teslable.core.health.lastFinishedChargeStats
 import com.dzid26.teslable.core.health.priceForCharge
 import com.dzid26.teslable.core.history.BatterySample
@@ -326,6 +327,11 @@ internal fun CarScreen(
                         scale = scale,
                         ratedKwhPerMile = health.ratedKwhPerMile,
                         pricePerKwh = pricePerKwh,
+                    )
+                    // Keyed on the minute as well, so a charge that ended while no sample came in stops saying "charging".
+                    val sessionsMinute = (nowMillis ?: rememberNowMillis()) / MILLIS_PER_MINUTE
+                    ChargeSessionsCard(
+                        remember(vehicleHistory, sessionsMinute) { chargeSessions(vehicleHistory, sessionsMinute * MILLIS_PER_MINUTE) },
                     )
                     BatteryHealthCard(health)
                     BatteryStatsCard(rest)
@@ -925,3 +931,5 @@ internal fun formatPercent(value: Float): String {
     val rounded = value.roundToInt()
     return if (rounded.toFloat() == value) "$rounded" else String.format(Locale.getDefault(), "%.1f", value)
 }
+
+private const val MILLIS_PER_MINUTE = 60_000L
