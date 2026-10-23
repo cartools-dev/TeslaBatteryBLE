@@ -20,11 +20,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.AnnotatedString
-import androidx.compose.ui.text.SpanStyle
-import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import com.dzid26.teslable.R
 import com.dzid26.teslable.core.history.CurrentRest
@@ -72,33 +68,25 @@ private fun DetailLine(
 ) {
     val style = MaterialTheme.typography.labelSmall
     val color = MaterialTheme.colorScheme.onSurfaceVariant
-    if (figure?.tip == null) {
-        Text(text = boldPart(detail, figure?.text), style = style, color = color)
+    if (figure == null) {
+        Text(text = detail, style = style, color = color)
     } else {
         // The figure and its separator move as one piece, so a narrow screen wraps the line before them and never
         // leaves a separator behind or breaks the figure in the middle.
         FlowRow(verticalArrangement = Arrangement.Center) {
             Text(text = "$detail ", style = style, color = color)
             Row {
-                Text(text = "· ", style = style, color = color)
-                HintText(figure.text, figure.tip, color, style = style.copy(fontWeight = FontWeight.Bold))
+                Text(text = "\u00B7 ", style = style, color = color)
+                val bold = style.copy(fontWeight = FontWeight.Bold)
+                if (figure.tip == null) {
+                    Text(text = figure.text, style = bold, color = color, softWrap = false)
+                } else {
+                    HintText(figure.text, figure.tip, color, style = bold)
+                }
             }
         }
     }
 }
-
-/** [detail], with the [bold] part (a figure the line carries) in bold; [detail] alone when there is none. */
-private fun boldPart(
-    detail: String,
-    bold: String?,
-): AnnotatedString =
-    buildAnnotatedString {
-        append(detail)
-        if (bold != null) {
-            append(" \u00B7 ")
-            withStyle(SpanStyle(fontWeight = FontWeight.Bold)) { append(bold) }
-        }
-    }
 
 @Composable
 internal fun StatLabel(text: String) = Text(text, style = MaterialTheme.typography.bodySmall)

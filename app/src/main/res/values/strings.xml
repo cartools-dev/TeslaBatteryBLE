@@ -122,7 +122,7 @@
     <string name="history_range_all">All</string>
     <string name="history_parked_range_hint">Worst and best case at that point: the drain could be two standard errors faster or slower than measured, from how much the parked readings scatter around the line.</string>
     <string name="history_parked_rate_hint_asleep">Power-down drain: the rate over the stretches the car sat parked with nobody in it and Sentry and climate off, an hour or more apart, the quietest the battery drains. The dashed line follows it.</string>
-    <string name="history_parked_rate_hint_mixed">Parked drain over all parked time, asleep or awake. Once enough power-down time is measured, this switches to the power-down rate.</string>
+    <string name="history_parked_rate_hint_mixed">Parked drain over all parked time, powered down or not. Once enough power-down time is measured, this switches to the power-down rate.</string>
     <string name="soc_description">%1$s percent</string>
     <string name="settings_units">Units</string>
     <string name="units_system">System default</string>
@@ -161,7 +161,7 @@
     <string name="drive_rate_joined">\u00B7 %1$s</string>
     <string name="drive_rough_note">Fewer stats and coarser steps until the car\'s full range is learned.</string>
     <string name="duration_ago">%1$s ago</string>
-    <string name="stats_deep_sleep_hint">Asleep the whole time, watched by the phone without a gap.</string>
+    <string name="stats_deep_sleep_hint">The car itself asleep the whole time, watched by the phone without a gap.</string>
     <string name="stats_deep_sleep_term">deep sleep</string>
     <string name="stats_drain_ceiling">\u2264%1$s</string>
     <string name="stats_drain_extrapolated" formatted="false">%1$s*</string>
@@ -179,7 +179,7 @@
     <string name="stats_parked_hint">The odometer unchanged and not charging.</string>
     <string name="stats_parked_now">Parked</string>
     <string name="stats_parked_term">parked</string>
-    <string name="stats_power_down_hint">Parked, unoccupied, Sentry and climate off.</string>
+    <string name="stats_power_down_hint">Parked, unoccupied, Sentry and climate off. The car may still be awake: not the same as deep sleep.</string>
     <string name="stats_power_down_now">Powered down</string>
     <string name="stats_power_down_term">power down</string>
     <string name="stats_since">since %1$s</string>
