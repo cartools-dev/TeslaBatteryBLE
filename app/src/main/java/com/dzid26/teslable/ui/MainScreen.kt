@@ -65,6 +65,7 @@ import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.repeatOnLifecycle
 import com.dzid26.teslable.R
 import com.dzid26.teslable.ble.BleUiState
+import com.dzid26.teslable.ble.CarDetails
 import com.dzid26.teslable.ble.ConnectionLabel
 import com.dzid26.teslable.ble.ConnectionPhase
 import com.dzid26.teslable.ble.LogEntry
@@ -100,7 +101,7 @@ fun MainScreen(
     onOpenVehicle: (String) -> Unit,
     onOpenRequestConsumed: () -> Unit,
     onPairKey: (String) -> Unit,
-    onSaveCar: (String, String?, Float?) -> Unit,
+    onSaveCar: (String, CarDetails) -> Unit,
     onWake: (String?) -> Unit,
     onReadSoc: () -> Unit,
     onOpenSettings: () -> Unit,
@@ -202,17 +203,16 @@ fun MainScreen(
 private fun CarEditor(
     state: BleUiState,
     target: String?,
-    onSaveCar: (String, String?, Float?) -> Unit,
+    onSaveCar: (String, CarDetails) -> Unit,
     onDismiss: () -> Unit,
 ) {
     if (target == null) return
     val vehicle = state.vehicles.firstOrNull { it.bleName == target } ?: return
     CarDialog(
         bleName = target,
-        initialVin = vehicle.vin ?: "",
-        initialRangeMiles = vehicle.factoryRangeMiles,
-        onSave = { vin, range ->
-            onSaveCar(target, vin, range)
+        vehicle = vehicle,
+        onSave = { details ->
+            onSaveCar(target, details)
             onDismiss()
         },
         onDismiss = onDismiss,

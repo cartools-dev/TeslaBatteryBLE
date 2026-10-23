@@ -2,9 +2,12 @@
 package com.dzid26.teslable.ui
 
 import android.widget.Toast
+import androidx.annotation.StringRes
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.MaterialTheme
@@ -21,6 +24,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardType
 import com.dzid26.teslable.R
+import com.dzid26.teslable.ble.CarDetails
 import com.dzid26.teslable.ble.Vehicle
 import com.dzid26.teslable.core.vehicle.decodeVin
 import com.dzid26.teslable.core.vehicle.epaSearchUrl
@@ -37,13 +41,13 @@ private const val GREYED_ALPHA = 0.38f
 @Composable
 internal fun CarDialog(
     bleName: String,
-    initialVin: String,
-    initialRangeMiles: Float?,
-    onSave: (vin: String?, factoryRangeMiles: Float?) -> Unit,
+    vehicle: Vehicle,
+    onSave: (CarDetails) -> Unit,
     onDismiss: () -> Unit,
 ) {
-    var vinInput by remember { mutableStateOf(initialVin) }
-    var rangeInput by remember { mutableStateOf(initialRangeMiles?.let { "%.0f".format(Locale.US, it) }.orEmpty()) }
+    var vinInput by remember { mutableStateOf(vehicle.vin.orEmpty()) }
+    var rangeInput by remember { mutableStateOf(vehicle.factoryRangeMiles?.let { "%.0f".format(Locale.US, it) }.orEmpty()) }
+    var capacityInput by remember { mutableStateOf(vehicle.factoryCapacityKwh?.let { "%.1f".format(Locale.US, it) }.orEmpty()) }
     val normalized = Vehicle.normalizeVin(vinInput)
     val expected =
         if (normalized.length == Vehicle.VIN_LENGTH) {
@@ -55,12 +59,14 @@ internal fun CarDialog(
     val vinValid = normalized.length == Vehicle.VIN_LENGTH && expected == bleName
     val range = rangeInput.replace(',', '.').toFloatOrNull()?.takeIf { it > 0f }
     val rangeValid = rangeInput.isBlank() || range != null
+    val capacity = capacityInput.replace(',', '.').toFloatOrNull()?.takeIf { it > 0f }
+    val capacityValid = capacityInput.isBlank() || capacity != null
     val epaUrl = if (vinValid) decodeVin(normalized)?.let(::epaSearchUrl) else null
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text(stringResource(R.string.car_edit_title)) },
         text = {
-            Column {
+            Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
                 OutlinedTextField(
                     value = vinInput,
                     onValueChange = { vinInput = it },
@@ -70,23 +76,21 @@ internal fun CarDialog(
                     supportingText = { Text(stringResource(vinHint(mismatch, vinValid))) },
                     modifier = Modifier.fillMaxWidth(),
                 )
-                OutlinedTextField(
-                    value = rangeInput,
-                    onValueChange = { rangeInput = it },
-                    singleLine = true,
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
-                    label = { Text(stringResource(R.string.car_range_label)) },
-                    isError = !rangeValid,
-                    supportingText = { Text(stringResource(R.string.car_range_hint)) },
-                    modifier = Modifier.fillMaxWidth(),
-                )
+                DecimalField(rangeInput, { rangeInput = it }, R.string.car_range_label, R.string.car_range_hint, rangeValid)
                 EpaLookupButton(epaUrl)
+                DecimalField(
+                    capacityInput,
+                    { capacityInput = it },
+                    R.string.car_capacity_label,
+                    R.string.car_capacity_hint,
+                    capacityValid,
+                )
             }
         },
         confirmButton = {
             TextButton(
-                onClick = { onSave(normalized.takeIf { it.isNotEmpty() }, range) },
-                enabled = (normalized.isEmpty() || vinValid) && rangeValid,
+                onClick = { onSave(CarDetails(normalized.takeIf { it.isNotEmpty() }, range, capacity)) },
+                enabled = (normalized.isEmpty() || vinValid) && rangeValid && capacityValid,
             ) {
                 Text(stringResource(R.string.action_save))
             }
@@ -132,3 +136,23 @@ private fun vinHint(
         valid -> R.string.vin_saved
         else -> R.string.vin_hint
     }
+
+@Composable
+private fun DecimalField(
+    value: String,
+    onValueChange: (String) -> Unit,
+    @StringRes label: Int,
+    @StringRes hint: Int,
+    valid: Boolean,
+) {
+    OutlinedTextField(
+        value = value,
+        onValueChange = onValueChange,
+        singleLine = true,
+        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+        label = { Text(stringResource(label)) },
+        isError = !valid,
+        supportingText = { Text(stringResource(hint)) },
+        modifier = Modifier.fillMaxWidth(),
+    )
+}

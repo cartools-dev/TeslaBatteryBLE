@@ -174,8 +174,12 @@ internal fun CarScreen(
             restStats(vehicleHistory, vehicleDrives, ProjectionContext(scale, vehicleStatuses))
         }
     val health =
-        remember(vehicleHistory, vehicle?.factoryRangeMiles) {
-            healthSummary(vehicleHistory, epaRatedRangeMiles = vehicle?.factoryRangeMiles)
+        remember(vehicleHistory, vehicle?.factoryRangeMiles, vehicle?.factoryCapacityKwh) {
+            healthSummary(
+                vehicleHistory,
+                epaRatedRangeMiles = vehicle?.factoryRangeMiles,
+                newCapacityKwh = vehicle?.factoryCapacityKwh,
+            )
         }
     // What a pull on this screen will do, and the feedback while it runs.
     val pullLabel =

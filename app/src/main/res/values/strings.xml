@@ -78,6 +78,8 @@
     <string name="log_title">Log</string>
     <string name="log_empty">No activity yet.</string>
     <string name="enable_toggle">Enable</string>
+    <string name="car_capacity_hint">Usable pack energy in kWh when the car was new; it sets the baseline for the capacity-based state of health.</string>
+    <string name="car_capacity_label">Battery capacity when new (kWh)</string>
     <string name="car_edit_title">Edit car</string>
     <string name="car_range_hint">Rated range in miles when the car was new; it sets the baseline for state of health.</string>
     <string name="car_range_label">Rated range when new (mi)</string>
