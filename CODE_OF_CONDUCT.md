@@ -54,7 +54,7 @@ or offline event.
 
 Instances of abusive, harassing, or otherwise unacceptable behavior may be reported
 to the maintainer through a private channel: use the repository's
-[Report a vulnerability](https://github.com/cartools-dev/TeslaBatteryBLE/security/advisories/new)
+[Report a vulnerability](https://github.com/opencartools/TeslaBatteryBLE/security/advisories/new)
 flow (it creates a confidential thread visible only to the maintainers) or contact
 [@dzid26](https://github.com/dzid26) on GitHub. All complaints will be reviewed and
 investigated promptly and fairly.
