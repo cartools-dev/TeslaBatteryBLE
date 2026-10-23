@@ -10,6 +10,7 @@ import android.content.IntentFilter
 import android.os.Handler
 import android.os.Looper
 import androidx.core.content.ContextCompat
+import com.dzid26.teslable.core.history.ActivitySample
 import com.dzid26.teslable.core.history.AppState
 import com.dzid26.teslable.core.history.BatterySample
 import com.dzid26.teslable.core.history.Command
@@ -77,6 +78,9 @@ class TeslaBleController(
 
     /** VCSEC status readings logged for every car, oldest first. */
     val statusHistory: StateFlow<List<StatusSample>> get() = historyStore.statusSamples
+
+    /** Sentry and climate readings logged for every car, oldest first. */
+    val activityHistory: StateFlow<List<ActivitySample>> get() = historyStore.activitySamples
 
     /** Drive readings recorded from every DriveState response, oldest first. */
     val driveHistory: StateFlow<List<DriveSample>> get() = historyStore.driveSamples

@@ -79,6 +79,7 @@ import com.dzid26.teslable.core.health.PriceChange
 import com.dzid26.teslable.core.health.chargeSessionOpen
 import com.dzid26.teslable.core.health.lastFinishedChargeStats
 import com.dzid26.teslable.core.health.priceForCharge
+import com.dzid26.teslable.core.history.ActivitySample
 import com.dzid26.teslable.core.history.BatterySample
 import com.dzid26.teslable.core.history.ChargeProjection
 import com.dzid26.teslable.core.history.DriveSample
@@ -130,6 +131,8 @@ internal fun CarScreen(
     history: List<BatterySample>,
     driveHistory: List<DriveSample>,
     statusHistory: List<StatusSample>,
+    // Sentry and climate readings: what keeps a locked car from counting as asleep.
+    activityHistory: List<ActivitySample> = emptyList(),
     // The newest route-bearing drive reading per car, for the live trip card.
     routes: Map<String, RouteSample> = emptyMap(),
     // The finished navigations per car, for the past-trips card.
@@ -166,13 +169,19 @@ internal fun CarScreen(
         } else {
             statusHistory.filter { it.vehicleId == vehicle.bleName }
         }
+    val vehicleActivity =
+        if (vehicle == null) {
+            emptyList()
+        } else {
+            activityHistory.filter { it.vehicleId == vehicle.bleName }
+        }
     val paired = isPaired(connection, vehicle)
     // Fitted once for every card below: the hero, the trip, both history charts.
     val scale = remember(vehicleHistory) { FullRangeScales.of(vehicleHistory) }
     // The stats card looks at the whole log, whatever range the battery chart shows.
     val rest =
-        remember(vehicleHistory, vehicleDrives, vehicleStatuses, scale) {
-            restStats(vehicleHistory, vehicleDrives, ProjectionContext(scale, vehicleStatuses))
+        remember(vehicleHistory, vehicleDrives, vehicleStatuses, vehicleActivity, scale) {
+            restStats(vehicleHistory, vehicleDrives, ProjectionContext(scale, vehicleStatuses, vehicleActivity))
         }
     val health =
         remember(vehicleHistory, vehicle?.factoryRangeMiles) {
@@ -317,7 +326,7 @@ internal fun CarScreen(
                         vehicleHistory,
                         vehicleDrives,
                         nowMillis = nowMillis ?: System.currentTimeMillis(),
-                        statuses = vehicleStatuses,
+                        sleepLogs = ProjectionContext(statuses = vehicleStatuses, activity = vehicleActivity),
                     )
                     DriveHistoryCard(vehicleHistory, vehicleDrives, scale = scale, ratedKwhPerMile = health.ratedKwhPerMile)
                     PastTripsCard(
@@ -759,8 +768,8 @@ internal fun BatteryHistoryCard(
     nowMillis: Long = System.currentTimeMillis(),
     // Injectable for the Paparazzi snapshots; production opens on the day range.
     initialRange: HistoryRange = HistoryRange.DAY,
-    // The VCSEC status log: when the car slept, for the deep-sleep drain rate.
-    statuses: List<StatusSample> = emptyList(),
+    // The status log and the Sentry and climate readings: when the car sat locked and alone, for the sleep drain rate.
+    sleepLogs: ProjectionContext = ProjectionContext(),
 ) {
     var range by rememberSaveable { mutableStateOf(initialRange) }
     val is24Hour = LocalIs24Hour.current ?: DateFormat.is24HourFormat(LocalContext.current)
@@ -803,7 +812,7 @@ internal fun BatteryHistoryCard(
                 // Parked drain: the drive samples' odometer marks the
                 // stretches the car moved. Shown next to the charge
                 // projection too: where the battery heads if unplugged now.
-                val discharge = dischargeProjection(samples, drives, baseMillis, now, ProjectionContext(scale, statuses))
+                val discharge = dischargeProjection(samples, drives, baseMillis, now, sleepLogs.copy(scale = scale))
                 // The projection gets room on the x-axis: its round-figure horizon ahead.
                 val windowEnd =
                     if (charge != null || discharge != null) {

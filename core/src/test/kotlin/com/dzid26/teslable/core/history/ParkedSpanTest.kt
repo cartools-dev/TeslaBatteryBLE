@@ -77,7 +77,7 @@ class ParkedSpanTest {
     fun `sleep is the parked stretch with nobody seen at the car`() {
         val samples = listOf(sample(0), sample(100), sample(200), sample(300), sample(700))
         val statuses = listOf(status(150, attended = true), status(500))
-        val span = assertNotNull(longestSleep(samples, drives(samples), statuses))
+        val span = assertNotNull(longestSleep(samples, drives(samples), ProjectionContext(statuses = statuses)))
         assertEquals(200 * MINUTE, span.startMillis)
         assertEquals(700 * MINUTE, span.endMillis)
         assertEquals(700 * MINUTE, assertNotNull(longestParked(samples, drives(samples))).endMillis)
@@ -89,11 +89,11 @@ class ParkedSpanTest {
         val b = sample(1)
         val before = status(-5, attended = true)
         // No status inside a ten-second pair: the unlocked, present reading just before it still stands.
-        assertEquals(false, unattendedBetween(a, b, listOf(before)))
-        assertEquals(true, unattendedBetween(a, b, listOf(status(-5))))
+        assertEquals(false, unattendedBetween(a, b, ProjectionContext(statuses = listOf(before))))
+        assertEquals(true, unattendedBetween(a, b, ProjectionContext(statuses = listOf(status(-5)))))
         // A carried reading older than a heartbeat is stale: the phone was away, nothing contradicts it.
-        assertEquals(true, unattendedBetween(a, b, listOf(status(-120, attended = true))))
-        assertEquals(true, unattendedBetween(a, b, emptyList()))
+        assertEquals(true, unattendedBetween(a, b, ProjectionContext(statuses = listOf(status(-120, attended = true)))))
+        assertEquals(true, unattendedBetween(a, b, ProjectionContext()))
     }
 
     @Test
@@ -113,6 +113,26 @@ class ParkedSpanTest {
         assertNull(longestParked(samples, drives(samples)))
         val steady = listOf(sample(0, 70), sample(300, 69))
         assertEquals(300 * MINUTE, assertNotNull(longestParked(steady, drives(steady))).endMillis)
+    }
+
+    @Test
+    fun `sentry or climate running keeps a locked car from counting as sleep`() {
+        val a = sample(0)
+        val b = sample(60)
+
+        fun reading(
+            minutes: Long,
+            kind: ActivityKind,
+            on: Boolean,
+        ) = ActivitySample(minutes * MINUTE, "", kind, on)
+        // Sentry on just before the gap stands for it; a later reading that turns it off ends it.
+        assertEquals(false, unattendedBetween(a, b, ProjectionContext(activity = listOf(reading(-5, ActivityKind.SENTRY, true)))))
+        assertEquals(true, unattendedBetween(a, b, ProjectionContext(activity = listOf(reading(-5, ActivityKind.SENTRY, false)))))
+        // The climate running inside the gap counts, and a Sentry-off reading does not cancel a climate-on one.
+        val climate = listOf(reading(10, ActivityKind.CLIMATE, true), reading(20, ActivityKind.SENTRY, false))
+        assertEquals(false, unattendedBetween(a, b, ProjectionContext(activity = climate)))
+        // A reading older than a heartbeat is stale.
+        assertEquals(true, unattendedBetween(a, b, ProjectionContext(activity = listOf(reading(-120, ActivityKind.CLIMATE, true)))))
     }
 
     private fun status(

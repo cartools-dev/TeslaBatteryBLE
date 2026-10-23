@@ -148,6 +148,7 @@ fun MainScreen(
             history = history.battery,
             driveHistory = history.drive,
             statusHistory = history.status,
+            activityHistory = history.activity,
             routes = history.routes,
             trips = history.trips,
             onBack = { viewingBleName = null },

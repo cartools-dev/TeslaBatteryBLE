@@ -31,6 +31,7 @@ import com.dzid26.teslable.core.history.DriveSample
 import com.dzid26.teslable.core.history.DriveWindow
 import com.dzid26.teslable.core.history.HistoryRange
 import com.dzid26.teslable.core.history.ParkedSpan
+import com.dzid26.teslable.core.history.ProjectionContext
 import com.dzid26.teslable.core.history.RestStats
 import com.dzid26.teslable.core.history.RouteSample
 import com.dzid26.teslable.core.history.SleepDrop
@@ -474,7 +475,7 @@ class CardSnapshots {
                 samples = sleepParkedSamples,
                 drives = sleepParkedSamples.map { parkedDrive(it) },
                 nowMillis = NOW,
-                statuses = sleepStatuses,
+                sleepLogs = ProjectionContext(statuses = sleepStatuses),
             )
         }
     }

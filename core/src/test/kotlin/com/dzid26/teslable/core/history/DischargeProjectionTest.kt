@@ -288,6 +288,19 @@ class DischargeProjectionTest {
     }
 
     @Test
+    fun `sentry running makes a long locked gap no sleep`() {
+        val samples = listOf(sample(0, 80), sample(120, 79), sample(240, 78), sample(360, 75))
+        val statuses = listOf(status(60), status(180), status(300, attended = true))
+        val sentry = listOf(ActivitySample(-5 * MINUTE, "", ActivityKind.SENTRY, true))
+        val projection =
+            assertNotNull(
+                project(samples, context = ProjectionContext(statuses = statuses, activity = sentry), rangeMillis = 24 * HOUR),
+            )
+        // Sentry was on throughout the first gaps: no sleep rate, so the line is the mixed one.
+        assertNull(projection.mixedPercentPerHour)
+    }
+
+    @Test
     fun `short quiet pairs are an awake car and make no sleep rate`() {
         // Locked and alone, but only minutes apart: the car was still awake, not sleeping.
         val samples = listOf(sample(0, 80), sample(10, 79), sample(20, 78), sample(30, 77), sample(240, 76))
