@@ -252,7 +252,7 @@ class CardSnapshots {
     @Test
     fun statsCard() {
         snapCard("stats-card") {
-            BatteryStatsCard(restStatsFixture)
+            SleepStatsCard(restStatsFixture)
         }
     }
 

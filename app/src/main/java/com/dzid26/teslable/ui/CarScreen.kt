@@ -339,7 +339,7 @@ internal fun CarScreen(
                         pricePerKwh = pricePerKwh,
                     )
                     BatteryHealthCard(health)
-                    BatteryStatsCard(rest)
+                    SleepStatsCard(rest)
                 }
             }
         }

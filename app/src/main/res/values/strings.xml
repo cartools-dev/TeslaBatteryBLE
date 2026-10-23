@@ -180,7 +180,7 @@
     <string name="stats_sleep_hint">Parked, nobody in the car, Sentry and climate off.</string>
     <string name="stats_sleep_term">sleep</string>
     <string name="stats_started">started %1$s</string>
-    <string name="stats_title">Battery stats</string>
+    <string name="stats_title">Sleep stats</string>
     <string name="trip_arrival_range">Arrive with %1$d%% (about %2$s left)</string>
     <string name="notification_trip_traffic">(+%1$s traffic)</string>
     <string name="notification_trip_label">"Trip: "</string>
