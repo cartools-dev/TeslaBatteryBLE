@@ -51,7 +51,7 @@ internal fun BatteryHealthCard(summary: HealthSummary) {
                 EstimateRow(
                     label = "Full range",
                     value = "~${unit.format(miles)}",
-                    detail = "fitted from ${summary.fullRangeSteps} percent steps",
+                    detail = "fitted from ${summary.fullRangeSteps} level steps",
                 )
             }
             summary.sohPercent?.let { soh ->
@@ -62,7 +62,7 @@ internal fun BatteryHealthCard(summary: HealthSummary) {
                         summary.newCapacityKwh?.let {
                             "of ${kwhLabel(it)} when new (rated constant times the new-car range)"
                         },
-                    detail = "fitted full range over the rated range when new",
+                    detail = "full range over rated range when new",
                 )
             }
             summary.capacityKwh?.let { kwh ->
@@ -70,21 +70,11 @@ internal fun BatteryHealthCard(summary: HealthSummary) {
                     label = "Usable capacity",
                     value = kwhLabel(kwh),
                     detail =
-                        if (summary.ratedKwhPerMile != null) {
-                            "based on the charge energy added, rated constant times full range"
-                        } else {
-                            "based on the charge energy added over the last charge"
-                        },
+                        summary.ratedKwhPerMile
+                            ?.let { constant -> efficiency.format(constant, unit, separator) }
+                            ?.let { "from charge energy added, rated constant $it" }
+                            ?: "from charge energy added",
                 )
-            }
-            summary.ratedKwhPerMile?.let { constant ->
-                efficiency.format(constant, unit, separator)?.let { text ->
-                    EstimateRow(
-                        label = "Rated constant",
-                        value = text,
-                        detail = "energy added per rated distance gained, from the last charge",
-                    )
-                }
             }
             if (summary.capacityKwh == null && summary.fullRangeMiles == null && summary.sohPercent == null) {
                 Text(
