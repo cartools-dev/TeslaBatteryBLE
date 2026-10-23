@@ -32,24 +32,43 @@ fun BleRecord.toActivitySample(vehicleId: String): ActivitySample? {
 }
 
 /**
- * Whether [next] is worth keeping after [last], the last one kept for the same car and kind: the first reading, one
- * that changes the state, or one a thinning interval after [last]. While Sentry or the climate runs the car is read
- * every ten seconds, so keeping them all would fill the history with copies of one state; every state change and a
- * reading each [ACTIVITY_KEEP_MILLIS] still cover a run, more densely than the carried-in reading a gap looks back
- * for, and the oldest readings are never pushed out by the newest copies.
+ * Thins a stream of [ActivitySample]s. While Sentry or the climate runs the car is read every ten seconds, so keeping
+ * every reading would fill the history with copies of one state. Per car and kind it keeps a reading each
+ * [ACTIVITY_KEEP_MILLIS], every change of state, and the reading just before a change, so a run ends at its true
+ * last reading. That is closer together than the 16 minutes a reading may stand for a gap.
  */
-fun keepActivity(
-    last: ActivitySample?,
-    next: ActivitySample,
-): Boolean = last == null || next.on != last.on || next.timestampMillis - last.timestampMillis >= ACTIVITY_KEEP_MILLIS
+class ActivityThinner {
+    private class Seen(
+        var kept: ActivitySample,
+        var latest: ActivitySample,
+    )
 
-/** The readings of [this], oldest first, thinned by [keepActivity] per car and kind. */
-fun List<ActivitySample>.thinned(): List<ActivitySample> {
-    val lastKept = mutableMapOf<Pair<String, ActivityKind>, ActivitySample>()
-    return filter { sample ->
-        val key = sample.vehicleId to sample.kind
-        keepActivity(lastKept[key], sample).also { if (it) lastKept[key] = sample }
+    private val seen = mutableMapOf<Pair<String, ActivityKind>, Seen>()
+
+    /** The readings to keep because [next] arrived, in time order: the one before a change, if dropped, then [next] when kept. */
+    fun accept(next: ActivitySample): List<ActivitySample> {
+        val key = next.vehicleId to next.kind
+        val state = seen[key]
+        if (state == null) {
+            seen[key] = Seen(next, next)
+            return listOf(next)
+        }
+        val changed = next.on != state.latest.on
+        val kept = mutableListOf<ActivitySample>()
+        if (changed && state.latest !== state.kept) kept += state.latest
+        if (changed || next.timestampMillis - state.kept.timestampMillis >= ACTIVITY_KEEP_MILLIS) {
+            kept += next
+            state.kept = next
+        }
+        state.latest = next
+        return kept
     }
+}
+
+/** The readings of [this], oldest first, thinned by an [ActivityThinner]. */
+fun List<ActivitySample>.thinned(): List<ActivitySample> {
+    val thinner = ActivityThinner()
+    return flatMap { thinner.accept(it) }
 }
 
 /** Kept readings of one state are at most this far apart: under the 16 minutes a reading may stand for a gap. */

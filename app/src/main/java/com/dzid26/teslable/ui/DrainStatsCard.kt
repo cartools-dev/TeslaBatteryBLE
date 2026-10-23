@@ -28,7 +28,7 @@ import com.dzid26.teslable.core.history.RestStats
  * and the lowest drain. Shown only when the logs hold any.
  */
 @Composable
-internal fun SleepStatsCard(rest: RestStats) {
+internal fun DrainStatsCard(rest: RestStats) {
     if (rest.isEmpty) return
     Card(modifier = Modifier.fillMaxWidth()) {
         Column(Modifier.padding(12.dp)) {

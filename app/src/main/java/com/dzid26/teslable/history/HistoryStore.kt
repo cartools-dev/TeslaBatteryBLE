@@ -3,8 +3,8 @@
 package com.dzid26.teslable.history
 
 import android.content.Context
-import com.dzid26.teslable.core.history.ActivityKind
 import com.dzid26.teslable.core.history.ActivitySample
+import com.dzid26.teslable.core.history.ActivityThinner
 import com.dzid26.teslable.core.history.AppState
 import com.dzid26.teslable.core.history.BatterySample
 import com.dzid26.teslable.core.history.BleRecord
@@ -16,10 +16,8 @@ import com.dzid26.teslable.core.history.RouteSample
 import com.dzid26.teslable.core.history.StatusSample
 import com.dzid26.teslable.core.history.Trip
 import com.dzid26.teslable.core.history.continuing
-import com.dzid26.teslable.core.history.keepActivity
 import com.dzid26.teslable.core.history.segmentTrips
 import com.dzid26.teslable.core.history.shouldLogStatus
-import com.dzid26.teslable.core.history.thinned
 import com.dzid26.teslable.core.history.toActivitySample
 import com.dzid26.teslable.core.history.toBatterySample
 import com.dzid26.teslable.core.history.toDriveSample
@@ -125,8 +123,8 @@ class HistoryStore(
      */
     val trips: StateFlow<Map<String, List<Trip>>> = _trips.asStateFlow()
 
-    /** The newest Sentry or climate reading kept per vehicle and kind, which [keepActivity] compares the next one against. */
-    private val lastKeptActivity = mutableMapOf<Pair<String, ActivityKind>, ActivitySample>()
+    /** Thins the Sentry and climate readings as they load and arrive. */
+    private val activityThinner = ActivityThinner()
 
     /** The newest status record logged per vehicle, which [shouldLogStatus] compares the next reading against. */
     private val lastLoggedStatus = mutableMapOf<String, BleRecord>()
@@ -388,10 +386,9 @@ class HistoryStore(
         record: BleRecord,
     ) {
         val sample = record.toActivitySample(vehicleId) ?: return
-        val key = vehicleId to sample.kind
-        if (!keepActivity(lastKeptActivity[key], sample)) return
-        lastKeptActivity[key] = sample
-        _activitySamples.value = (_activitySamples.value + sample).takeLast(MAX_ACTIVITY_SAMPLES)
+        val kept = activityThinner.accept(sample)
+        if (kept.isEmpty()) return
+        _activitySamples.value = (_activitySamples.value + kept).takeLast(MAX_ACTIVITY_SAMPLES)
     }
 
     /** Reads the closures and climate logs, which hold Sentry and climate state, into one list, oldest first. */
@@ -400,8 +397,7 @@ class HistoryStore(
             (closuresLogs.readAll() + climateLogs.readAll())
                 .flatMap { (vehicleId, records) -> records.mapNotNull { it.toActivitySample(vehicleId) } }
                 .sortedBy { it.timestampMillis }
-                .thinned()
-                .also { kept -> kept.forEach { lastKeptActivity[it.vehicleId to it.kind] = it } }
+                .flatMap { activityThinner.accept(it) }
                 .takeLast(MAX_ACTIVITY_SAMPLES)
         }.getOrDefault(emptyList())
 
