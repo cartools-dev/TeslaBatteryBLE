@@ -954,8 +954,6 @@ class CardSnapshots {
                 sessions = 6,
                 learningTarget = 3,
                 sohPercent = 89f,
-                sohSpreadPoints = 2f,
-                sohMismatch = false,
                 capacityKwh = 57.2f,
                 ratedKwhPerMile = 0.2736f,
                 capacitySwingPercent = null,

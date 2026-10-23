@@ -2,7 +2,7 @@
 
 What the app does today, in detail. The short version is in the [README](../README.md).
 
-- **Scan & connect** to nearby Teslas by advertised BLE name, with VIN-based hinting; once the VIN is saved, the car screen shows its model and model year under the name, and a pencil next to the name edits the VIN and the car's new-car rated range and battery capacity (the app links the EPA page for the VIN's model and year to copy it from)
+- **Scan & connect** to nearby Teslas by advertised BLE name, with VIN-based hinting; once the VIN is saved, the car screen shows its model and model year under the name, and a pencil next to the name edits the VIN and the car's new-car rated range (the app links the EPA page for the VIN's model and year to copy it from)
 - **Pair a key** (CHARGING_MANAGER role by default) via Tesla's unsigned `addKey` flow: NFC card tap on the console + vehicle confirmation
 - **No extra BLE channel** — the car reserves one BLE channel per connected device, not per app. A dongle or keyfob always takes its own channel; the app shares your phone's link, so installed on the same phone as Tesla's phone-key app it adds no channel at all
 - **Read battery SOC** and charge state over an authenticated, encrypted session; a

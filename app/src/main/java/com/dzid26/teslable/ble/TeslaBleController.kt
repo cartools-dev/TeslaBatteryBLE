@@ -221,7 +221,6 @@ class TeslaBleController(
             it.copy(
                 vin = normalized ?: it.vin,
                 factoryRangeMiles = details.factoryRangeMiles,
-                factoryCapacityKwh = details.factoryCapacityKwh,
             )
         }
         log("${vehicle.title}: details saved")

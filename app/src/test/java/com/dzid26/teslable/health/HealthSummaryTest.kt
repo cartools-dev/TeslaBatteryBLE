@@ -101,14 +101,13 @@ class HealthSummaryTest {
                 )
         assertNull(healthSummary(samples).sohPercent)
 
-        val withBaselines = healthSummary(samples, epaRatedRangeMiles = 330f, newCapacityKwh = 75f)
-        assertNotNull(withBaselines.sohPercent)
-        // Fitted range: ~300/330 = ~90.9%; energy delta: 65.625/75 = 87.5%.
-        assertEquals(89.2f, withBaselines.sohPercent!!, 1.2f)
-        assertTrue(!withBaselines.sohMismatch)
+        val withBaseline = healthSummary(samples, epaRatedRangeMiles = 330f)
+        assertNotNull(withBaseline.sohPercent)
+        // Fitted full range over the rated range when new: ~300/330 = ~90.9%.
+        assertEquals(90.9f, withBaseline.sohPercent!!, 1.5f)
         // The rated constant (kWh per mile) times the new-car range is the pack energy when new.
         assertNull(healthSummary(samples).newCapacityKwh)
-        assertEquals(withBaselines.ratedKwhPerMile!! * 330f, withBaselines.newCapacityKwh!!, 0.01f)
+        assertEquals(withBaseline.ratedKwhPerMile!! * 330f, withBaseline.newCapacityKwh!!, 0.01f)
     }
 
     @Test

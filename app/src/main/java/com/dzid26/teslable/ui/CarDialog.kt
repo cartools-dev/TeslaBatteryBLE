@@ -47,7 +47,6 @@ internal fun CarDialog(
 ) {
     var vinInput by remember { mutableStateOf(vehicle.vin.orEmpty()) }
     var rangeInput by remember { mutableStateOf(vehicle.factoryRangeMiles?.let { "%.0f".format(Locale.US, it) }.orEmpty()) }
-    var capacityInput by remember { mutableStateOf(vehicle.factoryCapacityKwh?.let { "%.1f".format(Locale.US, it) }.orEmpty()) }
     val normalized = Vehicle.normalizeVin(vinInput)
     val expected =
         if (normalized.length == Vehicle.VIN_LENGTH) {
@@ -59,8 +58,6 @@ internal fun CarDialog(
     val vinValid = normalized.length == Vehicle.VIN_LENGTH && expected == bleName
     val range = rangeInput.replace(',', '.').toFloatOrNull()?.takeIf { it > 0f }
     val rangeValid = rangeInput.isBlank() || range != null
-    val capacity = capacityInput.replace(',', '.').toFloatOrNull()?.takeIf { it > 0f }
-    val capacityValid = capacityInput.isBlank() || capacity != null
     val epaUrl = if (vinValid) decodeVin(normalized)?.let(::epaSearchUrl) else null
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -78,19 +75,12 @@ internal fun CarDialog(
                 )
                 DecimalField(rangeInput, { rangeInput = it }, R.string.car_range_label, R.string.car_range_hint, rangeValid)
                 EpaLookupButton(epaUrl)
-                DecimalField(
-                    capacityInput,
-                    { capacityInput = it },
-                    R.string.car_capacity_label,
-                    R.string.car_capacity_hint,
-                    capacityValid,
-                )
             }
         },
         confirmButton = {
             TextButton(
-                onClick = { onSave(CarDetails(normalized.takeIf { it.isNotEmpty() }, range, capacity)) },
-                enabled = (normalized.isEmpty() || vinValid) && rangeValid && capacityValid,
+                onClick = { onSave(CarDetails(normalized.takeIf { it.isNotEmpty() }, range)) },
+                enabled = (normalized.isEmpty() || vinValid) && rangeValid,
             ) {
                 Text(stringResource(R.string.action_save))
             }

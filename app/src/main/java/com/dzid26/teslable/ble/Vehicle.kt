@@ -20,8 +20,6 @@ data class Vehicle(
     val keySlot: Int? = null,
     /** The rated range in miles when the car was new, the baseline for state of health; set by the owner. */
     val factoryRangeMiles: Float? = null,
-    /** The pack capacity in kWh when the car was new, the baseline for the capacity-based state of health; set by the owner. */
-    val factoryCapacityKwh: Float? = null,
     val lastSeenMillis: Long = 0L,
 ) {
     /** What the UI calls this car: user-set name, then the car's own name. */
@@ -48,5 +46,4 @@ data class Vehicle(
 data class CarDetails(
     val vin: String?,
     val factoryRangeMiles: Float?,
-    val factoryCapacityKwh: Float?,
 )

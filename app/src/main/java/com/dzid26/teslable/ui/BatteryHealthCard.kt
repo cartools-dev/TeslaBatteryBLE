@@ -46,6 +46,13 @@ internal fun BatteryHealthCard(summary: HealthSummary) {
             }
             Spacer(Modifier.height(8.dp))
 
+            summary.fullRangeMiles?.let { miles ->
+                EstimateRow(
+                    label = "Full range",
+                    value = "~${unit.format(miles)}",
+                    detail = "fitted from ${summary.fullRangeSteps} percent steps",
+                )
+            }
             summary.sohPercent?.let { soh ->
                 EstimateRow(
                     label = "Capacity (SoH)",
@@ -54,12 +61,7 @@ internal fun BatteryHealthCard(summary: HealthSummary) {
                         summary.newCapacityKwh?.let {
                             "of ${kwhLabel(it)} when new (rated constant times the new-car range)"
                         },
-                    detail =
-                        if (summary.sohMismatch) {
-                            "range-based and charge-based estimates differ"
-                        } else {
-                            "from rated range and energy added while charging"
-                        },
+                    detail = "fitted full range over the rated range when new",
                 )
             }
             summary.capacityKwh?.let { kwh ->
@@ -70,13 +72,6 @@ internal fun BatteryHealthCard(summary: HealthSummary) {
                         summary.ratedKwhPerMile?.let { constant ->
                             efficiency.format(constant, unit, separator)?.let { "rated constant $it" }
                         } ?: "energy added over the last charge",
-                )
-            }
-            summary.fullRangeMiles?.let { miles ->
-                EstimateRow(
-                    label = "Full range",
-                    value = "~${unit.format(miles)}",
-                    detail = "fitted from ${summary.fullRangeSteps} percent steps",
                 )
             }
             if (summary.capacityKwh == null && summary.fullRangeMiles == null && summary.sohPercent == null) {
