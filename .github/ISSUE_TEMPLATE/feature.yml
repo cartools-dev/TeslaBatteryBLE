@@ -28,4 +28,4 @@ body:
       value: |
         Note: the project is local-first by design — features that require cloud
         accounts, telemetry, or sending vehicle data off the phone are out of scope
-        for the core app. See the [master plan](https://github.com/dzid26/TeslaBatteryBLE/blob/main/docs/master-plan.md).
+        for the core app. See the [master plan](https://github.com/cartools-dev/TeslaBatteryBLE/blob/main/docs/master-plan.md).

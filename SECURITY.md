@@ -3,7 +3,7 @@
 ## Reporting a vulnerability
 
 Please report vulnerabilities **privately** using GitHub's
-[Report a vulnerability](https://github.com/dzid26/TeslaBatteryBLE/security/advisories/new)
+[Report a vulnerability](https://github.com/cartools-dev/TeslaBatteryBLE/security/advisories/new)
 flow (Security → Advisories). Do not open a public issue.
 
 Include where possible:
