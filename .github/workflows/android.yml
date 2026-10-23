@@ -13,7 +13,7 @@ on:
       - 'LICENSE'
       # CI plumbing that cannot change the app: the PR/website screenshot
       # workflows (android.yml itself still runs the CI). Scripts are not
-      # ignored, because capture-screenshots.sh drives the smoke test and a PR
+      # ignored, because smoke-test.sh drives the smoke test and a PR
       # that changes it has to run it.
       - '.github/workflows/pr-*.yml'
       - '.github/workflows/website-*.yml'
@@ -28,7 +28,7 @@ on:
       - 'LICENSE'
       # CI plumbing that cannot change the app: the PR/website screenshot
       # workflows (android.yml itself still runs the CI). Scripts are not
-      # ignored, because capture-screenshots.sh drives the smoke test and a PR
+      # ignored, because smoke-test.sh drives the smoke test and a PR
       # that changes it has to run it.
       - '.github/workflows/pr-*.yml'
       - '.github/workflows/website-*.yml'
@@ -249,35 +249,30 @@ jobs:
           sudo udevadm trigger --name-match=kvm
 
       - name: Install, launch and read the simulated car
-        id: capture
+        id: smoke
         continue-on-error: true
         uses: ./.github/actions/emulator
         with:
-          script: bash .github/scripts/capture-screenshots.sh "$SMOKE_APK" smoke-screenshots "$SMOKE_PKG" "$SMOKE_ACTIVITY"
+          script: bash .github/scripts/smoke-test.sh "$SMOKE_APK" smoke-out "$SMOKE_PKG" "$SMOKE_ACTIVITY"
 
       # Emulator flakes (GL context preemption, adb daemon) are common on CI
-      # runners; give the run one fresh attempt. The assert below still fails
-      # the job when the app never showed the car.
+      # runners; give the run one fresh boot. The step below still fails the
+      # job when the app never showed the car.
       - name: Retry once
-        if: steps.capture.outcome == 'failure'
+        id: retry
+        if: steps.smoke.outcome == 'failure'
         continue-on-error: true
         uses: ./.github/actions/emulator
         with:
-          script: rm -rf smoke-screenshots && bash .github/scripts/capture-screenshots.sh "$SMOKE_APK" smoke-screenshots "$SMOKE_PKG" "$SMOKE_ACTIVITY"
+          script: rm -rf smoke-out && bash .github/scripts/smoke-test.sh "$SMOKE_APK" smoke-out "$SMOKE_PKG" "$SMOKE_ACTIVITY"
 
       # The car screen needs the pairing handshake, an authenticated read and
-      # the battery card, so it only appears when the shrunk app works.
+      # the battery card, so it only shows when the shrunk app works.
       - name: Assert the app reached the car
+        if: steps.smoke.outcome == 'failure' && steps.retry.outcome != 'success'
         run: |
-          set -euo pipefail
-          missing=""
-          for name in 02-scanning 03-car 05-settings; do
-            if [ ! -f "smoke-screenshots/$name.png" ]; then
-              echo "::error::missing $name.png: the shrunk app did not get that far (see the smoke-screenshots artifact)"
-              missing=true
-            fi
-          done
-          [ -z "$missing" ]
+          echo "::error::the shrunk app did not reach the car (see the smoke-out artifact)"
+          exit 1
 
       # Put the cause in the job log: the focused window, the visible texts
       # and any crash from the shrunk app (R8 strips what it cannot see used).
@@ -285,28 +280,19 @@ jobs:
         if: failure()
         run: |
           shopt -s nullglob
-          for f in smoke-screenshots/debug/*-focus.txt; do echo "== $f"; cat "$f"; done
-          for f in smoke-screenshots/debug/*-window.xml; do
-            echo "== $f"
-            grep -oE '(text|content-desc)="[^"]+"' "$f" | head -n 30 || true
-          done
-          # Only the first crash dump: every later one repeats it.
-          for f in smoke-screenshots/debug/*-crash.txt; do
-            echo "== $f"
-            head -n 120 "$f"
-            break
-          done
-          for f in smoke-screenshots/debug/*-logcat.txt; do
+          for f in smoke-out/focus.txt smoke-out/window-texts.txt; do echo "== $f"; cat "$f"; done
+          for f in smoke-out/crash.txt; do echo "== $f"; head -n 120 "$f"; done
+          for f in smoke-out/logcat.txt; do
             echo "== $f"
             grep -E 'com\.dzid26' "$f" | head -n 60 || true
           done
 
-      - name: Upload screenshots and logs
+      - name: Upload failure logs
         if: always()
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
-          name: smoke-screenshots
-          path: smoke-screenshots
+          name: smoke-out
+          path: smoke-out
           if-no-files-found: warn
 
   release:
