@@ -6,7 +6,6 @@ import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.PendingIntent
 import android.app.Service
-import android.bluetooth.BluetoothAdapter
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
@@ -83,18 +82,6 @@ class BleTrackingService : Service() {
             }
         }
 
-    /** Reconnects as soon as Bluetooth is back on instead of waiting out the reconnect backoff. */
-    private val bluetoothReceiver =
-        object : BroadcastReceiver() {
-            override fun onReceive(
-                context: Context,
-                intent: Intent,
-            ) {
-                if (intent.getIntExtra(BluetoothAdapter.EXTRA_STATE, BluetoothAdapter.ERROR) != BluetoothAdapter.STATE_ON) return
-                BleControllerHolder.get(context).ensureConnected(bluetoothJustOn = true)
-            }
-        }
-
     override fun onCreate() {
         super.onCreate()
         isRunning = true
@@ -106,12 +93,6 @@ class BleTrackingService : Service() {
                 addAction(Intent.ACTION_SCREEN_ON)
                 addAction(Intent.ACTION_SCREEN_OFF)
             },
-            ContextCompat.RECEIVER_NOT_EXPORTED,
-        )
-        ContextCompat.registerReceiver(
-            this,
-            bluetoothReceiver,
-            IntentFilter(BluetoothAdapter.ACTION_STATE_CHANGED),
             ContextCompat.RECEIVER_NOT_EXPORTED,
         )
         val controller = BleControllerHolder.get(this)
@@ -182,7 +163,6 @@ class BleTrackingService : Service() {
     override fun onDestroy() {
         isRunning = false
         runCatching { unregisterReceiver(screenReceiver) }
-        runCatching { unregisterReceiver(bluetoothReceiver) }
         BleControllerHolder.get(this).recordAppState(AppState.Event.TRACKING_STOPPED)
         scope.cancel()
         // stopService removes only the foreground notification; the grouped per-car ones are ours to cancel.
@@ -209,7 +189,7 @@ class BleTrackingService : Service() {
             val advert = state.devices.firstOrNull { it.address == vehicle.address }
             val now = System.currentTimeMillis()
             val durations = statusDurations(statuses, vehicle.bleName, now)
-            val display = connectionDisplay(connection, advert, vehicle = vehicle, durations = durations)
+            val display = connectionDisplay(connection, advert, vehicle = vehicle, durations = durations, bluetoothOn = state.bluetoothOn)
             val lastKnown = history.lastOrNull { it.vehicleId == vehicle.bleName }
             val reading = batteryPercent(connection, lastKnown, now)
             NotificationModel(

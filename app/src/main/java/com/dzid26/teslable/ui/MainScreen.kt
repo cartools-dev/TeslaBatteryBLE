@@ -1,6 +1,10 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 package com.dzid26.teslable.ui
 
+import android.bluetooth.BluetoothAdapter
+import android.content.Intent
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
@@ -346,23 +350,7 @@ internal fun ConnectionsScreen(
                 // room in landscape; its content scrolls internally.
                 val logMaxHeight = (maxHeight * LOG_HEIGHT_FRACTION).coerceAtLeast(96.dp)
                 Column(modifier = Modifier.fillMaxSize()) {
-                    if (!permissionsGranted) {
-                        PermissionCard(
-                            title = stringResource(R.string.main_permission_title),
-                            body = stringResource(R.string.main_permission_body),
-                            button = stringResource(R.string.main_permission_button),
-                            onClick = onRequestPermissions,
-                        )
-                        Spacer(Modifier.height(8.dp))
-                    }
-                    if (!locationServicesEnabled) {
-                        Text(
-                            text = stringResource(R.string.main_location_off),
-                            color = MaterialTheme.colorScheme.error,
-                            style = MaterialTheme.typography.bodySmall,
-                        )
-                        Spacer(Modifier.height(8.dp))
-                    }
+                    SetupBanners(permissionsGranted, state.bluetoothOn, locationServicesEnabled, onRequestPermissions)
 
                     val connectedCount = state.connections.values.count { it.phase == ConnectionPhase.READY }
                     Row(verticalAlignment = Alignment.CenterVertically) {
@@ -389,6 +377,7 @@ internal fun ConnectionsScreen(
                     VehicleList(
                         rows = rows,
                         scanning = state.scanning,
+                        bluetoothOn = state.bluetoothOn,
                         onOpen = onOpen,
                         onEditVin = onEditVin,
                         onWake = onWake,
@@ -408,6 +397,7 @@ internal fun ConnectionsScreen(
 private fun VehicleList(
     rows: List<VehicleRow>,
     scanning: Boolean,
+    bluetoothOn: Boolean,
     onOpen: (String, String) -> Unit,
     onEditVin: (String) -> Unit,
     onWake: (String) -> Unit,
@@ -446,11 +436,53 @@ private fun VehicleList(
                     onOpen = { onOpen(row.bleName, row.address) },
                     onEditVin = { onEditVin(row.bleName) },
                     onWake = { onWake(row.bleName) },
+                    bluetoothOn = bluetoothOn,
                     nowMillis = nowMillis ?: rememberNowMillis(row.connection?.chargeAtMillis),
                 )
             }
         }
     }
+}
+
+/** What stops scans from finding cars, above the list. Bluetooth can go off at any time, so it is not part of the wizard. */
+@Composable
+private fun SetupBanners(
+    permissionsGranted: Boolean,
+    bluetoothOn: Boolean,
+    locationServicesEnabled: Boolean,
+    onRequestPermissions: () -> Unit,
+) {
+    if (!permissionsGranted) {
+        PermissionCard(
+            title = stringResource(R.string.main_permission_title),
+            body = stringResource(R.string.main_permission_body),
+            button = stringResource(R.string.main_permission_button),
+            onClick = onRequestPermissions,
+        )
+        Spacer(Modifier.height(8.dp))
+    } else if (!bluetoothOn) {
+        BluetoothOffCard()
+        Spacer(Modifier.height(8.dp))
+    }
+    if (!locationServicesEnabled) {
+        Text(
+            text = stringResource(R.string.main_location_off),
+            color = MaterialTheme.colorScheme.error,
+            style = MaterialTheme.typography.bodySmall,
+        )
+        Spacer(Modifier.height(8.dp))
+    }
+}
+
+@Composable
+private fun BluetoothOffCard() {
+    val enableBluetooth = rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) {}
+    PermissionCard(
+        title = stringResource(R.string.main_bluetooth_off_title),
+        body = stringResource(R.string.main_bluetooth_off_body),
+        button = stringResource(R.string.main_bluetooth_off_button),
+        onClick = { enableBluetooth.launch(Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE)) },
+    )
 }
 
 /** A short, explicit prompt the wizard or a system settings screen backs up. */
@@ -484,13 +516,14 @@ internal fun VehicleCard(
     onOpen: () -> Unit,
     onEditVin: () -> Unit,
     onWake: () -> Unit,
+    bluetoothOn: Boolean = true,
     // Injectable for the Paparazzi snapshots; production call sites use the
     // default, which is the same ticking clock as before.
     nowMillis: Long = rememberNowMillis(row.connection?.chargeAtMillis),
     // Injectable for the Paparazzi snapshots; null keeps the timed spinner.
     spinnerOverride: Boolean? = null,
 ) {
-    val display = connectionDisplay(row.connection, row.advert, vehicle = row.vehicle)
+    val display = connectionDisplay(row.connection, row.advert, vehicle = row.vehicle, bluetoothOn = bluetoothOn)
     val reading = batteryPercent(row.connection, row.lastKnown, nowMillis)
     val canWake =
         row.connection?.status?.asleep == true &&
@@ -517,7 +550,7 @@ internal fun VehicleCard(
                     Text(
                         text = display.status,
                         style = MaterialTheme.typography.bodySmall,
-                        color = statusColor(row.connection),
+                        color = statusColor(row.connection, bluetoothOn),
                     )
                     Text(
                         text = vin ?: row.address,
@@ -549,7 +582,7 @@ internal fun VehicleCard(
                         }
                     }
                 } else {
-                    StatusPill(row.connection)
+                    StatusPill(row.connection, bluetoothOn = bluetoothOn)
                 }
             }
             // The top-right corner: a spinner while a read is in flight.
@@ -644,14 +677,15 @@ internal fun StatusPill(
     connection: TeslaConnection?,
     onAsleepClick: (() -> Unit)? = null,
     modifier: Modifier = Modifier,
+    bluetoothOn: Boolean = true,
 ) {
-    val label = connectionLabel(connection)
+    val label = connectionLabel(connection, bluetoothOn)
     val colors = MaterialTheme.colorScheme
     val (container, content) =
         when (label) {
             ConnectionLabel.AWAKE -> colors.primaryContainer to colors.onPrimaryContainer
             ConnectionLabel.ASLEEP -> colors.secondaryContainer to colors.onSecondaryContainer
-            ConnectionLabel.FAILED -> colors.errorContainer to colors.onErrorContainer
+            ConnectionLabel.FAILED, ConnectionLabel.BLUETOOTH_OFF -> colors.errorContainer to colors.onErrorContainer
             ConnectionLabel.DISCONNECTED, ConnectionLabel.CONNECTING, ConnectionLabel.CONNECTED ->
                 colors.surfaceVariant to colors.onSurfaceVariant
         }
@@ -728,10 +762,13 @@ internal fun ReadingSpinner(
 }
 
 @Composable
-private fun statusColor(connection: TeslaConnection?): Color =
-    when (connectionLabel(connection)) {
+private fun statusColor(
+    connection: TeslaConnection?,
+    bluetoothOn: Boolean,
+): Color =
+    when (connectionLabel(connection, bluetoothOn)) {
         ConnectionLabel.AWAKE -> MaterialTheme.colorScheme.primary
-        ConnectionLabel.FAILED -> MaterialTheme.colorScheme.error
+        ConnectionLabel.FAILED, ConnectionLabel.BLUETOOTH_OFF -> MaterialTheme.colorScheme.error
         ConnectionLabel.DISCONNECTED, ConnectionLabel.CONNECTING, ConnectionLabel.CONNECTED, ConnectionLabel.ASLEEP ->
             MaterialTheme.colorScheme.onSurfaceVariant
     }

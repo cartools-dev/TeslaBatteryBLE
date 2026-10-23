@@ -1,9 +1,15 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 package com.dzid26.teslable.ble
 
+import android.bluetooth.BluetoothAdapter
+import android.bluetooth.BluetoothManager
+import android.content.BroadcastReceiver
 import android.content.Context
+import android.content.Intent
+import android.content.IntentFilter
 import android.os.Handler
 import android.os.Looper
+import androidx.core.content.ContextCompat
 import com.dzid26.teslable.core.history.AppState
 import com.dzid26.teslable.core.history.BatterySample
 import com.dzid26.teslable.core.history.Command
@@ -136,7 +142,36 @@ class TeslaBleController(
             }
         }
 
+    /**
+     * Follows the Bluetooth switch for the life of the process: the screens show "Bluetooth off" while it is off,
+     * and links reconnect as soon as it is back on instead of waiting out the reconnect backoff.
+     */
+    private val bluetoothReceiver =
+        object : BroadcastReceiver() {
+            override fun onReceive(
+                context: Context,
+                intent: Intent,
+            ) {
+                when (intent.getIntExtra(BluetoothAdapter.EXTRA_STATE, BluetoothAdapter.ERROR)) {
+                    BluetoothAdapter.STATE_OFF -> _state.update { it.copy(bluetoothOn = false) }
+
+                    BluetoothAdapter.STATE_ON -> {
+                        _state.update { it.copy(bluetoothOn = true) }
+                        ensureConnected(bluetoothJustOn = true)
+                    }
+                }
+            }
+        }
+
     init {
+        val adapter = appContext.getSystemService(BluetoothManager::class.java)?.adapter
+        if (adapter != null && !adapter.isEnabled) _state.update { it.copy(bluetoothOn = false) }
+        ContextCompat.registerReceiver(
+            appContext,
+            bluetoothReceiver,
+            IntentFilter(BluetoothAdapter.ACTION_STATE_CHANGED),
+            ContextCompat.RECEIVER_NOT_EXPORTED,
+        )
         vehicleStore.load().forEach { vehicles[it.bleName] = it }
         // A restored backup can carry cached key slots for a key this device
         // does not have (device-only keys never leave the phone). Enrollment is

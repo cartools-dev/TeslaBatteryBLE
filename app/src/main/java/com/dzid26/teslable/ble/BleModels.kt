@@ -74,6 +74,8 @@ data class BleUiState(
     /** Set when a notification tap asks the UI to open a specific car. */
     val openVehicleRequest: String? = null,
     val log: List<LogEntry> = emptyList(),
+    /** The phone's Bluetooth switch; while off no link can come up, so cars read "Bluetooth off". */
+    val bluetoothOn: Boolean = true,
 )
 
 /** One log line, tagged with the car it came from (null for app-wide lines). */
@@ -241,6 +243,7 @@ fun connectionDisplay(
     advert: TeslaAdvert?,
     vehicle: Vehicle? = null,
     durations: StatusDurations? = null,
+    bluetoothOn: Boolean = true,
 ): ConnectionDisplay {
     val title =
         vehicle?.displayName?.takeIf { it.isNotBlank() }
@@ -251,7 +254,7 @@ fun connectionDisplay(
             ?: "Tesla"
     return ConnectionDisplay(
         title = title,
-        stateText = connectionStateText(connection, durations),
+        stateText = connectionStateText(connection, durations, bluetoothOn),
         // Live RSSI while connected; otherwise the scan advert's, so unpaired
         // cars show signal strength too.
         rssi = if (connection?.phase == ConnectionPhase.READY) connection.rssi ?: advert?.rssi else advert?.rssi,
@@ -265,8 +268,11 @@ fun connectionDisplay(
 private fun connectionStateText(
     connection: TeslaConnection?,
     durations: StatusDurations?,
+    bluetoothOn: Boolean,
 ): String =
-    when (connectionLabel(connection)) {
+    when (connectionLabel(connection, bluetoothOn)) {
+        ConnectionLabel.BLUETOOTH_OFF -> "Bluetooth off"
+
         ConnectionLabel.DISCONNECTED, ConnectionLabel.FAILED -> "Disconnected"
 
         ConnectionLabel.CONNECTING -> "Connecting..."
@@ -289,6 +295,9 @@ enum class ConnectionLabel(
     DISCONNECTED("Disconnected"),
     FAILED("Failed"),
 
+    /** The phone's Bluetooth is off, so the car cannot be reached whatever the last phase was. */
+    BLUETOOTH_OFF("Bluetooth off"),
+
     /** Connecting, connected or discovering services: the link is not usable yet. */
     CONNECTING("Connecting"),
 
@@ -298,7 +307,17 @@ enum class ConnectionLabel(
     ASLEEP("Asleep"),
 }
 
-fun connectionLabel(connection: TeslaConnection?): ConnectionLabel =
+fun connectionLabel(
+    connection: TeslaConnection?,
+    bluetoothOn: Boolean = true,
+): ConnectionLabel =
+    if (!bluetoothOn) {
+        ConnectionLabel.BLUETOOTH_OFF
+    } else {
+        phaseLabel(connection)
+    }
+
+private fun phaseLabel(connection: TeslaConnection?): ConnectionLabel =
     when (connection?.phase) {
         null, ConnectionPhase.IDLE, ConnectionPhase.DISCONNECTED -> ConnectionLabel.DISCONNECTED
 
