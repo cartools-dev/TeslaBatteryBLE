@@ -30,6 +30,7 @@ import com.dzid26.teslable.protocol.SessionKeys
 import com.dzid26.teslable.protocol.TeslaCommands
 import com.dzid26.teslable.protocol.TeslaCrypto
 import com.dzid26.teslable.protocol.TeslaKeyPair
+import com.dzid26.teslable.protocol.TeslaLocationTireCommands
 import com.dzid26.teslable.protocol.TeslaNames
 import com.dzid26.teslable.protocol.TeslaSessionRequests
 import com.dzid26.teslable.protocol.TeslaVcsec
@@ -738,9 +739,11 @@ class TeslaBleController(
         DRIVE,
         CLOSURES,
         CLIMATE,
+        LOCATION,
+        TIRE_PRESSURE,
         ;
 
-        /** Part of an Infotainment read (charge, drive, closures, climate). */
+        /** Part of an Infotainment read (charge, drive, closures, climate, location, tire pressure). */
         val isRead: Boolean get() = this != WAKE
     }
 
@@ -1288,7 +1291,8 @@ class TeslaBleController(
 
         /**
          * Asks for the next state category after the previous reply (drive
-         * after charge, closures after drive, climate after closures), only
+         * after charge, closures after drive, climate after closures, then location while
+         * driving and tire pressure when due), only
          * while the car is awake and an Infotainment session already exists:
          * it never starts a session or wakes the car.
          */
@@ -1433,9 +1437,45 @@ class TeslaBleController(
                     requestFollowUp(TeslaCommands.buildClimateStateRequest(), CommandKind.CLIMATE)
                 }
 
-                CommandKind.CLIMATE -> stateReplies.onClimate(plaintext, deviceTimestamp)
+                CommandKind.CLIMATE, CommandKind.LOCATION, CommandKind.TIRE_PRESSURE ->
+                    handleLaterRead(pending.kind, plaintext, deviceTimestamp)
             }
             return true
+        }
+
+        /** The climate, location and tire pressure replies: each hands over to the next read that is wanted. */
+        private fun handleLaterRead(
+            kind: CommandKind,
+            plaintext: ByteArray,
+            deviceTimestamp: Instant,
+        ) {
+            when (kind) {
+                CommandKind.CLIMATE -> {
+                    stateReplies.onClimate(plaintext, deviceTimestamp)
+                    val now = System.currentTimeMillis()
+                    if (infotainmentPolicy.wantsLocation(now)) {
+                        infotainmentPolicy.onLocationRequested(now)
+                        requestFollowUp(TeslaLocationTireCommands.buildLocationStateRequest(), CommandKind.LOCATION)
+                    } else {
+                        requestTirePressureIfDue()
+                    }
+                }
+
+                CommandKind.LOCATION -> {
+                    stateReplies.onLocation(plaintext, deviceTimestamp)
+                    requestTirePressureIfDue()
+                }
+
+                else -> stateReplies.onTirePressure(plaintext, deviceTimestamp)
+            }
+        }
+
+        /** The tire pressure read, when [InfotainmentPollPolicy.wantsTirePressure] says it is due. */
+        private fun requestTirePressureIfDue() {
+            val now = System.currentTimeMillis()
+            if (!infotainmentPolicy.wantsTirePressure(now)) return
+            infotainmentPolicy.onTirePressureRequested(now)
+            requestFollowUp(TeslaLocationTireCommands.buildTirePressureStateRequest(), CommandKind.TIRE_PRESSURE)
         }
 
         private fun handleChargeResponse(

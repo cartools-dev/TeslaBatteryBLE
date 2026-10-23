@@ -539,7 +539,50 @@ class InfotainmentPollPolicyTest {
         assertEquals(InfotainmentPollPolicy.Reason.FRESH_START, policy.lastReadReason)
     }
 
+    @Test
+    fun locationIsWantedOnlyWhileDriving() {
+        freshStartAndFirstRead()
+        assertFalse(policy.wantsLocation(now))
+        policy.onDriveReading(ShiftStateKind.D, 100)
+        assertTrue(policy.wantsLocation(now))
+        policy.onLocationRequested(now)
+        assertFalse(policy.wantsLocation(now + TICK), "odometer standing still")
+        policy.onDriveReading(ShiftStateKind.D, 101)
+        assertTrue(policy.wantsLocation(now + TICK), "odometer advanced")
+        policy.onLocationRequested(now + TICK)
+        assertFalse(policy.wantsLocation(now + 2 * TICK))
+        assertTrue(policy.wantsLocation(now + TICK + InfotainmentPollPolicy.LOCATION_MAX_INTERVAL_MS), "five minutes at most")
+        policy.onDriveReading(ShiftStateKind.P, 102)
+        assertFalse(policy.wantsLocation(now + 2 * TICK))
+    }
+
+    @Test
+    fun tirePressureIsWantedAfterAFreshStartThenEveryTenMinutes() {
+        policy.onFreshStart(now)
+        assertTrue(policy.wantsTirePressure(now))
+        policy.onTirePressureRequested(now)
+        assertFalse(policy.wantsTirePressure(now + TIRES - TICK))
+        assertTrue(policy.wantsTirePressure(now + TIRES))
+        policy.onFreshStart(now + 1)
+        assertTrue(policy.wantsTirePressure(now + 1), "a fresh start reads it again")
+    }
+
+    @Test
+    fun tirePressureIsReadAgainOnceAfterAbout200mOfDriving() {
+        policy.onFreshStart(now)
+        policy.onDriveReading(ShiftStateKind.D, 10_000)
+        policy.onTirePressureRequested(now)
+        policy.onDriveReading(ShiftStateKind.D, 10_012)
+        assertFalse(policy.wantsTirePressure(now + TICK))
+        policy.onDriveReading(ShiftStateKind.D, 10_013)
+        assertTrue(policy.wantsTirePressure(now + TICK))
+        policy.onTirePressureRequested(now + TICK)
+        policy.onDriveReading(ShiftStateKind.D, 10_100)
+        assertFalse(policy.wantsTirePressure(now + 2 * TICK), "only once per fresh start")
+    }
+
     private companion object {
+        const val TIRES = InfotainmentPollPolicy.TIRE_PRESSURE_INTERVAL_MS
         const val TICK = 10_000L
         const val HOLD_PRESENT = InfotainmentPollPolicy.HOLD_PRESENT_MS
         const val SAFETY = InfotainmentPollPolicy.IDLE_SAFETY_INTERVAL_MS

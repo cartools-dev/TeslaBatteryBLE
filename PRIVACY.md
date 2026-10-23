@@ -17,8 +17,9 @@ anywhere.**
   in the car, the display state, valet mode) and its climate state (whether
   the climate is on, cabin and outside temperatures, temperature settings, fan,
   seat and other heater settings, defrost and keeper mode such as Dog or
-  Party). Neither the closures nor the climate state carries a location, a
-  route or any name or text. Every reading is kept with the time your phone
+  Party), the car's location (coordinates, heading and elevation, read while
+  it is driving) and its tire pressures. Neither the closures nor the climate
+  state carries a location, a route or any name or text. Every reading is kept with the time your phone
   received it and the signal strength (RSSI) it last measured from the car, in
   local files that stay on this phone
 - When your phone's Bluetooth connection to each car was established and when
@@ -39,7 +40,7 @@ anywhere.**
 The app never synchronizes, uploads, or shares anything. Android's system backup
 is separate: if you have it enabled, your device may include app data in cloud
 backup or device-to-device transfer, except battery history, status readings,
-drive, closures and climate state, signal strength and connection times,
+drive, closures, climate, location and tire pressure state, signal strength and connection times,
 the commands the app sent and its usage state,
 which the app excludes so they stay on this device. By default each vehicle key is encrypted
 with an AES key that stays in this device's hardware-backed Keystore. Android 11

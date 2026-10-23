@@ -6,13 +6,15 @@ import com.dzid26.teslable.core.infotainment.InfotainmentPollPolicy
 import com.dzid26.teslable.history.HistoryStore
 import com.dzid26.teslable.protocol.ShiftStateKind
 import com.dzid26.teslable.protocol.TeslaCommands
+import com.dzid26.teslable.protocol.TeslaLocationTireCommands
 import com.dzid26.teslable.protocol.climateOn
 import com.dzid26.teslable.protocol.sentryOn
 import com.dzid26.teslable.protocol.shiftStateKind
 import java.time.Instant
 
 /**
- * Handles the Infotainment replies that follow a charge reply (drive, closures, climate) for one
+ * Handles the Infotainment replies that follow a charge reply (drive, closures, climate, location,
+ * tire pressure) for one
  * car: each goes to the history store verbatim (ADR-0008), feeds the poll policy its flag
  * (ADR-0009), and reaches the debug log only as a change of that flag, never as a location, route or
  * destination. One instance per vehicle link.
@@ -44,7 +46,7 @@ internal class InfotainmentStateReplies(
         }
         historyStore.recordDrive(vehicleId, drive, deviceTimestamp, rssi())
         val shift = drive.shiftStateKind
-        policy.onDriveReading(shift)
+        policy.onDriveReading(shift, drive.odometer_in_hundredths_of_a_mile)
         if (shift != lastShiftState) {
             lastShiftState = shift
             log("shift state ${shift?.name ?: "unknown"}")
@@ -87,6 +89,32 @@ internal class InfotainmentStateReplies(
             lastClimateOn = on
             log("climate ${if (on) "on" else "off"}")
         }
+    }
+
+    /** A LocationState reply. Logged whole; the debug log never sees a coordinate. */
+    fun onLocation(
+        plaintext: ByteArray,
+        deviceTimestamp: Instant,
+    ) {
+        val location = runCatching { TeslaLocationTireCommands.parseLocationState(plaintext) }.getOrNull()
+        if (location == null) {
+            log("location response missing data${refusal(plaintext)}")
+            return
+        }
+        historyStore.recordLocation(vehicleId, location, deviceTimestamp, rssi())
+    }
+
+    /** A TirePressureState reply, logged whole. */
+    fun onTirePressure(
+        plaintext: ByteArray,
+        deviceTimestamp: Instant,
+    ) {
+        val tirePressure = runCatching { TeslaLocationTireCommands.parseTirePressureState(plaintext) }.getOrNull()
+        if (tirePressure == null) {
+            log("tire pressure response missing data${refusal(plaintext)}")
+            return
+        }
+        historyStore.recordTirePressure(vehicleId, tirePressure, deviceTimestamp, rssi())
     }
 
     /** The reason a reply carried no data, for the debug log: " (RESULT)" when the car refused, else "". */

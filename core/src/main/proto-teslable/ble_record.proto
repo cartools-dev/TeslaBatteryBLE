@@ -59,6 +59,11 @@ message BleRecord {
         CommandResult command_result = 10;
         // The app's own state: screen, foreground, tracking service.
         AppState app_state = 11;
+        // The car's LocationState (coordinates, heading, elevation) and
+        // TirePressureState, kept whole so fields the app does not know yet
+        // survive.
+        CarServer.LocationState location_state = 12;
+        CarServer.TirePressureState tire_pressure_state = 13;
     }
 }
 
@@ -85,7 +90,7 @@ message Command {
         POLICY_SAFETY = 5;     // poll policy: the idle safety read
         FRESH_START = 6;       // poll policy: the first read after the app or tracking started
         SESSION_HANDSHAKE = 7; // a session info request, whatever asked for the session
-        FOLLOW_UP = 8;         // drive, closures or climate read after the previous reply
+        FOLLOW_UP = 8;         // drive, closures, climate, location or tire pressure read after the previous reply
         PAIRING = 9;           // checking the whitelist for our key, or adding it
         KEY_LOOKUP = 10;       // locating our key's slot in the whitelist
     }
@@ -96,7 +101,7 @@ message Command {
     oneof request {
         // Wake, whitelist or key-slot lookups, pairing (VCSEC).
         VCSEC.UnsignedMessage vcsec = 2;
-        // A GetVehicleData read (charge, drive, closures, climate).
+        // A GetVehicleData read (charge, drive, closures, climate, location, tire pressure).
         CarServer.Action infotainment = 3;
         // A session info request: the domain it is addressed to. The public
         // key, the routing address and the request id are left out.

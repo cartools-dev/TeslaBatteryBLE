@@ -24,6 +24,8 @@ import com.tesla.generated.carserver.vehicle.ChargeState
 import com.tesla.generated.carserver.vehicle.ClimateState
 import com.tesla.generated.carserver.vehicle.ClosuresState
 import com.tesla.generated.carserver.vehicle.DriveState
+import com.tesla.generated.carserver.vehicle.LocationState
+import com.tesla.generated.carserver.vehicle.TirePressureState
 import com.tesla.generated.vcsec.VehicleStatus
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -52,6 +54,8 @@ import java.time.Instant
  * - `<vehicleId>.closures.pblog`: every ClosuresState reply (it holds the
  *   sentry mode state), raw; log only, nothing reads it back yet;
  * - `<vehicleId>.climate.pblog`: every ClimateState reply, raw; log only;
+ * - `<vehicleId>.location.pblog`: every LocationState reply (read while driving), raw; log only;
+ * - `<vehicleId>.tire-pressure.pblog`: every TirePressureState reply (read every 10 minutes), raw; log only;
  * - `<vehicleId>.connection.pblog`: when the connection to the car became
  *   ready or an established one ended. Log only: nothing reads it back yet;
  * - `<vehicleId>.command.pblog`: the requests the app sent to the car, raw and
@@ -77,6 +81,8 @@ class HistoryStore(
     private val driveLogs = VehicleLogs(historyDir, DRIVE_LOG_SUFFIX)
     private val closuresLogs = VehicleLogs(historyDir, CLOSURES_LOG_SUFFIX)
     private val climateLogs = VehicleLogs(historyDir, CLIMATE_LOG_SUFFIX)
+    private val locationLogs = VehicleLogs(historyDir, LOCATION_LOG_SUFFIX)
+    private val tirePressureLogs = VehicleLogs(historyDir, TIRE_PRESSURE_LOG_SUFFIX)
     private val connectionLogs = VehicleLogs(historyDir, CONNECTION_LOG_SUFFIX)
     private val commandLogs = VehicleLogs(historyDir, COMMAND_LOG_SUFFIX)
     private val appLog = AppLog(historyDir)
@@ -127,6 +133,8 @@ class HistoryStore(
                 // cap trims by, so it holds across restarts.
                 runCatching { closuresLogs.readAll() }
                 runCatching { climateLogs.readAll() }
+                runCatching { locationLogs.readAll() }
+                runCatching { tirePressureLogs.readAll() }
                 runCatching { connectionLogs.readAll() }
                 runCatching { commandLogs.readAll() }
                 runCatching { appLog.readAll() }
@@ -251,6 +259,32 @@ class HistoryStore(
     ) {
         val record = BleRecord(device_timestamp = deviceTimestamp, rssi = rssi, climate_state = climate)
         scope.launch { mutex.withLock { climateLogs.append(vehicleId, record) } }
+    }
+
+    /**
+     * Logs one LocationState reply, verbatim (ADR-0008): coordinates, heading and elevation, and
+     * any field the app does not know yet. [deviceTimestamp] and [rssi] as for the other kinds.
+     * No read model yet.
+     */
+    fun recordLocation(
+        vehicleId: String,
+        location: LocationState,
+        deviceTimestamp: Instant,
+        rssi: Int?,
+    ) {
+        val record = BleRecord(device_timestamp = deviceTimestamp, rssi = rssi, location_state = location)
+        scope.launch { mutex.withLock { locationLogs.append(vehicleId, record) } }
+    }
+
+    /** Logs one TirePressureState reply, verbatim (ADR-0008). No read model yet. */
+    fun recordTirePressure(
+        vehicleId: String,
+        tirePressure: TirePressureState,
+        deviceTimestamp: Instant,
+        rssi: Int?,
+    ) {
+        val record = BleRecord(device_timestamp = deviceTimestamp, rssi = rssi, tire_pressure_state = tirePressure)
+        scope.launch { mutex.withLock { tirePressureLogs.append(vehicleId, record) } }
     }
 
     /**
@@ -401,6 +435,12 @@ class HistoryStore(
 
         /** `<vehicleId>.climate.pblog`: ClimateState replies in [BleRecord]s, with `device_timestamp` (ADR-0008). */
         const val CLIMATE_LOG_SUFFIX = ".climate.pblog"
+
+        /** `<vehicleId>.location.pblog`: LocationState replies in [BleRecord]s, with `device_timestamp` (ADR-0008). */
+        const val LOCATION_LOG_SUFFIX = ".location.pblog"
+
+        /** `<vehicleId>.tire-pressure.pblog`: TirePressureState replies in [BleRecord]s, with `device_timestamp` (ADR-0008). */
+        const val TIRE_PRESSURE_LOG_SUFFIX = ".tire-pressure.pblog"
 
         /** `<vehicleId>.connection.pblog`: connection events in [BleRecord]s, timed by `device_timestamp` (ADR-0008). */
         const val CONNECTION_LOG_SUFFIX = ".connection.pblog"

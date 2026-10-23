@@ -8,11 +8,14 @@ import com.dzid26.teslable.protocol.TeslaKeys
 import com.dzid26.teslable.protocol.TeslaSession
 import com.tesla.generated.carserver.common.Void
 import com.tesla.generated.carserver.server.Action
+import com.tesla.generated.carserver.server.GetVehicleData
 import com.tesla.generated.carserver.vehicle.ChargeState
 import com.tesla.generated.carserver.vehicle.ClimateState
 import com.tesla.generated.carserver.vehicle.ClosuresState
 import com.tesla.generated.carserver.vehicle.DriveState
+import com.tesla.generated.carserver.vehicle.LocationState
 import com.tesla.generated.carserver.vehicle.ShiftState
+import com.tesla.generated.carserver.vehicle.TirePressureState
 import com.tesla.generated.carserver.vehicle.VehicleData
 import com.tesla.generated.signatures.AES_GCM_Response_Signature_Data
 import com.tesla.generated.signatures.HMAC_Signature_Data
@@ -315,20 +318,9 @@ class FakeCarProtocol(
         // action.
         val action = runCatching { Action.ADAPTER.decode(plaintext) }.getOrNull()
         val vehicleData = action?.vehicleAction?.getVehicleData
-        if (vehicleData?.getChargeState != null) {
-            out += authenticated(domain, uuid, requestTag, chargeResponse())
-            return
-        }
-        if (vehicleData?.getDriveState != null) {
-            out += authenticated(domain, uuid, requestTag, driveResponse())
-            return
-        }
-        if (vehicleData?.getClosuresState != null) {
-            out += authenticated(domain, uuid, requestTag, closuresResponse())
-            return
-        }
-        if (vehicleData?.getClimateState != null) {
-            out += authenticated(domain, uuid, requestTag, climateResponse())
+        val reply = vehicleData?.let(::vehicleDataResponse)
+        if (reply != null) {
+            out += authenticated(domain, uuid, requestTag, reply)
             return
         }
 
@@ -349,6 +341,18 @@ class FakeCarProtocol(
                 )
         }
     }
+
+    /** The simulated reply to a `GetVehicleData` request, or null for a category it does not simulate. */
+    private fun vehicleDataResponse(request: GetVehicleData): ByteArray? =
+        when {
+            request.getChargeState != null -> chargeResponse()
+            request.getDriveState != null -> driveResponse()
+            request.getClosuresState != null -> closuresResponse()
+            request.getClimateState != null -> climateResponse()
+            request.getLocationState != null -> locationResponse()
+            request.getTirePressureState != null -> tirePressureResponse()
+            else -> null
+        }
 
     private fun chargeResponse(): ByteArray =
         CarServerResponse(
@@ -435,6 +439,19 @@ class FakeCarProtocol(
                             timestamp = Instant.ofEpochMilli(System.currentTimeMillis()),
                         ),
                 ),
+        ).encode()
+
+    /** The simulated car is parked, so it reports no position; the shape is enough to exercise the read. */
+    private fun locationResponse(): ByteArray =
+        CarServerResponse(
+            vehicleData =
+                VehicleData(location_state = LocationState(timestamp = Instant.ofEpochMilli(System.currentTimeMillis()))),
+        ).encode()
+
+    private fun tirePressureResponse(): ByteArray =
+        CarServerResponse(
+            vehicleData =
+                VehicleData(tire_pressure_state = TirePressureState(timestamp = Instant.ofEpochMilli(System.currentTimeMillis()))),
         ).encode()
 
     private fun authenticated(

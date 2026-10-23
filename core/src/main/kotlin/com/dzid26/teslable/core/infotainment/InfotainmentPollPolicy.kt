@@ -11,7 +11,9 @@ import com.tesla.generated.vcsec.ClosureStatuses
 import com.tesla.generated.vcsec.VehicleStatus
 
 /**
- * When to ask the car for its Infotainment state (charge, drive, closures and climate).
+ * When to ask the car for its Infotainment state (charge, drive, closures and climate; plus location
+ * while driving and tire pressure every [TIRE_PRESSURE_INTERVAL_MS], see [wantsLocation] and
+ * [wantsTirePressure]).
  *
  * Any Infotainment request restarts the car's own sleep countdown (about 10 minutes), so polling it
  * while the car is merely awake keeps it awake (ADR-0009, issue #112). VCSEC status does not, and
@@ -65,6 +67,13 @@ class InfotainmentPollPolicy {
 
     private var lastReadAtMs: Long? = null
     private var lastChangeAtMs: Long? = null
+    private var lastTirePressureAtMs: Long? = null
+    private var startOdometer: Int? = null
+    private var odometer: Int? = null
+    private var locationOdometer: Int? = null
+    private var lastLocationAtMs: Long? = null
+    private var moved = false
+    private var tireReadAfterMove = false
     private var userPresent = false
     private var started = false
     private var charging = false
@@ -91,6 +100,13 @@ class InfotainmentPollPolicy {
     fun onFreshStart(nowMillis: Long) {
         started = true
         lastReadAtMs = null
+        lastTirePressureAtMs = null
+        startOdometer = null
+        odometer = null
+        locationOdometer = null
+        lastLocationAtMs = null
+        moved = false
+        tireReadAfterMove = false
         charging = false
         driving = false
         sentry = false
@@ -125,7 +141,15 @@ class InfotainmentPollPolicy {
     }
 
     /** The latest drive reading. Shift state D, R or N is activity. */
-    fun onDriveReading(shiftState: ShiftStateKind?) {
+    fun onDriveReading(
+        shiftState: ShiftStateKind?,
+        odometerHundredthsMile: Int? = null,
+    ) {
+        if (odometerHundredthsMile != null) {
+            odometer = odometerHundredthsMile
+            val start = startOdometer ?: odometerHundredthsMile.also { startOdometer = it }
+            moved = odometerHundredthsMile - start >= MOVED_HUNDREDTHS_MILE
+        }
         driving = shiftState == ShiftStateKind.D || shiftState == ShiftStateKind.R || shiftState == ShiftStateKind.N
     }
 
@@ -137,6 +161,42 @@ class InfotainmentPollPolicy {
     /** The latest climate reading. Climate on, or a climate keeper mode, is activity. */
     fun onClimateReading(climateOn: Boolean) {
         climate = climateOn
+    }
+
+    /**
+     * Whether the location read follows the climate reply: while driving, when the odometer has
+     * advanced since the last location read, and at the latest every [LOCATION_MAX_INTERVAL_MS]
+     * (a car stopped in gear). Reads come at most once per VCSEC tick, so never faster than 10 s.
+     */
+    fun wantsLocation(nowMillis: Long): Boolean {
+        if (!driving) return false
+        val last = lastLocationAtMs
+        val advanced = odometer != null && odometer != locationOdometer
+        return last == null || advanced || nowMillis - last >= LOCATION_MAX_INTERVAL_MS - DUE_SLACK_MS
+    }
+
+    /** The location read went out at [nowMillis]. */
+    fun onLocationRequested(nowMillis: Long) {
+        lastLocationAtMs = nowMillis
+        locationOdometer = odometer
+    }
+
+    /**
+     * Whether the tire pressure read follows now: the first one after a fresh start, one more once
+     * the car has moved about 200 m since then (the sensors only report while rolling), then once
+     * [TIRE_PRESSURE_INTERVAL_MS] has passed since the last one. Pressures change slowly, so most
+     * reads skip it.
+     */
+    fun wantsTirePressure(nowMillis: Long): Boolean {
+        val last = lastTirePressureAtMs
+        val intervalPassed = last == null || nowMillis - last >= TIRE_PRESSURE_INTERVAL_MS - DUE_SLACK_MS
+        return intervalPassed || (moved && !tireReadAfterMove)
+    }
+
+    /** The tire pressure read went out at [nowMillis]. */
+    fun onTirePressureRequested(nowMillis: Long) {
+        lastTirePressureAtMs = nowMillis
+        if (moved) tireReadAfterMove = true
     }
 
     /**
@@ -229,6 +289,15 @@ class InfotainmentPollPolicy {
          * car that would sleep is asleep by then and is never kept awake by it. Tuned from the real-car check.
          */
         const val IDLE_SAFETY_INTERVAL_MS = 1_200_000L
+
+        /** A location read is at most this far apart while driving, even when the odometer stands still. */
+        const val LOCATION_MAX_INTERVAL_MS = 300_000L
+
+        /** About 200 m (0.124 mi) in the odometer's hundredths of a mile. */
+        const val MOVED_HUNDREDTHS_MILE = 13
+
+        /** Between tire pressure reads: they follow a read only when this much time has passed. */
+        const val TIRE_PRESSURE_INTERVAL_MS = 600_000L
 
         /**
          * VCSEC statuses arrive about every 10 s give or take a few ms, so a read is due slightly
