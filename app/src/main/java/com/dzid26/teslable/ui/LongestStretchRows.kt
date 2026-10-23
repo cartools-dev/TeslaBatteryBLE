@@ -15,14 +15,16 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.dzid26.teslable.R
 import com.dzid26.teslable.core.history.DeepSleep
+import com.dzid26.teslable.core.history.ParkedSpan
 import com.dzid26.teslable.core.history.RestStats
 import com.dzid26.teslable.core.history.SleepDrop
 import com.dzid26.teslable.core.history.compactDuration
 import kotlin.math.roundToInt
 
-/** The longest parked, sleep and deep sleep stretches, each with its term explained on a tap, when there are any. */
+/** The longest parked, sleep and deep sleep stretches and the lowest drain, each with its term explained on a tap, when there are any. */
 @Composable
 internal fun LongestStretchRows(rest: RestStats) {
+    rest.lowestDrain?.let { LowestDrainRow(it) }
     rest.parked?.let {
         LongestStretchRow(
             Stretch(R.string.stats_parked_term, R.string.stats_parked_hint, it.startMillis, it.endMillis),
@@ -122,3 +124,29 @@ private fun drainLabel(
 
 private const val HOURS_PER_WEEK = 24 * 7
 private const val TENTHS = 10
+
+/** The slowest drain between two readings: the rate leads, with the span it was measured over and when it ended. */
+@Composable
+private fun LowestDrainRow(span: ParkedSpan) {
+    val is24Hour = LocalIs24Hour.current ?: DateFormat.is24HourFormat(LocalContext.current)
+    StatRow(
+        label = {
+            Row {
+                StatLabel(stringResource(R.string.stats_lowest))
+                Spacer(Modifier.width(4.dp))
+                HintText(
+                    text = stringResource(R.string.stats_lowest_drain_term),
+                    hint = stringResource(R.string.stats_lowest_drain_hint),
+                    color = MaterialTheme.colorScheme.onSurface,
+                )
+            }
+        },
+        value = drainLabel(span.percentPerHour.coerceAtLeast(0.0), ceiling = false).orEmpty(),
+        detail =
+            stringResource(
+                R.string.stats_lowest_detail,
+                compactDuration(span.durationMillis).orEmpty(),
+                formatTime(span.endMillis, showDate = true, is24Hour = is24Hour),
+            ),
+    )
+}

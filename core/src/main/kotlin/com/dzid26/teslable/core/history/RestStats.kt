@@ -5,14 +5,16 @@ package com.dzid26.teslable.core.history
 /**
  * The longest parked, sleep and deep sleep stretches the logs hold, each null when there is none:
  * [parked] sat still (odometer unchanged, not charged), [sleep] was parked with nobody at the car, and
- * [deepSleep] was asleep without a break in the phone's view.
+ * [deepSleep] was asleep without a break in the phone's view. [lowestDrain] is the slowest loss
+ * between two readings at least two hours apart.
  */
 data class RestStats(
     val parked: ParkedSpan? = null,
     val sleep: ParkedSpan? = null,
     val deepSleep: DeepSleep? = null,
+    val lowestDrain: ParkedSpan? = null,
 ) {
-    val isEmpty: Boolean get() = parked == null && sleep == null && deepSleep == null
+    val isEmpty: Boolean get() = parked == null && sleep == null && deepSleep == null && lowestDrain == null
 }
 
 /**
@@ -31,4 +33,5 @@ fun restStats(
         parked = longestParked(samples, drives, context.scale),
         sleep = longestSleep(samples, drives, context.statuses, context.scale),
         deepSleep = longestDeepSleep(samples, drives, context.statuses, context.scale),
+        lowestDrain = lowestDrain(samples, drives, context.scale),
     )

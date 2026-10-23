@@ -162,6 +162,10 @@
     <string name="stats_drain_week">%1$s%%/week</string>
     <string name="stats_ended">ended %1$s</string>
     <string name="stats_longest">Longest</string>
+    <string name="stats_lowest">Lowest</string>
+    <string name="stats_lowest_detail">over %1$s, ended %2$s</string>
+    <string name="stats_lowest_drain_hint">The slowest battery loss between two readings at least 2 hours apart, parked and not charging.</string>
+    <string name="stats_lowest_drain_term">drain</string>
     <string name="stats_parked_hint">The odometer unchanged and not charging.</string>
     <string name="stats_parked_term">parked</string>
     <string name="stats_sleep_hint">Parked, locked, nobody at the car.</string>

@@ -96,6 +96,25 @@ class ParkedSpanTest {
         assertEquals(true, unattendedBetween(a, b, emptyList()))
     }
 
+    @Test
+    fun `the lowest drain is the slowest pair of reads two hours or more apart`() {
+        val samples = listOf(sample(0, 70), sample(10, 69), sample(300, 69), sample(900, 68), sample(1000, 68))
+        val span = assertNotNull(lowestDrain(samples, drives(samples)))
+        // 10 -> 300 holds the level (no loss) and is the longest of the zero-loss pairs; 300 -> 900 lost a point.
+        assertEquals(10 * MINUTE, span.startMillis)
+        assertEquals(300 * MINUTE, span.endMillis)
+        assertNull(lowestDrain(listOf(sample(0, 70), sample(60, 69)), drives(listOf(sample(0), sample(60)))))
+    }
+
+    @Test
+    fun `a pair starting at a read whose usable level lags the level is left out`() {
+        val samples = listOf(sample(0, 70).copy(usableLevel = 69), sample(300, 69))
+        assertNull(lowestDrain(samples, drives(samples)))
+        assertNull(longestParked(samples, drives(samples)))
+        val steady = listOf(sample(0, 70), sample(300, 69))
+        assertEquals(300 * MINUTE, assertNotNull(longestParked(steady, drives(steady))).endMillis)
+    }
+
     private fun status(
         minutes: Long,
         attended: Boolean = false,

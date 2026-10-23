@@ -965,6 +965,7 @@ class CardSnapshots {
         // 28 h parked (1.1 points lost), 22 h of it locked and alone, and a 9 h 25 min deep sleep two days back.
         private val restStatsFixture =
             RestStats(
+                lowestDrain = ParkedSpan(startMillis = NOW - 30 * HOUR, endMillis = NOW - 13 * HOUR, dropPercent = 0.03),
                 parked = ParkedSpan(startMillis = NOW - 40 * HOUR, endMillis = NOW - 12 * HOUR, dropPercent = 1.1),
                 sleep = ParkedSpan(startMillis = NOW - 38 * HOUR, endMillis = NOW - 16 * HOUR, dropPercent = 0.7),
                 deepSleep = DeepSleep(NOW - 34 * HOUR, NOW - 34 * HOUR + 565 * MINUTE, SleepDrop(51.3, 51.0, 700 * MINUTE, ceiling = true)),

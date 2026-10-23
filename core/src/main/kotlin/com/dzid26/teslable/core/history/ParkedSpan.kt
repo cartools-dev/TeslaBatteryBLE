@@ -84,13 +84,18 @@ private fun parkedSpan(
     return ParkedSpan(readAt(a), readAt(b), (a.soc(scale) - b.soc(scale)).toDouble())
 }
 
-/** True when the car stayed parked between two consecutive reads: it did not move and was not charged in between. */
+/**
+ * True when the car stayed parked between two consecutive reads, and the pair can be trusted: it did not move,
+ * was not charged in between, and the level at the first read was the usable level. While the car holds part of
+ * a cold battery back, the two differ and its levels and ranges are temperature-adjusted (vehicle-command#526),
+ * so a drain measured from such a read would mix weather into battery loss.
+ */
 internal fun parkedBetween(
     a: BatterySample,
     b: BatterySample,
     readingA: DriveSample?,
     readingB: DriveSample?,
-): Boolean = stayedParked(readingA, readingB) && !chargedBetween(a, b)
+): Boolean = a.usableLevel == a.batteryLevel && stayedParked(readingA, readingB) && !chargedBetween(a, b)
 
 /**
  * True when the car was plugged in between two reads. A charge running at [a] counts. At [b] it counts unless
@@ -143,6 +148,31 @@ internal fun unattendedBetween(
 }
 
 private fun StatusSample.attended(): Boolean = !locked || userPresent
+
+/**
+ * The parked pair of reads at least [MIN_LOWEST_DRAIN_MILLIS] apart that lost the battery's level slowest: the
+ * best the car did between two readings, however long it sat. A level that rose or held counts as no loss, and
+ * of equal rates the longer pair wins.
+ *
+ * @param samples one vehicle's battery samples, oldest first.
+ * @param drives the same vehicle's drive samples, oldest first.
+ * @param scale the fitted rated-range scale that refines the drops; null reads the integer levels.
+ */
+fun lowestDrain(
+    samples: List<BatterySample>,
+    drives: List<DriveSample>,
+    scale: FullRangeScale? = null,
+): ParkedSpan? {
+    val readings = driveReadingsAt(samples, drives.filter { it.odometerInHundredthsOfAMile != null })
+    return (1 until samples.size)
+        .filter { parkedBetween(samples[it - 1], samples[it], readings[it - 1], readings[it]) }
+        .mapNotNull { parkedSpan(samples, it - 1, it, scale) }
+        .filter { it.durationMillis >= MIN_LOWEST_DRAIN_MILLIS }
+        .minWithOrNull(compareBy({ it.percentPerHour.coerceAtLeast(0.0) }, { -it.durationMillis }))
+}
+
+/** Two reads closer than this say too little about a drain: a rounding step looks like a rate. */
+private const val MIN_LOWEST_DRAIN_MILLIS = 2 * 60 * 60_000L
 
 /** A charge session this young at a read has only just begun: the energy added is still near zero. */
 private const val NEAR_ZERO_KWH = 0.1f
