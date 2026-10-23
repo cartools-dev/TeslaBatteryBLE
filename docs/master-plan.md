@@ -42,7 +42,7 @@ account, nothing leaves the phone."*
 | Layer | Who / when |
 | --- | --- |
 | JVM unit tests + static analysis | CI, fully autonomous |
-| Emulator UI/screenshots | CI (`android-emulator-runner`) |
+| Emulator smoke test and daily exploration | CI (`.github/actions/emulator`) |
 | Real car smoke test | Owner, batched ~10 min per milestone |
 
 Real-car checklist (keep short): pair key → wake car → SOC read → background
