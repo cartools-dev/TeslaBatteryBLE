@@ -115,18 +115,11 @@ jobs:
           sudo udevadm trigger --name-match=kvm
 
       - name: Explore
-        uses: ReactiveCircus/android-emulator-runner@a421e43855164a8197daf9d8d40fe71c6996bb0d # v2
+        uses: ./.github/actions/emulator
         env:
           EXPLORE_SEED: ${{ inputs.seed }}
           EXPLORE_EVENTS: ${{ inputs.events }}
         with:
-          api-level: 34
-          target: google_apis
-          arch: x86_64
-          profile: pixel_6
-          emulator-boot-timeout: 420
-          emulator-options: -no-window -gpu swiftshader_indirect -no-snapshot -noaudio -no-boot-anim
-          disable-animations: true
           script: bash .github/scripts/explore.sh "$SMOKE_APK" explore-out "$SMOKE_PKG" "$SMOKE_ACTIVITY"
 
       - name: Upload findings and logs
