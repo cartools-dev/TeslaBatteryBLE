@@ -443,7 +443,7 @@ class CardSnapshots {
 
     @Test
     fun historyCardChargingProjection() {
-        // Charging toward the limit: the green line up, the parked drain muted.
+        // Charging toward the limit: the green line up, the parked drain dashed in the measured line blue.
         snapCard("history-card_charging-projection") {
             BatteryHistoryCard(
                 samples = chargingSamples,
