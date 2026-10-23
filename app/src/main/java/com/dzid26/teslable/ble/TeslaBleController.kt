@@ -259,6 +259,8 @@ class TeslaBleController(
     ) {
         selectVehicle(bleName, persist = true)
         _state.update { it.copy(openVehicleRequest = bleName) }
+        // The master switch is off: the car view opens with what is stored, but nothing connects.
+        if (!_state.value.trackingEnabled) return
         val link = links[bleName]
         when (link?.phase) {
             ConnectionPhase.READY -> {
