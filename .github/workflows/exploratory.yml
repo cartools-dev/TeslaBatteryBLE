@@ -5,7 +5,7 @@ name: Exploratory test
 # screenshot walk, a stress pass (font scale, rotation, process death) and a
 # seeded monkey run. It judges from text only (uiautomator tree, logcat) and
 # files one deduplicated GitHub issue per crash, ANR or broken value. A day
-# without a new commit on main costs a few seconds.
+# without an app-relevant change on main costs a few seconds.
 on:
   schedule:
     # 03:41 UTC every day
@@ -38,8 +38,14 @@ jobs:
     outputs:
       run: ${{ steps.decide.outputs.run }}
     steps:
-      # A scheduled run is skipped when this commit already had a finished
-      # exploratory run. A manual run always goes ahead.
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          fetch-depth: 0
+
+      # A scheduled run is skipped when nothing that can change the app was
+      # committed since the last successful run (a skipped run counts as
+      # successful, a failed one does not, so failures are retried). The ignore
+      # list is the one android.yml uses. A manual run always goes ahead.
       - name: Decide
         id: decide
         env:
@@ -49,11 +55,20 @@ jobs:
             echo "run=true" >> "$GITHUB_OUTPUT"
             exit 0
           fi
-          count="$(gh api "repos/$GITHUB_REPOSITORY/actions/workflows/exploratory.yml/runs?head_sha=$GITHUB_SHA&status=completed&per_page=1" --jq .total_count)"
-          if [ "$count" -gt 0 ]; then
-            echo "Commit $GITHUB_SHA was already explored; skipping."
+          last="$(gh api "repos/$GITHUB_REPOSITORY/actions/workflows/exploratory.yml/runs?status=success&per_page=1" --jq '.workflow_runs[0].head_sha // empty')"
+          if [ -z "$last" ] || ! git cat-file -e "$last^{commit}" 2> /dev/null; then
+            echo "No earlier successful run on a known commit; running."
+            echo "run=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          relevant="$(git diff --name-only "$last" "$GITHUB_SHA" |
+            grep -vE '\.md$|^docs/|^website/|^fastlane/|^LICENSE$|^\.github/workflows/(pr|website)-.*\.yml$|^tools/signal-matrix/' || true)"
+          if [ -z "$relevant" ]; then
+            echo "Nothing relevant changed since $last; skipping."
             echo "run=false" >> "$GITHUB_OUTPUT"
           else
+            echo "Changed since $last:"
+            echo "$relevant"
             echo "run=true" >> "$GITHUB_OUTPUT"
           fi
 
