@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Card
+import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -147,7 +148,7 @@ private fun EstimateRow(
         }
         val style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold)
         if (valueHint != null) {
-            HintText(text = value, hint = valueHint, color = MaterialTheme.colorScheme.onSurface, style = style)
+            HintText(text = value, hint = valueHint, color = LocalContentColor.current, style = style)
         } else {
             Text(text = value, style = style)
         }
