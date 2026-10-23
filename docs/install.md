@@ -4,13 +4,13 @@ The README has the short version. Stable releases are not out yet; signed stable
 
 ## GitHub Releases
 
-Install the APK from the latest [release](https://github.com/cartools-dev/TeslaBatteryBLE/releases).
+Install the APK from the latest [release](https://github.com/opencartools/TeslaBatteryBLE/releases).
 Releases are signed with the owner key and include prereleases such as betas.
 
 ## Obtainium (auto-updates from GitHub)
 
 1. Open [Obtainium](https://github.com/ImranR98/Obtainium) → **Add App**
-2. URL: `https://github.com/cartools-dev/TeslaBatteryBLE`
+2. URL: `https://github.com/opencartools/TeslaBatteryBLE`
 3. Obtainium tracks stable releases by default. To also follow tagged
    pre-releases (for example betas), enable **Include prereleases**.
 4. Install and let Obtainium keep it updated

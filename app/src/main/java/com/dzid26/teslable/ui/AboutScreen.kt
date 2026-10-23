@@ -201,7 +201,7 @@ internal fun openUrl(
     }
 }
 
-private const val SOURCE_URL = "https://github.com/cartools-dev/TeslaBatteryBLE"
+private const val SOURCE_URL = "https://github.com/opencartools/TeslaBatteryBLE"
 private const val LICENSE_URL = "$SOURCE_URL/blob/main/LICENSE"
 private const val NOTICES_URL = "$SOURCE_URL/blob/main/THIRD_PARTY_NOTICES.md"
 private const val PRIVACY_URL = "$SOURCE_URL/blob/main/PRIVACY.md"

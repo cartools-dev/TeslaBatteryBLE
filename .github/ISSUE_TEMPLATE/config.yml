@@ -1,8 +1,8 @@
 blank_issues_enabled: false
 contact_links:
   - name: Report a security vulnerability
-    url: https://github.com/cartools-dev/TeslaBatteryBLE/security/advisories/new
+    url: https://github.com/opencartools/TeslaBatteryBLE/security/advisories/new
     about: Please report vulnerabilities privately, never in a public issue.
   - name: Contributing guide
-    url: https://github.com/cartools-dev/TeslaBatteryBLE/blob/main/CONTRIBUTING.md
+    url: https://github.com/opencartools/TeslaBatteryBLE/blob/main/CONTRIBUTING.md
     about: Dev setup and test expectations.
