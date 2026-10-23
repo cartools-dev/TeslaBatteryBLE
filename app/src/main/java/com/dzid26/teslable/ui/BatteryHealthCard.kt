@@ -50,6 +50,10 @@ internal fun BatteryHealthCard(summary: HealthSummary) {
                 EstimateRow(
                     label = "Capacity (SoH)",
                     value = "${soh.roundToInt()}%",
+                    valueHint =
+                        summary.newCapacityKwh?.let {
+                            "of ${kwhLabel(it)} when new (rated constant times the new-car range)"
+                        },
                     detail =
                         if (summary.sohMismatch) {
                             "rated-range and energy-delta sources differ"
@@ -61,7 +65,7 @@ internal fun BatteryHealthCard(summary: HealthSummary) {
             summary.capacityKwh?.let { kwh ->
                 EstimateRow(
                     label = "Usable capacity",
-                    value = "~${(kwh * 10).roundToInt() / 10f}kWh",
+                    value = kwhLabel(kwh),
                     detail =
                         summary.ratedKwhPerMile?.let { constant ->
                             efficiency.format(constant, unit, separator)?.let { "rated constant $it" }
@@ -108,11 +112,17 @@ internal fun BatteryHealthCard(summary: HealthSummary) {
     }
 }
 
+/** An energy to a tenth of a kWh, no space before the unit. */
+private fun kwhLabel(kwh: Float): String = "~${(kwh * TENTHS).roundToInt() / TENTHS}kWh"
+
+private const val TENTHS = 10f
+
 @Composable
 private fun EstimateRow(
     label: String,
     value: String,
     detail: String,
+    valueHint: String? = null,
 ) {
     Row(
         verticalAlignment = Alignment.Bottom,
@@ -129,11 +139,12 @@ private fun EstimateRow(
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
-        Text(
-            text = value,
-            style = MaterialTheme.typography.titleMedium,
-            fontWeight = FontWeight.SemiBold,
-        )
+        val style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold)
+        if (valueHint != null) {
+            HintText(text = value, hint = valueHint, color = MaterialTheme.colorScheme.onSurface, style = style)
+        } else {
+            Text(text = value, style = style)
+        }
     }
 }
 

@@ -106,6 +106,9 @@ class HealthSummaryTest {
         // Fitted range: ~300/330 = ~90.9%; energy delta: 65.625/75 = 87.5%.
         assertEquals(89.2f, withBaselines.sohPercent!!, 1.2f)
         assertTrue(!withBaselines.sohMismatch)
+        // The rated constant (kWh per mile) times the new-car range is the pack energy when new.
+        assertNull(healthSummary(samples).newCapacityKwh)
+        assertEquals(withBaselines.ratedKwhPerMile!! * 330f, withBaselines.newCapacityKwh!!, 0.01f)
     }
 
     @Test

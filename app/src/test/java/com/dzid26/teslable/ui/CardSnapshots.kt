@@ -963,6 +963,7 @@ class CardSnapshots {
                 fullRangeSteps = 42,
                 confidence = HealthConfidence.MEDIUM,
                 qualityNote = null,
+                newCapacityKwh = 75f,
             )
 
         // 28 h parked (1.1 points lost), 22 h of it locked and alone, and a 9 h 25 min deep sleep two days back.

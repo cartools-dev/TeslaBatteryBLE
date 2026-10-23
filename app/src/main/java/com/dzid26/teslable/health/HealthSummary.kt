@@ -39,6 +39,8 @@ data class HealthSummary(
     val confidence: HealthConfidence,
     /** A plain-language caveat when the inputs are thin, else null. */
     val qualityNote: String?,
+    /** The pack energy when new, the rated constant times the new-car rated range; null until both are known. */
+    val newCapacityKwh: Float? = null,
 )
 
 /**
@@ -102,6 +104,7 @@ fun healthSummary(
         fullRangeSteps = scale?.samples ?: 0,
         confidence = confidenceFor(sessions.size),
         qualityNote = qualityNote(backboneSession ?: energySession ?: lastSession),
+        newCapacityKwh = ratedKwhPerMile?.let { constant -> epaRatedRangeMiles?.takeIf { it > 0f }?.let { constant * it } },
     )
 }
 
