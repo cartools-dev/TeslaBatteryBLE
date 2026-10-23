@@ -2,25 +2,30 @@
 
 package com.dzid26.teslable.core.history
 
-/** How the car is resting now: [PARKED] sitting still, or [POWERED_DOWN] parked and left alone long enough to count as a power down. */
-enum class RestKind { PARKED, POWERED_DOWN }
+/**
+ * What the car is doing now: [CHARGING] or [DRIVING] (in gear), or resting: [PARKED] sitting still, or
+ * [POWERED_DOWN] parked and left alone long enough to count as a power down.
+ */
+enum class RestKind { CHARGING, DRIVING, PARKED, POWERED_DOWN }
 
-/** The car's resting state now and when it began: the start of the stretch that leads up to it. */
+/** The car's state now and when it began: the start of the stretch that leads up to it. */
 data class CurrentRest(
     val kind: RestKind,
     val sinceMillis: Long,
 )
 
 /**
- * The car's state now by the rules the stats use, or null when it is not resting or not known: charging, in gear,
- * with no reading of the drive state to say, or with nothing heard from the car for longer than a status heartbeat
- * ([STATUS_CHANGE_MAX_GAP_MILLIS]) before [nowMillis]. The newest drive reading, even one after the newest battery
- * read, must show the car out of gear at the odometer the stretch holds; a drive after it, unseen, is not known.
+ * The car's state now, or null when it is not known: nothing heard from it for longer than a status heartbeat
+ * ([STATUS_CHANGE_MAX_GAP_MILLIS]) before [nowMillis], or no drive reading to say whether it moved. It is [RestKind.CHARGING]
+ * when the newest read is charging and [RestKind.DRIVING] when the newest drive reading, even one after the newest battery
+ * read, is in gear; each since the unbroken run of such reads began.
  *
- * It is parked when the odometer has not moved since [CurrentRest.sinceMillis] (the first read of the unbroken run
- * of [parkedBetween] pairs that ends at the newest read, holes included). It is powered down when, on top of that,
- * nobody is in it and Sentry and the climate are off now ([idleAt]), and have been for at least an hour (the
- * shortest pair that counts as a power down): a car that has just been left is still awake.
+ * Otherwise it rests, by the rules the stats use. The newest drive reading must show the car at the odometer the
+ * stretch holds; a drive after it, unseen, is not known. It is parked when the odometer has not moved since
+ * [CurrentRest.sinceMillis] (the first read of the unbroken run of [parkedBetween] pairs that ends at the newest read,
+ * holes included). It is powered down when, on top of that, nobody is in it and Sentry and the climate are off now
+ * ([idleAt]), and have been for at least an hour (the shortest pair that counts as a power down): a car that has just
+ * been left is still awake.
  *
  * @param samples one vehicle's battery samples, oldest first.
  * @param drives the same vehicle's drive samples, oldest first.
@@ -36,7 +41,54 @@ fun currentRest(
     val parkedDrives = drives.filter { it.odometerInHundredthsOfAMile != null }
     val readings = driveReadingsAt(samples, parkedDrives)
     val stale = nowMillis - heardFromAt(samples, context) > STATUS_CHANGE_MAX_GAP_MILLIS
-    if (last == null || stale || !settled(last, readings.lastOrNull(), parkedDrives.lastOrNull())) return null
+    return if (last == null ||
+        stale
+    ) {
+        null
+    } else {
+        activeNow(samples, readings, parkedDrives.lastOrNull())
+            ?: restNow(samples, readings, parkedDrives.lastOrNull(), nowMillis, context)
+    }
+}
+
+/** Charging or driving now, with the start of the run of reads that says so; null when the car is doing neither. */
+private fun activeNow(
+    samples: List<BatterySample>,
+    readings: List<DriveSample?>,
+    newest: DriveSample?,
+): CurrentRest? {
+    val last = samples.last()
+    return when {
+        last.isCharging ->
+            CurrentRest(
+                RestKind.CHARGING,
+                readAt(samples[trailingRun(samples.lastIndex, floor = 0) { samples[it - 1].isCharging }]),
+            )
+        newest?.inGear == true ->
+            CurrentRest(
+                RestKind.DRIVING,
+                readAt(
+                    samples[
+                        trailingRun(samples.lastIndex, floor = 0) {
+                            readings[it - 1]?.inGear ==
+                                true
+                        },
+                    ],
+                ),
+            )
+        else -> null
+    }
+}
+
+/** Parked or powered down now, or null when the newest drive readings do not settle where the car is. */
+private fun restNow(
+    samples: List<BatterySample>,
+    readings: List<DriveSample?>,
+    newest: DriveSample?,
+    nowMillis: Long,
+    context: ProjectionContext,
+): CurrentRest? {
+    if (!settled(samples.last(), readings.lastOrNull(), newest)) return null
     val first = trailingRun(samples.lastIndex, floor = 0) { parkedBetween(samples[it - 1], samples[it], readings[it - 1], readings[it]) }
     val idleFirst =
         if (idleAt(nowMillis, context)) {

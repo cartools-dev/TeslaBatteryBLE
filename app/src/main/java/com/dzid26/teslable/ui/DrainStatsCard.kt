@@ -132,11 +132,17 @@ internal fun StatRow(
 @Composable
 private fun NowRow(current: CurrentRest) {
     val is24Hour = LocalIs24Hour.current ?: DateFormat.is24HourFormat(LocalContext.current)
-    val poweredDown = current.kind == RestKind.POWERED_DOWN
+    val (state, hint) =
+        when (current.kind) {
+            RestKind.CHARGING -> R.string.stats_charging_now to null
+            RestKind.DRIVING -> R.string.stats_driving_now to null
+            RestKind.PARKED -> R.string.stats_parked_now to R.string.stats_parked_hint
+            RestKind.POWERED_DOWN -> R.string.stats_power_down_now to R.string.stats_power_down_hint
+        }
     StatRow(
         label = { StatLabel(stringResource(R.string.stats_now)) },
-        value = stringResource(if (poweredDown) R.string.stats_power_down_now else R.string.stats_parked_now),
+        value = stringResource(state),
         detail = stringResource(R.string.stats_since, formatTime(current.sinceMillis, showDate = true, is24Hour = is24Hour)),
-        valueTip = stringResource(if (poweredDown) R.string.stats_power_down_hint else R.string.stats_parked_hint),
+        valueTip = hint?.let { stringResource(it) },
     )
 }

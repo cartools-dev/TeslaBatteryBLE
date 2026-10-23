@@ -69,12 +69,22 @@ class CurrentRestTest {
     }
 
     @Test
-    fun `charging, in gear, no reading or no samples is no rest`() {
-        val charging = listOf(sample(0), sample(100, ChargingStateKind.Charging))
-        assertNull(currentRest(charging, drives(charging), 101 * MINUTE))
-        val driving = listOf(sample(0), sample(100))
-        assertNull(currentRest(driving, drives(driving, shift = { ShiftStateKind.D }), 101 * MINUTE))
-        assertNull(currentRest(driving, emptyList(), 101 * MINUTE))
+    fun `charging and driving are states of their own, since the run of reads began`() {
+        val charging = listOf(sample(0), sample(50, ChargingStateKind.Charging), sample(100, ChargingStateKind.Charging))
+        val chargingNow = assertNotNull(currentRest(charging, drives(charging), 101 * MINUTE))
+        assertEquals(RestKind.CHARGING, chargingNow.kind)
+        assertEquals(50 * MINUTE, chargingNow.sinceMillis)
+        val driving = listOf(sample(0), sample(50), sample(100))
+        val gear = drives(driving, shift = { if (it.timestampMillis >= 50 * MINUTE) ShiftStateKind.D else ShiftStateKind.P })
+        val drivingNow = assertNotNull(currentRest(driving, gear, 101 * MINUTE))
+        assertEquals(RestKind.DRIVING, drivingNow.kind)
+        assertEquals(50 * MINUTE, drivingNow.sinceMillis)
+    }
+
+    @Test
+    fun `no drive reading or no samples is no state`() {
+        val parked = listOf(sample(0), sample(100))
+        assertNull(currentRest(parked, emptyList(), 101 * MINUTE))
         assertNull(currentRest(emptyList(), emptyList(), 0L))
     }
 
@@ -88,11 +98,11 @@ class CurrentRestTest {
     }
 
     @Test
-    fun `a newer drive reading in gear or at another odometer means not parked`() {
+    fun `a newer drive reading in gear means driving, at another odometer not known`() {
         val samples = listOf(sample(0), sample(100), sample(200))
         val parked = drives(samples)
         val newerInGear = parked + parked.last().copy(timestampMillis = 205 * MINUTE, shiftState = ShiftStateKind.D)
-        assertNull(currentRest(samples, newerInGear, 206 * MINUTE))
+        assertEquals(RestKind.DRIVING, assertNotNull(currentRest(samples, newerInGear, 206 * MINUTE)).kind)
         val newerMoved = parked + parked.last().copy(timestampMillis = 205 * MINUTE, odometerInHundredthsOfAMile = ODOMETER + 50)
         assertNull(currentRest(samples, newerMoved, 206 * MINUTE))
         val newerParked = parked + parked.last().copy(timestampMillis = 205 * MINUTE)
