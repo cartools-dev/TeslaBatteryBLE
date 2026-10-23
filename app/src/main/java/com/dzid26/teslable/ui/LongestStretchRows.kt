@@ -28,18 +28,19 @@ internal fun LongestStretchRows(rest: RestStats) {
     rest.parked?.let {
         LongestStretchRow(
             Stretch(R.string.stats_parked_term, R.string.stats_parked_hint, it.startMillis, it.endMillis),
-            it.percentPerHour,
+            rateFigure(it.percentPerHour),
         )
     }
     rest.sleep?.let {
-        LongestStretchRow(Stretch(R.string.stats_sleep_term, R.string.stats_sleep_hint, it.startMillis, it.endMillis), it.percentPerHour)
+        LongestStretchRow(
+            Stretch(R.string.stats_sleep_term, R.string.stats_sleep_hint, it.startMillis, it.endMillis),
+            rateFigure(it.percentPerHour),
+        )
     }
     rest.deepSleep?.let {
         LongestStretchRow(
             Stretch(R.string.stats_deep_sleep_term, R.string.stats_deep_sleep_hint, it.startMillis, it.endMillis),
-            it.percentPerHour,
-            ceiling = it.drop?.ceiling == true,
-            drainTip = it.drop?.let { drop -> drainTip(it, drop) },
+            it.drop?.takeIf { drop -> drop.ceiling }?.let { drop -> ceilingFigure(it, drop) } ?: rateFigure(it.percentPerHour),
         )
     }
 }
@@ -55,9 +56,7 @@ private class Stretch(
 @Composable
 private fun LongestStretchRow(
     stretch: Stretch,
-    perHour: Double?,
-    ceiling: Boolean = false,
-    drainTip: String? = null,
+    figure: Figure?,
 ) {
     val is24Hour = LocalIs24Hour.current ?: DateFormat.is24HourFormat(LocalContext.current)
     StatRow(
@@ -74,51 +73,56 @@ private fun LongestStretchRow(
         },
         value = compactDuration(stretch.endMillis - stretch.startMillis).orEmpty(),
         detail = stringResource(R.string.stats_ended, formatTime(stretch.endMillis, showDate = true, is24Hour = is24Hour)),
-        figure = drainLabel(perHour, ceiling)?.let { Figure(it, drainTip) },
+        figure = figure,
         valueTip = stringResource(R.string.stats_started, formatTime(stretch.startMillis, showDate = true, is24Hour = is24Hour)),
     )
 }
 
-/** Where a deep sleep's drain figure comes from: the two levels, the span between them and how much of it was not deep sleep. */
+/**
+ * A deep sleep with no battery read near its ends: the most the battery lost over the nearest readings, with a
+ * tap hint on how long that span was and how much of it may not have been deep sleep.
+ */
 @Composable
-private fun drainTip(
+private fun ceilingFigure(
     sleep: DeepSleep,
     drop: SleepDrop,
-): String {
+): Figure {
     val locale = LocalLocale.current.platformLocale
-    return stringResource(
-        R.string.stats_drain_hint,
-        "%.1f".format(locale, drop.fromPercent),
-        "%.1f".format(locale, drop.toPercent),
-        compactDuration(drop.spanMillis).orEmpty(),
-        compactDuration((drop.spanMillis - sleep.durationMillis).coerceAtLeast(0L)).orEmpty(),
-    )
+    val lost = drop.percent.coerceAtLeast(0.0)
+    val text =
+        if ((lost * TENTHS).roundToInt() == 0) {
+            stringResource(R.string.stats_drain_total_tiny)
+        } else {
+            stringResource(R.string.stats_drain_total, "%.1f".format(locale, lost))
+        }
+    val tip =
+        stringResource(
+            R.string.stats_drain_hint,
+            compactDuration(drop.spanMillis).orEmpty(),
+            compactDuration((drop.spanMillis - sleep.durationMillis).coerceAtLeast(0L)).orEmpty(),
+        )
+    return Figure(text, tip)
 }
+
+/** The drain rate as a figure; null when there is none to give. */
+@Composable
+private fun rateFigure(percentPerHour: Double?): Figure? = drainLabel(percentPerHour)?.let { Figure(it) }
 
 /**
  * The drain as "0.7%/day", or per week when a day's worth would round to nothing. A level that did not fall
  * over the stretch (within the readings' noise) reads as under 0.1%/week; null when there is no figure to give.
  */
 @Composable
-private fun drainLabel(
-    percentPerHour: Double?,
-    ceiling: Boolean,
-): String? {
+private fun drainLabel(percentPerHour: Double?): String? {
     val perHour = percentPerHour ?: return null
     val locale = LocalLocale.current.platformLocale
     val perDay = perDay(perHour, locale)
     val perWeek = perHour * HOURS_PER_WEEK
     val tiny = perHour <= 0.0 || (perWeek * TENTHS).roundToInt() == 0
-    val figure =
-        if (perDay != null) {
-            stringResource(R.string.history_parked_rate, perDay)
-        } else {
-            stringResource(R.string.stats_drain_week, "%.1f".format(locale, perWeek))
-        }
     return when {
         tiny -> stringResource(R.string.stats_drain_tiny_week)
-        ceiling -> stringResource(R.string.stats_drain_ceiling, figure)
-        else -> figure
+        perDay != null -> stringResource(R.string.history_parked_rate, perDay)
+        else -> stringResource(R.string.stats_drain_week, "%.1f".format(locale, perWeek))
     }
 }
 
@@ -141,7 +145,7 @@ private fun LowestDrainRow(span: ParkedSpan) {
                 )
             }
         },
-        value = drainLabel(span.percentPerHour.coerceAtLeast(0.0), ceiling = false).orEmpty(),
+        value = drainLabel(span.percentPerHour.coerceAtLeast(0.0)).orEmpty(),
         detail =
             stringResource(
                 R.string.stats_lowest_detail,
