@@ -366,10 +366,12 @@ class ChargeSessionsTest {
     }
 
     @Test
-    fun `no average power without energy or with under a minute of data`() {
+    fun `no average power without energy or with under five minutes of data`() {
         assertNull(chargeSessions(listOf(sample(0, 20), sample(30, 40))).single().averageKw)
-        val brief = chargeSessions(listOf(sample(0, 20, energyAddedKwh = 0f), sample(0, 21, energyAddedKwh = 1f))).single()
+        val brief = chargeSessions(listOf(sample(0, 20, energyAddedKwh = 0f), sample(4, 21, energyAddedKwh = 1f))).single()
         assertNull(brief.averageKw)
+        val longer = chargeSessions(listOf(sample(0, 20, energyAddedKwh = 0f), sample(6, 21, energyAddedKwh = 1f))).single()
+        assertEquals(10f, longer.averageKw!!, 0.001f)
     }
 
     @Test

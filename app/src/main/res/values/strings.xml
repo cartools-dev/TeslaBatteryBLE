@@ -158,7 +158,7 @@
     <string name="charge_session_energy_label">added</string>
     <string name="charge_session_miles_added">%1$s of rated range added</string>
     <string name="charge_session_option">%1$s · %2$skWh</string>
-    <string name="charge_session_option_live">%1$s · charging</string>
+    <string name="charge_session_option_live">Charging · %1$s</string>
     <string name="charge_session_percent_range">%1$d%% to %2$d%%</string>
     <string name="charge_session_selector_description">Choose a charging session</string>
     <string name="charge_sessions_title_count">Charging sessions (%1$d)</string>

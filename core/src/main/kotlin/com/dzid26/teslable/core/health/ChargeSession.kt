@@ -28,7 +28,7 @@ data class ChargeSession(
 ) {
     val durationMillis: Long get() = endMillis - startMillis
 
-    /** Energy over duration, kW; null without energy or under a minute of data, where the average means nothing. */
+    /** Energy over duration, kW; null without energy or under five minutes of data, where the sampling interval at each end skews it. */
     val averageKw: Float?
         get() {
             val energy = energyAddedKwh ?: return null
@@ -183,7 +183,7 @@ fun chargeSessionOpen(
 /** Below this swing the estimator itself refuses to compute a capacity. */
 const val MIN_SWING_PERCENT = 5f
 
-private const val MIN_AVERAGE_MILLIS = 60_000L
+private const val MIN_AVERAGE_MILLIS = 5 * 60_000L
 private const val MILLIS_PER_HOUR = 3_600_000f
 
 /** A pause (Stopped or NoPower) shorter than this does not end a session. */
