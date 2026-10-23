@@ -136,11 +136,11 @@ data class ProjectionContext(
     val statuses: List<StatusSample> = emptyList(),
     val activity: List<ActivitySample> = emptyList(),
 ) {
-    /** The Sentry readings of [activity], split once for the searches that read them. */
-    internal val sentryReadings: List<ActivitySample> = activity.filter { it.kind == ActivityKind.SENTRY }
+    /** The Sentry readings of [activity], split once, when first read, for the searches that use them. */
+    internal val sentryReadings: List<ActivitySample> by lazy { activity.filter { it.kind == ActivityKind.SENTRY } }
 
     /** The climate readings of [activity]. */
-    internal val climateReadings: List<ActivitySample> = activity.filter { it.kind == ActivityKind.CLIMATE }
+    internal val climateReadings: List<ActivitySample> by lazy { activity.filter { it.kind == ActivityKind.CLIMATE } }
 }
 
 /** The drop (percent) and duration of the pairs the car slept through. */

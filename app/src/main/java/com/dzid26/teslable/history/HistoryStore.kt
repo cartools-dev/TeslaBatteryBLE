@@ -3,6 +3,7 @@
 package com.dzid26.teslable.history
 
 import android.content.Context
+import com.dzid26.teslable.core.history.ActivityKind
 import com.dzid26.teslable.core.history.ActivitySample
 import com.dzid26.teslable.core.history.AppState
 import com.dzid26.teslable.core.history.BatterySample
@@ -15,8 +16,10 @@ import com.dzid26.teslable.core.history.RouteSample
 import com.dzid26.teslable.core.history.StatusSample
 import com.dzid26.teslable.core.history.Trip
 import com.dzid26.teslable.core.history.continuing
+import com.dzid26.teslable.core.history.keepActivity
 import com.dzid26.teslable.core.history.segmentTrips
 import com.dzid26.teslable.core.history.shouldLogStatus
+import com.dzid26.teslable.core.history.thinned
 import com.dzid26.teslable.core.history.toActivitySample
 import com.dzid26.teslable.core.history.toBatterySample
 import com.dzid26.teslable.core.history.toDriveSample
@@ -121,6 +124,9 @@ class HistoryStore(
      * destination names stay out of every other read model.
      */
     val trips: StateFlow<Map<String, List<Trip>>> = _trips.asStateFlow()
+
+    /** The newest Sentry or climate reading kept per vehicle and kind, which [keepActivity] compares the next one against. */
+    private val lastKeptActivity = mutableMapOf<Pair<String, ActivityKind>, ActivitySample>()
 
     /** The newest status record logged per vehicle, which [shouldLogStatus] compares the next reading against. */
     private val lastLoggedStatus = mutableMapOf<String, BleRecord>()
@@ -382,6 +388,9 @@ class HistoryStore(
         record: BleRecord,
     ) {
         val sample = record.toActivitySample(vehicleId) ?: return
+        val key = vehicleId to sample.kind
+        if (!keepActivity(lastKeptActivity[key], sample)) return
+        lastKeptActivity[key] = sample
         _activitySamples.value = (_activitySamples.value + sample).takeLast(MAX_ACTIVITY_SAMPLES)
     }
 
@@ -391,6 +400,8 @@ class HistoryStore(
             (closuresLogs.readAll() + climateLogs.readAll())
                 .flatMap { (vehicleId, records) -> records.mapNotNull { it.toActivitySample(vehicleId) } }
                 .sortedBy { it.timestampMillis }
+                .thinned()
+                .also { kept -> kept.forEach { lastKeptActivity[it.vehicleId to it.kind] = it } }
                 .takeLast(MAX_ACTIVITY_SAMPLES)
         }.getOrDefault(emptyList())
 
@@ -480,7 +491,7 @@ class HistoryStore(
         const val COMMAND_LOG_SUFFIX = ".command.pblog"
         const val MAX_SAMPLES = 20_000
 
-        /** Sentry and climate readings kept in memory: the logs write one per ten seconds while either runs. */
+        /** Thinned Sentry and climate readings kept in memory: a state change and one every ten minutes of a run. */
         const val MAX_ACTIVITY_SAMPLES = 50_000
 
         /** Route readings kept per car for the past trips: a navigation sends one every few minutes. */

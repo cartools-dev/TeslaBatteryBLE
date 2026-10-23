@@ -84,6 +84,25 @@ class ParkedSpanTest {
     }
 
     @Test
+    fun `the lowest drain is the slowest pair of reads six hours or more apart`() {
+        val samples = listOf(sample(0, 70), sample(10, 69), sample(400, 69), sample(1000, 68), sample(1100, 68))
+        val span = assertNotNull(lowestDrain(samples, drives(samples)))
+        // 10 -> 400 holds the level (no loss); 400 -> 1000 lost a point; the pairs around them are under six hours.
+        assertEquals(10 * MINUTE, span.startMillis)
+        assertEquals(400 * MINUTE, span.endMillis)
+        assertNull(lowestDrain(listOf(sample(0, 70), sample(300, 69)), drives(listOf(sample(0), sample(300)))))
+    }
+
+    @Test
+    fun `a pair starting at a read whose usable level lags the level is left out`() {
+        val samples = listOf(sample(0, 70).copy(usableLevel = 69), sample(400, 69))
+        assertNull(lowestDrain(samples, drives(samples)))
+        assertNull(longestParked(samples, drives(samples)))
+        val steady = listOf(sample(0, 70), sample(300, 69))
+        assertEquals(300 * MINUTE, assertNotNull(longestParked(steady, drives(steady))).endMillis)
+    }
+
+    @Test
     fun `sentry or climate running keeps a car from counting as sleep`() {
         val a = sample(0)
         val b = sample(60)

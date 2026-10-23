@@ -179,9 +179,11 @@ internal fun CarScreen(
     // Fitted once for every card below: the hero, the trip, both history charts.
     val scale = remember(vehicleHistory) { FullRangeScales.of(vehicleHistory) }
     // The stats card looks at the whole log, whatever range the battery chart shows.
+    // The status and activity logs the sleep rules read, built once per change of either.
+    val sleepLogs = remember(vehicleStatuses, vehicleActivity) { ProjectionContext(statuses = vehicleStatuses, activity = vehicleActivity) }
     val rest =
-        remember(vehicleHistory, vehicleDrives, vehicleStatuses, vehicleActivity, scale) {
-            restStats(vehicleHistory, vehicleDrives, ProjectionContext(scale, vehicleStatuses, vehicleActivity))
+        remember(vehicleHistory, vehicleDrives, sleepLogs, scale) {
+            restStats(vehicleHistory, vehicleDrives, sleepLogs.copy(scale = scale))
         }
     val health =
         remember(vehicleHistory, vehicle?.factoryRangeMiles) {
@@ -326,7 +328,7 @@ internal fun CarScreen(
                         vehicleHistory,
                         vehicleDrives,
                         nowMillis = nowMillis ?: System.currentTimeMillis(),
-                        sleepLogs = ProjectionContext(statuses = vehicleStatuses, activity = vehicleActivity),
+                        sleepLogs = sleepLogs,
                     )
                     DriveHistoryCard(vehicleHistory, vehicleDrives, scale = scale, ratedKwhPerMile = health.ratedKwhPerMile)
                     PastTripsCard(
@@ -778,6 +780,7 @@ internal fun BatteryHistoryCard(
     val stats = lastFinishedChargeStats(samples, now)
     // Fitted once: the stats, the projection and the chart all read it.
     val scale = remember(samples) { FullRangeScales.of(samples) }
+    val withScale = remember(sleepLogs, scale) { sleepLogs.copy(scale = scale) }
 
     Card(modifier = Modifier.fillMaxWidth()) {
         Column(Modifier.padding(12.dp)) {
@@ -812,7 +815,7 @@ internal fun BatteryHistoryCard(
                 // Parked drain: the drive samples' odometer marks the
                 // stretches the car moved. Shown next to the charge
                 // projection too: where the battery heads if unplugged now.
-                val discharge = dischargeProjection(samples, drives, baseMillis, now, sleepLogs.copy(scale = scale))
+                val discharge = dischargeProjection(samples, drives, baseMillis, now, withScale)
                 // The projection gets room on the x-axis: its round-figure horizon ahead.
                 val windowEnd =
                     if (charge != null || discharge != null) {
