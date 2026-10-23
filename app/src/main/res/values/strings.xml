@@ -121,8 +121,8 @@
     <string name="history_range_30d">30d</string>
     <string name="history_range_all">All</string>
     <string name="history_parked_range_hint">Worst and best case at that point: the drain could be two standard errors faster or slower than measured, from how much the parked readings scatter around the line.</string>
-    <string name="history_parked_rate_hint_asleep">Deep-sleep drain: the rate over the gaps the car slept through (a sleep status inside the gap), the quietest the battery drains. The dashed line follows it.</string>
-    <string name="history_parked_rate_hint_mixed">Parked drain over all parked time, asleep or awake. Once the car has slept long enough to measure deep sleep, this switches to the deep-sleep rate.</string>
+    <string name="history_parked_rate_hint_asleep">Power-down drain: the rate over the stretches the car sat parked with nobody in it and Sentry and climate off, an hour or more apart, the quietest the battery drains. The dashed line follows it.</string>
+    <string name="history_parked_rate_hint_mixed">Parked drain over all parked time, asleep or awake. Once enough power-down time is measured, this switches to the power-down rate.</string>
     <string name="soc_description">%1$s percent</string>
     <string name="settings_units">Units</string>
     <string name="units_system">System default</string>
@@ -179,10 +179,10 @@
     <string name="stats_parked_hint">The odometer unchanged and not charging.</string>
     <string name="stats_parked_now">Parked</string>
     <string name="stats_parked_term">parked</string>
+    <string name="stats_power_down_hint">Parked, unoccupied, Sentry and climate off.</string>
+    <string name="stats_power_down_now">Powered down</string>
+    <string name="stats_power_down_term">power down</string>
     <string name="stats_since">since %1$s</string>
-    <string name="stats_sleep_hint">Parked, unoccupied, Sentry and climate off.</string>
-    <string name="stats_sleep_term">sleep</string>
-    <string name="stats_sleeping_now">Sleeping</string>
     <string name="stats_started">started %1$s</string>
     <string name="stats_title">Battery drain stats</string>
     <string name="trip_arrival_range">Arrive with %1$d%% (about %2$s left)</string>

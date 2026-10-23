@@ -40,20 +40,20 @@ class CurrentRestTest {
     private fun climate(minutes: Long) = ActivitySample(minutes * MINUTE, "", ActivityKind.CLIMATE, true)
 
     @Test
-    fun `parked since the unbroken run began, and sleeping once idle for an hour`() {
+    fun `parked since the unbroken run began, and poweredDown once idle for an hour`() {
         val samples = listOf(sample(0), sample(100), sample(200), sample(400))
         val now = 405 * MINUTE
-        val sleeping = assertNotNull(currentRest(samples, drives(samples), now))
-        assertEquals(RestKind.SLEEPING, sleeping.kind)
-        assertEquals(0L, sleeping.sinceMillis)
-        // Someone in the car in the last gap: parked, not sleeping, and not since the idle run either.
+        val poweredDown = assertNotNull(currentRest(samples, drives(samples), now))
+        assertEquals(RestKind.POWERED_DOWN, poweredDown.kind)
+        assertEquals(0L, poweredDown.sinceMillis)
+        // Someone in the car in the last gap: parked, not poweredDown, and not since the idle run either.
         val parked = assertNotNull(currentRest(samples, drives(samples), now, ProjectionContext(statuses = listOf(present(300)))))
         assertEquals(RestKind.PARKED, parked.kind)
         assertEquals(0L, parked.sinceMillis)
     }
 
     @Test
-    fun `just left is parked, not yet sleeping`() {
+    fun `just left is parked, not yet poweredDown`() {
         val samples = listOf(sample(0), sample(10))
         val rest = assertNotNull(currentRest(samples, drives(samples), 12 * MINUTE))
         assertEquals(RestKind.PARKED, rest.kind)
@@ -84,7 +84,7 @@ class CurrentRestTest {
         assertNull(currentRest(samples, drives(samples), 200 * MINUTE + 3 * 24 * 60 * MINUTE))
         // A status reading heard recently keeps the state current though the last battery read is old.
         val heard = ProjectionContext(statuses = listOf(StatusSample(1000 * MINUTE, "", asleep = true, userPresent = false, locked = true)))
-        assertEquals(RestKind.SLEEPING, assertNotNull(currentRest(samples, drives(samples), 1005 * MINUTE, heard)).kind)
+        assertEquals(RestKind.POWERED_DOWN, assertNotNull(currentRest(samples, drives(samples), 1005 * MINUTE, heard)).kind)
     }
 
     @Test
@@ -96,7 +96,7 @@ class CurrentRestTest {
         val newerMoved = parked + parked.last().copy(timestampMillis = 205 * MINUTE, odometerInHundredthsOfAMile = ODOMETER + 50)
         assertNull(currentRest(samples, newerMoved, 206 * MINUTE))
         val newerParked = parked + parked.last().copy(timestampMillis = 205 * MINUTE)
-        assertEquals(RestKind.SLEEPING, assertNotNull(currentRest(samples, newerParked, 206 * MINUTE)).kind)
+        assertEquals(RestKind.POWERED_DOWN, assertNotNull(currentRest(samples, newerParked, 206 * MINUTE)).kind)
     }
 
     private companion object {

@@ -20,7 +20,7 @@ import com.dzid26.teslable.core.history.RestStats
 import com.dzid26.teslable.core.history.compactDuration
 import kotlin.math.roundToInt
 
-/** The longest parked, sleep and deep sleep stretches and the lowest drain, each with its term explained on a tap, when there are any. */
+/** The longest parked, power down and deep sleep stretches and the lowest drain, each term explained on a tap. */
 @Composable
 internal fun LongestStretchRows(rest: RestStats) {
     rest.lowestDrain?.let { LowestDrainRow(it) }
@@ -30,9 +30,9 @@ internal fun LongestStretchRows(rest: RestStats) {
             rateFigure(it.percentPerHour, it.durationMillis),
         )
     }
-    rest.sleep?.let {
+    rest.powerDown?.let {
         LongestStretchRow(
-            Stretch(R.string.stats_sleep_term, R.string.stats_sleep_hint, it.startMillis, it.endMillis),
+            Stretch(R.string.stats_power_down_term, R.string.stats_power_down_hint, it.startMillis, it.endMillis),
             rateFigure(it.percentPerHour, it.durationMillis),
         )
     }
@@ -46,7 +46,7 @@ internal fun LongestStretchRows(rest: RestStats) {
 
 /** True when a rate shown in the stats was measured over less than a day, so its per-day figure carries a star. */
 internal fun RestStats.extrapolatesToADay(): Boolean =
-    listOfNotNull(parked?.durationMillis, sleep?.durationMillis, lowestDrain?.durationMillis, deepSleep?.drop?.spanMillis)
+    listOfNotNull(parked?.durationMillis, powerDown?.durationMillis, lowestDrain?.durationMillis, deepSleep?.drop?.spanMillis)
         .any { it < DAY_MILLIS }
 
 /** What a "Longest ..." row says: the underlined term, its hint and the stretch's first and last moments. */

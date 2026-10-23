@@ -74,10 +74,10 @@ class ParkedSpanTest {
     }
 
     @Test
-    fun `sleep is the parked stretch with nobody in the car and Sentry and climate off`() {
+    fun `power down is the parked stretch with nobody in the car and Sentry and climate off`() {
         val samples = listOf(sample(0), sample(100), sample(200), sample(300), sample(700))
         val present = listOf(status(150, present = true))
-        val span = assertNotNull(longestSleep(samples, drives(samples), ProjectionContext(statuses = present)))
+        val span = assertNotNull(longestPowerDown(samples, drives(samples), ProjectionContext(statuses = present)))
         assertEquals(200 * MINUTE, span.startMillis)
         assertEquals(700 * MINUTE, span.endMillis)
         assertEquals(700 * MINUTE, assertNotNull(longestParked(samples, drives(samples))).endMillis)
@@ -103,7 +103,7 @@ class ParkedSpanTest {
     }
 
     @Test
-    fun `someone in the car keeps it from counting as sleep, locked or not`() {
+    fun `someone in the car keeps it from counting as a power down, locked or not`() {
         val a = sample(0)
         val b = sample(1)
         // The reading carried in from before a short gap stands for it; being locked or not is not looked at.
@@ -115,7 +115,7 @@ class ParkedSpanTest {
     }
 
     @Test
-    fun `sentry or climate running keeps a car from counting as sleep`() {
+    fun `sentry or climate running keeps a car from counting as a power down`() {
         val a = sample(0)
         val b = sample(60)
 

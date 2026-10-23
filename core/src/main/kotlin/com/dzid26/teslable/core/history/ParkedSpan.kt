@@ -36,13 +36,13 @@ fun longestParked(
 
 /**
  * The longest stretch of consecutive pairs that were parked and idle: nobody in the car and neither Sentry nor the
- * climate running in any of them ([idleBetween]), awake or asleep. This is the sleep the parked-drain projection follows. Ties go
+ * climate running in any of them ([idleBetween]), awake or asleep. This is the power down the parked-drain projection follows. Ties go
  * to the later stretch.
  *
  * @param context the fitted scale, the vehicle's status log and its Sentry and climate readings.
  * @see longestParked for the other parameters.
  */
-fun longestSleep(
+fun longestPowerDown(
     samples: List<BatterySample>,
     drives: List<DriveSample>,
     context: ProjectionContext,

@@ -2,8 +2,8 @@
 
 package com.dzid26.teslable.core.history
 
-/** How the car is resting now: [PARKED] sitting still, or [SLEEPING] parked and left alone long enough to count as sleep. */
-enum class RestKind { PARKED, SLEEPING }
+/** How the car is resting now: [PARKED] sitting still, or [POWERED_DOWN] parked and left alone long enough to count as a power down. */
+enum class RestKind { PARKED, POWERED_DOWN }
 
 /** The car's resting state now and when it began: the start of the stretch that leads up to it. */
 data class CurrentRest(
@@ -18,9 +18,9 @@ data class CurrentRest(
  * read, must show the car out of gear at the odometer the stretch holds; a drive after it, unseen, is not known.
  *
  * It is parked when the odometer has not moved since [CurrentRest.sinceMillis] (the first read of the unbroken run
- * of [parkedBetween] pairs that ends at the newest read, holes included). It is sleeping when, on top of that,
+ * of [parkedBetween] pairs that ends at the newest read, holes included). It is powered down when, on top of that,
  * nobody is in it and Sentry and the climate are off now ([idleAt]), and have been for at least an hour (the
- * shortest pair that counts as sleep): a car that has just been left is still awake.
+ * shortest pair that counts as a power down): a car that has just been left is still awake.
  *
  * @param samples one vehicle's battery samples, oldest first.
  * @param drives the same vehicle's drive samples, oldest first.
@@ -44,8 +44,8 @@ fun currentRest(
         } else {
             null
         }
-    val sleepingSince = idleFirst?.let { readAt(samples[it]) }?.takeIf { nowMillis - it >= MIN_SLEEP_PAIR_MILLIS }
-    return sleepingSince?.let { CurrentRest(RestKind.SLEEPING, it) } ?: CurrentRest(RestKind.PARKED, readAt(samples[first]))
+    val poweredDownSince = idleFirst?.let { readAt(samples[it]) }?.takeIf { nowMillis - it >= MIN_SLEEP_PAIR_MILLIS }
+    return poweredDownSince?.let { CurrentRest(RestKind.POWERED_DOWN, it) } ?: CurrentRest(RestKind.PARKED, readAt(samples[first]))
 }
 
 /** The newest moment anything was heard from the car: its newest battery read or status reading. */

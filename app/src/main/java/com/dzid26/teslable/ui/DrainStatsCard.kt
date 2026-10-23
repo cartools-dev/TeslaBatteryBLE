@@ -32,7 +32,7 @@ import com.dzid26.teslable.core.history.RestKind
 import com.dzid26.teslable.core.history.RestStats
 
 /**
- * How the car rests: its state now (parked or sleeping, since when) and, over the whole log, the longest
+ * How the car rests: its state now (parked or powered down, since when) and, over the whole log, the longest
  * parked, sleep and deep sleep stretches and the lowest drain. Shown only when there is anything to say.
  */
 @Composable
@@ -140,15 +140,15 @@ internal fun StatRow(
     }
 }
 
-/** Whether the car is parked or sleeping now and since when, with the rule for it on a tap of the state. */
+/** Whether the car is parked or powered down now and since when, with the rule for it on a tap of the state. */
 @Composable
 private fun NowRow(current: CurrentRest) {
     val is24Hour = LocalIs24Hour.current ?: DateFormat.is24HourFormat(LocalContext.current)
-    val sleeping = current.kind == RestKind.SLEEPING
+    val poweredDown = current.kind == RestKind.POWERED_DOWN
     StatRow(
         label = { StatLabel(stringResource(R.string.stats_now)) },
-        value = stringResource(if (sleeping) R.string.stats_sleeping_now else R.string.stats_parked_now),
+        value = stringResource(if (poweredDown) R.string.stats_power_down_now else R.string.stats_parked_now),
         detail = stringResource(R.string.stats_since, formatTime(current.sinceMillis, showDate = true, is24Hour = is24Hour)),
-        valueTip = stringResource(if (sleeping) R.string.stats_sleep_hint else R.string.stats_parked_hint),
+        valueTip = stringResource(if (poweredDown) R.string.stats_power_down_hint else R.string.stats_parked_hint),
     )
 }

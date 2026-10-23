@@ -254,7 +254,7 @@ class CardSnapshots {
     @Test
     fun statsCard() {
         snapCard("stats-card") {
-            DrainStatsCard(restStatsFixture, CurrentRest(RestKind.SLEEPING, NOW - 3 * HOUR))
+            DrainStatsCard(restStatsFixture, CurrentRest(RestKind.POWERED_DOWN, NOW - 3 * HOUR))
         }
     }
 
@@ -969,7 +969,7 @@ class CardSnapshots {
             RestStats(
                 lowestDrain = ParkedSpan(startMillis = NOW - 30 * HOUR, endMillis = NOW - 13 * HOUR, dropPercent = 0.03),
                 parked = ParkedSpan(startMillis = NOW - 40 * HOUR, endMillis = NOW - 12 * HOUR, dropPercent = 1.1),
-                sleep = ParkedSpan(startMillis = NOW - 38 * HOUR, endMillis = NOW - 16 * HOUR, dropPercent = 0.7),
+                powerDown = ParkedSpan(startMillis = NOW - 38 * HOUR, endMillis = NOW - 16 * HOUR, dropPercent = 0.7),
                 deepSleep = DeepSleep(NOW - 34 * HOUR, NOW - 34 * HOUR + 565 * MINUTE, SleepDrop(51.3, 50.9, 700 * MINUTE, ceiling = true)),
             )
 
