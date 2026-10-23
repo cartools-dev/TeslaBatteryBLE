@@ -69,10 +69,21 @@ internal fun BatteryHealthCard(summary: HealthSummary) {
                     label = "Usable capacity",
                     value = kwhLabel(kwh),
                     detail =
-                        summary.ratedKwhPerMile?.let { constant ->
-                            efficiency.format(constant, unit, separator)?.let { "rated constant $it" }
-                        } ?: "energy added over the last charge",
+                        if (summary.ratedKwhPerMile != null) {
+                            "based on the charge energy added, rated constant times full range"
+                        } else {
+                            "based on the charge energy added over the last charge"
+                        },
                 )
+            }
+            summary.ratedKwhPerMile?.let { constant ->
+                efficiency.format(constant, unit, separator)?.let { text ->
+                    EstimateRow(
+                        label = "Rated constant",
+                        value = text,
+                        detail = "energy added per rated distance gained, from the last charge",
+                    )
+                }
             }
             if (summary.capacityKwh == null && summary.fullRangeMiles == null && summary.sohPercent == null) {
                 Text(
