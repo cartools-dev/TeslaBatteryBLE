@@ -90,13 +90,12 @@ fun dischargeProjection(
     context: ProjectionContext = ProjectionContext(),
 ): DischargeProjection? {
     val scale = context.scale
-    val statuses = context.statuses
     val last = samples.lastOrNull() ?: return null
     val horizon = projectionHorizonMillis(rangeMillis)
     if (nowMillis - last.timestampMillis > horizon) return null
 
     val windowed = samples.filter { it.timestampMillis >= last.timestampMillis - rangeMillis }
-    val parked = parkedDrain(windowed, drives.filter { it.odometerInHundredthsOfAMile != null }, scale, statuses)
+    val parked = parkedDrain(windowed, drives.filter { it.odometerInHundredthsOfAMile != null }, context)
     if (parked.millis < MIN_RATE_SPAN_MILLIS || parked.drop <= 0.0) return null
 
     val fromSoc = last.soc(scale)
@@ -128,13 +127,21 @@ fun dischargeProjection(
 
 /**
  * What refines the parked rate beyond the raw samples: the fitted rated-range
- * [scale] (null reads the integer level) and the vehicle's VCSEC [statuses],
- * oldest first, which say when the car slept.
+ * [scale] (null reads the integer level), the vehicle's VCSEC [statuses], oldest first,
+ * which say when the car slept and when someone was in it, and its Sentry and climate
+ * [activity] readings, oldest first, which say when it was kept busy.
  */
 data class ProjectionContext(
     val scale: FullRangeScale? = null,
     val statuses: List<StatusSample> = emptyList(),
-)
+    val activity: List<ActivitySample> = emptyList(),
+) {
+    /** The Sentry readings of [activity], split once, when first read, for the searches that use them. */
+    internal val sentryReadings: List<ActivitySample> by lazy { activity.filter { it.kind == ActivityKind.SENTRY } }
+
+    /** The climate readings of [activity]. */
+    internal val climateReadings: List<ActivitySample> by lazy { activity.filter { it.kind == ActivityKind.CLIMATE } }
+}
 
 /** The drop (percent) and duration of the pairs the car slept through. */
 private class SleepSpan(
@@ -177,9 +184,9 @@ private class ParkedDrain(
 private fun parkedDrain(
     samples: List<BatterySample>,
     drives: List<DriveSample>,
-    scale: FullRangeScale?,
-    statuses: List<StatusSample>,
+    context: ProjectionContext,
 ): ParkedDrain {
+    val scale = context.scale
     val drops = mutableListOf<Double>()
     val spans = mutableListOf<Long>()
     val quiet = mutableListOf<Boolean>()
@@ -192,7 +199,7 @@ private fun parkedDrain(
         if (parkedBetween(a, b, readingA, readingB)) {
             drops += (a.soc(scale) - b.soc(scale)).toDouble()
             spans += b.timestampMillis - a.timestampMillis
-            quiet += b.timestampMillis - a.timestampMillis >= MIN_SLEEP_PAIR_MILLIS && unattendedBetween(a, b, statuses)
+            quiet += b.timestampMillis - a.timestampMillis >= MIN_SLEEP_PAIR_MILLIS && idleBetween(a, b, context)
         }
     }
     val drop = drops.sum()

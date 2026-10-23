@@ -177,10 +177,10 @@
     <string name="stats_lowest_drain_term">drain</string>
     <string name="stats_parked_hint">The odometer unchanged and not charging.</string>
     <string name="stats_parked_term">parked</string>
-    <string name="stats_sleep_hint">Parked, locked, nobody at the car.</string>
+    <string name="stats_sleep_hint">Parked, unoccupied, Sentry and climate off.</string>
     <string name="stats_sleep_term">sleep</string>
     <string name="stats_started">started %1$s</string>
-    <string name="stats_title">Battery stats</string>
+    <string name="stats_title">Battery drain stats</string>
     <string name="trip_arrival_range">Arrive with %1$d%% (about %2$s left)</string>
     <string name="notification_trip_traffic">(+%1$s traffic)</string>
     <string name="notification_trip_label">"Trip: "</string>

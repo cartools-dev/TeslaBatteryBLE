@@ -3,6 +3,8 @@
 package com.dzid26.teslable.history
 
 import android.content.Context
+import com.dzid26.teslable.core.history.ActivitySample
+import com.dzid26.teslable.core.history.ActivityThinner
 import com.dzid26.teslable.core.history.AppState
 import com.dzid26.teslable.core.history.BatterySample
 import com.dzid26.teslable.core.history.BleRecord
@@ -16,6 +18,7 @@ import com.dzid26.teslable.core.history.Trip
 import com.dzid26.teslable.core.history.continuing
 import com.dzid26.teslable.core.history.segmentTrips
 import com.dzid26.teslable.core.history.shouldLogStatus
+import com.dzid26.teslable.core.history.toActivitySample
 import com.dzid26.teslable.core.history.toBatterySample
 import com.dzid26.teslable.core.history.toDriveSample
 import com.dzid26.teslable.core.history.toRouteSample
@@ -92,6 +95,10 @@ class HistoryStore(
 
     /** VCSEC status readings logged for every car, oldest first. */
     val statusSamples: StateFlow<List<StatusSample>> = _statusSamples.asStateFlow()
+    private val _activitySamples = MutableStateFlow<List<ActivitySample>>(emptyList())
+
+    /** Sentry and climate readings logged for every car, oldest first. */
+    val activitySamples: StateFlow<List<ActivitySample>> = _activitySamples.asStateFlow()
     private val _driveSamples = MutableStateFlow<List<DriveSample>>(emptyList())
 
     /** DriveState readings logged for every car, oldest first. */
@@ -116,6 +123,9 @@ class HistoryStore(
      */
     val trips: StateFlow<Map<String, List<Trip>>> = _trips.asStateFlow()
 
+    /** Thins the Sentry and climate readings as they load and arrive. */
+    private val activityThinner = ActivityThinner()
+
     /** The newest status record logged per vehicle, which [shouldLogStatus] compares the next reading against. */
     private val lastLoggedStatus = mutableMapOf<String, BleRecord>()
 
@@ -128,11 +138,9 @@ class HistoryStore(
                 _driveSamples.value = driveSamples
                 _latestRoutes.value = latestRoutes
                 _trips.value = routeReadings.mapValues { (_, readings) -> segmentTrips(readings).takeLast(MAX_TRIPS) }
-                // Closures, climate and connection records have no read model
-                // yet. Reading the files only refreshes the record counts the
-                // cap trims by, so it holds across restarts.
-                runCatching { closuresLogs.readAll() }
-                runCatching { climateLogs.readAll() }
+                // Connection records have no read model yet. Reading the files only
+                // refreshes the record counts the cap trims by, so it holds across restarts.
+                _activitySamples.value = readActivitySamples()
                 runCatching { locationLogs.readAll() }
                 runCatching { tirePressureLogs.readAll() }
                 runCatching { connectionLogs.readAll() }
@@ -243,7 +251,12 @@ class HistoryStore(
         rssi: Int?,
     ) {
         val record = BleRecord(device_timestamp = deviceTimestamp, rssi = rssi, closures_state = closures)
-        scope.launch { mutex.withLock { closuresLogs.append(vehicleId, record) } }
+        scope.launch {
+            mutex.withLock {
+                closuresLogs.append(vehicleId, record)
+                appendActivity(vehicleId, record)
+            }
+        }
     }
 
     /**
@@ -258,7 +271,12 @@ class HistoryStore(
         rssi: Int?,
     ) {
         val record = BleRecord(device_timestamp = deviceTimestamp, rssi = rssi, climate_state = climate)
-        scope.launch { mutex.withLock { climateLogs.append(vehicleId, record) } }
+        scope.launch {
+            mutex.withLock {
+                climateLogs.append(vehicleId, record)
+                appendActivity(vehicleId, record)
+            }
+        }
     }
 
     /**
@@ -363,6 +381,26 @@ class HistoryStore(
         _statusSamples.value = (_statusSamples.value + sample).takeLast(MAX_SAMPLES)
     }
 
+    private fun appendActivity(
+        vehicleId: String,
+        record: BleRecord,
+    ) {
+        val sample = record.toActivitySample(vehicleId) ?: return
+        val kept = activityThinner.accept(sample)
+        if (kept.isEmpty()) return
+        _activitySamples.value = (_activitySamples.value + kept).takeLast(MAX_ACTIVITY_SAMPLES)
+    }
+
+    /** Reads the closures and climate logs, which hold Sentry and climate state, into one list, oldest first. */
+    private fun readActivitySamples(): List<ActivitySample> =
+        runCatching {
+            (closuresLogs.readAll() + climateLogs.readAll())
+                .flatMap { (vehicleId, records) -> records.mapNotNull { it.toActivitySample(vehicleId) } }
+                .sortedBy { it.timestampMillis }
+                .flatMap { activityThinner.accept(it) }
+                .takeLast(MAX_ACTIVITY_SAMPLES)
+        }.getOrDefault(emptyList())
+
     private fun readSamples(): List<BatterySample> =
         runCatching {
             chargeLogs
@@ -449,6 +487,9 @@ class HistoryStore(
         const val COMMAND_LOG_SUFFIX = ".command.pblog"
         const val MAX_SAMPLES = 20_000
 
+        /** Thinned Sentry and climate readings kept in memory: a state change and one every ten minutes of a run. */
+        const val MAX_ACTIVITY_SAMPLES = 50_000
+
         /** Route readings kept per car for the past trips: a navigation sends one every few minutes. */
         const val MAX_ROUTE_READINGS = 5_000
 
@@ -462,6 +503,8 @@ data class HistorySamples(
     val battery: List<BatterySample>,
     val drive: List<DriveSample>,
     val status: List<StatusSample> = emptyList(),
+    /** Sentry and climate readings, which say when a locked car was kept busy. */
+    val activity: List<ActivitySample> = emptyList(),
     /** The newest route-bearing drive reading per car, by vehicle id. */
     val routes: Map<String, RouteSample> = emptyMap(),
     /** The finished navigations per car, by vehicle id, oldest first. */

@@ -49,7 +49,7 @@ fun longestDeepSleep(
  * one follows within a heartbeat. The log writes a reading on every change and a heartbeat while the phone is
  * connected, so a hole in it (the phone out of range or reconnecting) ends the run at the last asleep reading:
  * the car may have woken unseen. A deep sleep needs the phone connected throughout; the projection's wider
- * notion of a quiet parked car, holes included, is [unattendedBetween]. A run shorter than
+ * notion of a quiet parked car, holes included, is [idleBetween]. A run shorter than
  * [MIN_SLEEP_SPAN_MILLIS] is not a deep sleep.
  *
  * The drain is read from the last battery read at or before the sleep and the first at or after it, when the car

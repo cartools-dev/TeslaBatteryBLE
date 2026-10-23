@@ -4,7 +4,7 @@ package com.dzid26.teslable.core.history
 
 /**
  * The longest parked, sleep and deep sleep stretches the logs hold, each null when there is none:
- * [parked] sat still (odometer unchanged, not charged), [sleep] was parked with nobody at the car, and
+ * [parked] sat still (odometer unchanged, not charged), [sleep] was parked with nobody in the car and Sentry and climate off, and
  * [deepSleep] was asleep without a break in the phone's view. [lowestDrain] is the slowest loss
  * between two readings at least six hours apart.
  */
@@ -22,7 +22,7 @@ data class RestStats(
  *
  * @param samples one vehicle's battery samples, oldest first.
  * @param drives the same vehicle's drive samples, oldest first.
- * @param context the fitted scale that refines the drops and the vehicle's status log, oldest first.
+ * @param context the fitted scale that refines the drops, the vehicle's status log and its Sentry and climate readings.
  */
 fun restStats(
     samples: List<BatterySample>,
@@ -31,7 +31,7 @@ fun restStats(
 ): RestStats =
     RestStats(
         parked = longestParked(samples, drives, context.scale),
-        sleep = longestSleep(samples, drives, context.statuses, context.scale),
+        sleep = longestSleep(samples, drives, context),
         deepSleep = longestDeepSleep(samples, drives, context.statuses, context.scale),
         lowestDrain = lowestDrain(samples, drives, context.scale),
     )
