@@ -275,6 +275,7 @@ internal fun CarScreen(
                 ) {
                     HeroCard(
                         pricePerKwh = pricePerKwh,
+                        bluetoothOn = state.bluetoothOn,
                         connection = connection,
                         advert = advert,
                         vehicle = vehicle,
@@ -326,6 +327,7 @@ internal fun HeroCard(
     vehicle: Vehicle?,
     history: List<BatterySample>,
     statusHistory: List<StatusSample>,
+    bluetoothOn: Boolean = true,
     // Injectable for the Paparazzi snapshots; production call sites use the
     // default, which is the same ticking clock as before.
     nowMillis: Long = rememberNowMillis(connection?.chargeAtMillis),
@@ -337,7 +339,7 @@ internal fun HeroCard(
     scale: FullRangeScale? = remember(history) { FullRangeScales.of(history) },
 ) {
     val context = LocalContext.current
-    val display = connectionDisplay(connection, advert, vehicle = vehicle)
+    val display = connectionDisplay(connection, advert, vehicle = vehicle, bluetoothOn = bluetoothOn)
     val charge = connection?.charge
     // With no live reading, the newest stored sample still answers "how full
     // is the car?" at a glance; the caption makes its age explicit.
@@ -368,6 +370,7 @@ internal fun HeroCard(
                     )
                     StatusPill(
                         connection = connection,
+                        bluetoothOn = bluetoothOn,
                         onAsleepClick = {
                             Toast
                                 .makeText(context, "Swipe down to wake the car", Toast.LENGTH_SHORT)

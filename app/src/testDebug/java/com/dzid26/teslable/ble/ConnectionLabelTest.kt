@@ -49,4 +49,17 @@ class ConnectionLabelTest {
     fun `no connection at all reads disconnected`() {
         assertEquals("Disconnected" to "Disconnected", pillAndLine(null))
     }
+
+    @Test
+    fun bluetoothOffOverridesEveryPhaseOnPillAndStatusLine() {
+        for (phase in ConnectionPhase.entries) {
+            val connection = connection(phase, awake)
+            assertEquals(
+                phase.name,
+                "Bluetooth off" to "Bluetooth off",
+                connectionLabel(connection, bluetoothOn = false).pillText to
+                    connectionDisplay(connection, advert = null, bluetoothOn = false).stateText,
+            )
+        }
+    }
 }
