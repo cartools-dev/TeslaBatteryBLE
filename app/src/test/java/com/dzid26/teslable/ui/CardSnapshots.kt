@@ -953,8 +953,8 @@ class CardSnapshots {
             HealthSummary(
                 sessions = 6,
                 learningTarget = 3,
-                sohPercent = null,
-                sohSpreadPoints = null,
+                sohPercent = 89f,
+                sohSpreadPoints = 2f,
                 sohMismatch = false,
                 capacityKwh = 57.2f,
                 ratedKwhPerMile = 0.2736f,

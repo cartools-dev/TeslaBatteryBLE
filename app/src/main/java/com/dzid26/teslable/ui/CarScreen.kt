@@ -215,16 +215,18 @@ internal fun CarScreen(
                 },
                 title = {
                     val vinLabel = remember(vehicle?.vin) { vehicle?.vin?.let(::decodeVin)?.label }
-                    Row(verticalAlignment = Alignment.CenterVertically) {
+                    Row(verticalAlignment = Alignment.Top) {
                         Column {
                             Text(vehicle?.title ?: connection?.gattDeviceName ?: advert?.name ?: "Car")
                             vinLabel?.let { Text(it, style = MaterialTheme.typography.bodyMedium) }
                         }
                         if (vehicle != null) {
-                            IconButton(onClick = onEdit) {
+                            // Small, so the pencil sits on the name line instead of between the two lines.
+                            IconButton(onClick = onEdit, modifier = Modifier.size(EDIT_ICON_BUTTON)) {
                                 Icon(
                                     imageVector = Icons.Filled.Edit,
                                     contentDescription = stringResource(R.string.car_edit_title),
+                                    modifier = Modifier.size(EDIT_ICON),
                                 )
                             }
                         }
@@ -871,6 +873,9 @@ private fun HistoryRange.label(): String =
     )
 
 private const val REFRESH_FEEDBACK_MS = 2500L
+
+private val EDIT_ICON_BUTTON = 28.dp
+private val EDIT_ICON = 18.dp
 
 /** Green shared by charging segments, dots, and the projected line. */
 internal val chargingChartColor = Color(0xFF43A047)
