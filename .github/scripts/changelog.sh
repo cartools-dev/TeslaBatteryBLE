@@ -3,8 +3,8 @@
 # Print release-note bullets for a revision range, one per change on the main
 # line: the title of each merged pull request (GitHub puts it on the first line
 # of the merge commit body) and the subject of any commit pushed directly. Only
-# changes that touch the app or its build are listed; workflow, docs, website and
-# tooling changes are left out.
+# changes that touch the app or its build and whose Conventional Commits prefix is
+# feat or fix are listed; refactor, chore, ci, docs, test and the like are left out.
 # Usage: changelog.sh <owner/repo> <range-or-rev>
 set -euo pipefail
 
@@ -13,6 +13,9 @@ RANGE="${2:?usage: changelog.sh <owner/repo> <range-or-rev>}"
 
 # What counts as "the app": its sources, the protocol core it ships, and the build.
 APP_PATHS=(app core gradle config build.gradle.kts settings.gradle.kts gradle.properties)
+
+# feat: / fix: with an optional scope and breaking-change mark, e.g. fix(ble)!:
+NOTABLE='^(feat|fix)(\([^)]*\))?!?:'
 
 git log --first-parent --format=%H "$RANGE" | while read -r sha; do
   # The change is what the commit (or merge) brings in over its first parent.
@@ -24,9 +27,11 @@ git log --first-parent --format=%H "$RANGE" | while read -r sha; do
       number="${subject#Merge pull request #}"
       number="${number%% *}"
       title="$(git log -1 --format=%b "$sha" | sed -n '/./{p;q;}')"
+      [[ "${title:-$subject}" =~ $NOTABLE ]] || continue
       echo "- ${title:-$subject} ([#$number](https://github.com/$REPO/pull/$number))"
       ;;
     *)
+      [[ "$subject" =~ $NOTABLE ]] || continue
       echo "- $subject ([${sha:0:7}](https://github.com/$REPO/commit/$sha))"
       ;;
   esac
