@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -221,8 +222,8 @@ internal fun CarScreen(
                             vinLabel?.let { Text(it, style = MaterialTheme.typography.bodyMedium) }
                         }
                         if (vehicle != null) {
-                            // Small, so the pencil sits on the name line instead of between the two lines.
-                            IconButton(onClick = onEdit, modifier = Modifier.size(EDIT_ICON_BUTTON)) {
+                            // A small glyph lifted onto the name line, inside the standard 48dp touch target.
+                            IconButton(onClick = onEdit, modifier = Modifier.offset(y = EDIT_ICON_LIFT)) {
                                 Icon(
                                     imageVector = Icons.Filled.Edit,
                                     contentDescription = stringResource(R.string.car_edit_title),
@@ -874,7 +875,7 @@ private fun HistoryRange.label(): String =
 
 private const val REFRESH_FEEDBACK_MS = 2500L
 
-private val EDIT_ICON_BUTTON = 28.dp
+private val EDIT_ICON_LIFT = (-10).dp
 private val EDIT_ICON = 18.dp
 
 /** Green shared by charging segments, dots, and the projected line. */
