@@ -172,7 +172,7 @@ fun lowestDrain(
 }
 
 /** Two reads closer than this say too little about a drain: a rounding step looks like a rate. */
-private const val MIN_LOWEST_DRAIN_MILLIS = 2 * 60 * 60_000L
+private const val MIN_LOWEST_DRAIN_MILLIS = 6 * 60 * 60_000L
 
 /** A charge session this young at a read has only just begun: the energy added is still near zero. */
 private const val NEAR_ZERO_KWH = 0.1f

@@ -35,6 +35,13 @@ internal fun BatteryStatsCard(rest: RestStats) {
             Text(text = stringResource(R.string.stats_title), style = MaterialTheme.typography.titleSmall)
             Spacer(Modifier.height(8.dp))
             LongestStretchRows(rest)
+            if (rest.extrapolatesToADay()) {
+                Text(
+                    text = stringResource(R.string.stats_extrapolated_note),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
         }
     }
 }
