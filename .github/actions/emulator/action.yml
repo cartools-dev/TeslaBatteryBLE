@@ -1,0 +1,19 @@
+name: Run a script on the CI emulator
+description: Boots the one emulator configuration CI uses (API 34, Pixel 6, no window) and runs a script on it.
+inputs:
+  script:
+    description: Shell script to run once the emulator has booted
+    required: true
+runs:
+  using: composite
+  steps:
+    - uses: ReactiveCircus/android-emulator-runner@a421e43855164a8197daf9d8d40fe71c6996bb0d # v2
+      with:
+        api-level: 34
+        target: google_apis
+        arch: x86_64
+        profile: pixel_6
+        emulator-boot-timeout: 420
+        emulator-options: -no-window -gpu swiftshader_indirect -no-snapshot -noaudio -no-boot-anim
+        disable-animations: true
+        script: ${{ inputs.script }}

@@ -251,15 +251,8 @@ jobs:
       - name: Install, launch and read the simulated car
         id: capture
         continue-on-error: true
-        uses: ReactiveCircus/android-emulator-runner@a421e43855164a8197daf9d8d40fe71c6996bb0d # v2
+        uses: ./.github/actions/emulator
         with:
-          api-level: 34
-          target: google_apis
-          arch: x86_64
-          profile: pixel_6
-          emulator-boot-timeout: 420
-          emulator-options: -no-window -gpu swiftshader_indirect -no-snapshot -noaudio -no-boot-anim
-          disable-animations: true
           script: bash .github/scripts/capture-screenshots.sh "$SMOKE_APK" smoke-screenshots "$SMOKE_PKG" "$SMOKE_ACTIVITY"
 
       # Emulator flakes (GL context preemption, adb daemon) are common on CI
@@ -268,15 +261,8 @@ jobs:
       - name: Retry once
         if: steps.capture.outcome == 'failure'
         continue-on-error: true
-        uses: ReactiveCircus/android-emulator-runner@a421e43855164a8197daf9d8d40fe71c6996bb0d # v2
+        uses: ./.github/actions/emulator
         with:
-          api-level: 34
-          target: google_apis
-          arch: x86_64
-          profile: pixel_6
-          emulator-boot-timeout: 420
-          emulator-options: -no-window -gpu swiftshader_indirect -no-snapshot -noaudio -no-boot-anim
-          disable-animations: true
           script: rm -rf smoke-screenshots && bash .github/scripts/capture-screenshots.sh "$SMOKE_APK" smoke-screenshots "$SMOKE_PKG" "$SMOKE_ACTIVITY"
 
       # The car screen needs the pairing handshake, an authenticated read and
