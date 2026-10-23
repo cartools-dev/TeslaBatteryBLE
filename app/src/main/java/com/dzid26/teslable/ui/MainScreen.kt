@@ -65,6 +65,7 @@ import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.repeatOnLifecycle
 import com.dzid26.teslable.R
 import com.dzid26.teslable.ble.BleUiState
+import com.dzid26.teslable.ble.CarDetails
 import com.dzid26.teslable.ble.ConnectionLabel
 import com.dzid26.teslable.ble.ConnectionPhase
 import com.dzid26.teslable.ble.LogEntry
@@ -100,7 +101,7 @@ fun MainScreen(
     onOpenVehicle: (String) -> Unit,
     onOpenRequestConsumed: () -> Unit,
     onPairKey: (String) -> Unit,
-    onSaveVin: (String, String) -> Unit,
+    onSaveCar: (String, CarDetails) -> Unit,
     onWake: (String?) -> Unit,
     onReadSoc: () -> Unit,
     onOpenSettings: () -> Unit,
@@ -150,6 +151,7 @@ fun MainScreen(
             routes = history.routes,
             trips = history.trips,
             onBack = { viewingBleName = null },
+            onEdit = { vinTarget = bleName },
             onPair = { onPairKey(address) },
             onRefresh = {
                 // One pull does the right thing for the current state: reconnect,
@@ -188,29 +190,29 @@ fun MainScreen(
         )
     }
 
-    VinEditor(
+    CarEditor(
         state = state,
         target = vinTarget,
-        onSaveVin = onSaveVin,
+        onSaveCar = onSaveCar,
         onDismiss = { vinTarget = null },
     )
 }
 
-/** The cars-list VIN editor; renders nothing unless a car is being edited. */
+/** The car editor, opened from the cars list or the car screen; renders nothing unless a car is being edited. */
 @Composable
-private fun VinEditor(
+private fun CarEditor(
     state: BleUiState,
     target: String?,
-    onSaveVin: (String, String) -> Unit,
+    onSaveCar: (String, CarDetails) -> Unit,
     onDismiss: () -> Unit,
 ) {
     if (target == null) return
     val vehicle = state.vehicles.firstOrNull { it.bleName == target } ?: return
-    VinDialog(
+    CarDialog(
         bleName = target,
-        initialVin = vehicle.vin ?: "",
-        onSave = { vin ->
-            onSaveVin(target, vin)
+        vehicle = vehicle,
+        onSave = { details ->
+            onSaveCar(target, details)
             onDismiss()
         },
         onDismiss = onDismiss,

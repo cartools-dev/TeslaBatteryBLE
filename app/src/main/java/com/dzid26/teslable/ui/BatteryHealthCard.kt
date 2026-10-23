@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Card
+import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -46,33 +47,33 @@ internal fun BatteryHealthCard(summary: HealthSummary) {
             }
             Spacer(Modifier.height(8.dp))
 
+            summary.fullRangeMiles?.let { miles ->
+                EstimateRow(
+                    label = "Full range",
+                    value = "~${unit.format(miles)}",
+                    detail = "fitted from ${summary.fullRangeSteps} level steps",
+                )
+            }
             summary.sohPercent?.let { soh ->
                 EstimateRow(
                     label = "Capacity (SoH)",
                     value = "${soh.roundToInt()}%",
-                    detail =
-                        if (summary.sohMismatch) {
-                            "rated-range and energy-delta sources differ"
-                        } else {
-                            "rated-range + energy-delta estimate"
+                    valueHint =
+                        summary.newCapacityKwh?.let {
+                            "of ${kwhLabel(it)} when new (rated constant times the new-car range)"
                         },
+                    detail = "full range over rated range when new",
                 )
             }
             summary.capacityKwh?.let { kwh ->
                 EstimateRow(
                     label = "Usable capacity",
-                    value = "~${(kwh * 10).roundToInt() / 10f}kWh",
+                    value = kwhLabel(kwh),
                     detail =
-                        summary.ratedKwhPerMile?.let { constant ->
-                            efficiency.format(constant, unit, separator)?.let { "rated constant $it" }
-                        } ?: "energy added over the last charge",
-                )
-            }
-            summary.fullRangeMiles?.let { miles ->
-                EstimateRow(
-                    label = "Full range",
-                    value = "~${unit.format(miles)}",
-                    detail = "fitted from ${summary.fullRangeSteps} percent steps",
+                        summary.ratedKwhPerMile
+                            ?.let { constant -> efficiency.format(constant, unit, separator) }
+                            ?.let { "from charge energy added, rated constant $it" }
+                            ?: "from charge energy added",
                 )
             }
             if (summary.capacityKwh == null && summary.fullRangeMiles == null && summary.sohPercent == null) {
@@ -99,8 +100,12 @@ internal fun BatteryHealthCard(summary: HealthSummary) {
             Spacer(Modifier.height(4.dp))
             Text(
                 text =
-                    "Measured on this phone from your own readings. A state-of-health " +
-                        "percentage appears once the car's factory range is set.",
+                    if (summary.sohPercent == null) {
+                        "Measured on this phone from your own readings. A state-of-health " +
+                            "percentage appears once the car's factory range is set."
+                    } else {
+                        "Measured on this phone from your own readings."
+                    },
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -108,11 +113,17 @@ internal fun BatteryHealthCard(summary: HealthSummary) {
     }
 }
 
+/** An energy to a tenth of a kWh, no space before the unit. */
+private fun kwhLabel(kwh: Float): String = "~${(kwh * TENTHS).roundToInt() / TENTHS}kWh"
+
+private const val TENTHS = 10f
+
 @Composable
 private fun EstimateRow(
     label: String,
     value: String,
     detail: String,
+    valueHint: String? = null,
 ) {
     Row(
         verticalAlignment = Alignment.Bottom,
@@ -129,11 +140,14 @@ private fun EstimateRow(
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
-        Text(
-            text = value,
-            style = MaterialTheme.typography.titleMedium,
-            fontWeight = FontWeight.SemiBold,
-        )
+        val style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold)
+        // A gap so a long detail never touches the figure.
+        val gap = Modifier.padding(start = 8.dp)
+        if (valueHint != null) {
+            HintText(text = value, hint = valueHint, color = LocalContentColor.current, style = style, modifier = gap)
+        } else {
+            Text(text = value, style = style, modifier = gap)
+        }
     }
 }
 

@@ -203,21 +203,29 @@ class TeslaBleController(
 
     // ---------------------------------------------------------------- UI actions
 
-    /** Saves a VIN for one car after the cars-list editor validated it. */
-    fun saveVin(
+    /**
+     * Saves what the owner entered for one car. A VIN, when given, must hash to the car's advertised name;
+     * without one the saved VIN stays. The new-car range and capacity are saved as given, null to clear them.
+     */
+    fun saveCar(
         bleName: String,
-        vin: String,
+        details: CarDetails,
     ) {
-        val normalized = Vehicle.normalizeVin(vin)
         val vehicle = vehicles[bleName] ?: return
-        if (!vehicle.acceptsVin(normalized)) {
+        val normalized = details.vin?.let(Vehicle::normalizeVin)?.takeIf { it.isNotEmpty() }
+        if (normalized != null && !vehicle.acceptsVin(normalized)) {
             log("${vehicle.title}: VIN does not match this car's advertised name")
             return
         }
-        updateVehicle(bleName) { it.copy(vin = normalized) }
-        log("${vehicle.title}: VIN saved")
+        updateVehicle(bleName) {
+            it.copy(
+                vin = normalized ?: it.vin,
+                factoryRangeMiles = details.factoryRangeMiles,
+            )
+        }
+        log("${vehicle.title}: details saved")
         // A VIN unlocks the sessions; retry the handshake now.
-        links[bleName]?.takeIf { it.phase == ConnectionPhase.READY }?.startSession()
+        if (normalized != null) links[bleName]?.takeIf { it.phase == ConnectionPhase.READY }?.startSession()
     }
 
     fun startScan() {

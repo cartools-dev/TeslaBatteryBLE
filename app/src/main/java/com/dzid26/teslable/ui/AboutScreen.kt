@@ -189,7 +189,7 @@ private fun LinkRow(
     }
 }
 
-private fun openUrl(
+internal fun openUrl(
     context: Context,
     url: String,
 ) {

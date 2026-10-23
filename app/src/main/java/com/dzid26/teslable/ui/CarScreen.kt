@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -21,6 +22,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
@@ -133,6 +135,7 @@ internal fun CarScreen(
     // The finished navigations per car, for the past-trips card.
     trips: Map<String, List<Trip>> = emptyMap(),
     onBack: () -> Unit,
+    onEdit: () -> Unit,
     onPair: () -> Unit,
     onRefresh: () -> Unit,
     onOpenSettings: () -> Unit,
@@ -172,8 +175,8 @@ internal fun CarScreen(
             restStats(vehicleHistory, vehicleDrives, ProjectionContext(scale, vehicleStatuses))
         }
     val health =
-        remember(vehicleHistory) {
-            healthSummary(vehicleHistory)
+        remember(vehicleHistory, vehicle?.factoryRangeMiles) {
+            healthSummary(vehicleHistory, epaRatedRangeMiles = vehicle?.factoryRangeMiles)
         }
     // What a pull on this screen will do, and the feedback while it runs.
     val pullLabel =
@@ -209,9 +212,21 @@ internal fun CarScreen(
                 },
                 title = {
                     val vinLabel = remember(vehicle?.vin) { vehicle?.vin?.let(::decodeVin)?.label }
-                    Column {
-                        Text(vehicle?.title ?: connection?.gattDeviceName ?: advert?.name ?: "Car")
-                        vinLabel?.let { Text(it, style = MaterialTheme.typography.bodyMedium) }
+                    Row(verticalAlignment = Alignment.Top) {
+                        Column {
+                            Text(vehicle?.title ?: connection?.gattDeviceName ?: advert?.name ?: "Car")
+                            vinLabel?.let { Text(it, style = MaterialTheme.typography.bodyMedium) }
+                        }
+                        if (vehicle != null) {
+                            // A small glyph lifted onto the name line, inside the standard 48dp touch target.
+                            IconButton(onClick = onEdit, modifier = Modifier.offset(y = EDIT_ICON_LIFT)) {
+                                Icon(
+                                    imageVector = Icons.Filled.Edit,
+                                    contentDescription = stringResource(R.string.car_edit_title),
+                                    modifier = Modifier.size(EDIT_ICON),
+                                )
+                            }
+                        }
                     }
                 },
                 actions = {
@@ -255,7 +270,7 @@ internal fun CarScreen(
                     Modifier
                         .fillMaxSize()
                         .verticalScroll(rememberScrollState())
-                        .padding(16.dp),
+                        .padding(start = 16.dp, top = 4.dp, end = 16.dp, bottom = 16.dp),
                 verticalArrangement = Arrangement.spacedBy(16.dp),
             ) {
                 val context = LocalContext.current
@@ -855,6 +870,9 @@ private fun HistoryRange.label(): String =
     )
 
 private const val REFRESH_FEEDBACK_MS = 2500L
+
+private val EDIT_ICON_LIFT = (-10).dp
+private val EDIT_ICON = 18.dp
 
 /** Green shared by charging segments, dots, and the projected line. */
 internal val chargingChartColor = Color(0xFF43A047)

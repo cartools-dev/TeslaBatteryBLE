@@ -24,6 +24,23 @@ data class VinInfo(
         get() = listOfNotNull(model?.displayName, modelYear).takeIf { it.isNotEmpty() }?.joinToString(" ")
 }
 
+private val EPA_MODELS = setOf(TeslaModel.ModelS, TeslaModel.Model3, TeslaModel.ModelX, TeslaModel.ModelY)
+
+/**
+ * The fueleconomy.gov page listing the EPA ratings for this car's model and year, where the new-car
+ * range can be copied from; null when the VIN gives no year or the model is not one EPA lists here.
+ */
+fun epaSearchUrl(info: VinInfo): String? {
+    val year = info.modelYear
+    val model = info.model?.takeIf { it in EPA_MODELS }
+    return if (year == null || model == null) {
+        null
+    } else {
+        "https://www.fueleconomy.gov/feg/PowerSearch.do?action=noform&path=1&year1=$year&year2=$year" +
+            "&make=Tesla&baseModel=${model.displayName.replace(" ", "%20")}&srchtyp=ymm"
+    }
+}
+
 private const val VIN_LENGTH = 17
 private const val MODEL_INDEX = 3
 private const val YEAR_INDEX = 9

@@ -580,6 +580,7 @@ class CardSnapshots {
                 driveHistory = DemoScreenFixtures.drives(NOW),
                 statusHistory = emptyList(),
                 onBack = {},
+                onEdit = {},
                 onPair = {},
                 onRefresh = {},
                 onOpenSettings = {},
@@ -617,6 +618,7 @@ class CardSnapshots {
                 routes = mapOf(DemoScreenFixtures.vehicle.bleName to route),
                 trips = mapOf(DemoScreenFixtures.vehicle.bleName to demoPastTrips(NOW)),
                 onBack = {},
+                onEdit = {},
                 onPair = {},
                 onRefresh = {},
                 onOpenSettings = {},
@@ -668,6 +670,7 @@ class CardSnapshots {
                 driveHistory = emptyList(),
                 statusHistory = emptyList(),
                 onBack = {},
+                onEdit = {},
                 onPair = {},
                 onRefresh = {},
                 onOpenSettings = {},
@@ -950,9 +953,7 @@ class CardSnapshots {
             HealthSummary(
                 sessions = 6,
                 learningTarget = 3,
-                sohPercent = null,
-                sohSpreadPoints = null,
-                sohMismatch = false,
+                sohPercent = 89f,
                 capacityKwh = 57.2f,
                 ratedKwhPerMile = 0.2736f,
                 capacitySwingPercent = null,
@@ -960,6 +961,7 @@ class CardSnapshots {
                 fullRangeSteps = 42,
                 confidence = HealthConfidence.MEDIUM,
                 qualityNote = null,
+                newCapacityKwh = 75f,
             )
 
         // 28 h parked (1.1 points lost), 22 h of it locked and alone, and a 9 h 25 min deep sleep two days back.

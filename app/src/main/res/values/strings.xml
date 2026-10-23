@@ -78,9 +78,13 @@
     <string name="log_title">Log</string>
     <string name="log_empty">No activity yet.</string>
     <string name="enable_toggle">Enable</string>
+    <string name="car_edit_title">Edit car</string>
+    <string name="car_range_hint">Rated range in miles when the car was new; it sets the baseline for state of health.</string>
+    <string name="car_range_label">Rated range when new (mi)</string>
+    <string name="car_range_lookup">Use EPA "total range"</string>
+    <string name="car_range_needs_vin">Enter the VIN first: it gives the model and year.</string>
     <string name="vin_add">Add VIN</string>
     <string name="vin_edit">Edit VIN</string>
-    <string name="vin_title">VIN</string>
     <string name="vin_label">17-character VIN</string>
     <string name="vin_mismatch">Doesn\'t match this car\'s advertised name</string>
     <string name="vin_saved">Saved for this car; never logged.</string>

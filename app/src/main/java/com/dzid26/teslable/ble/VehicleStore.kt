@@ -46,6 +46,7 @@ class VehicleStore(
                     vehicle.displayName?.let { put(KEY_DISPLAY_NAME, it) }
                     vehicle.vin?.let { put(KEY_VIN, it) }
                     vehicle.keySlot?.let { put(KEY_KEY_SLOT, it) }
+                    vehicle.factoryRangeMiles?.let { put(KEY_FACTORY_RANGE, it.toDouble()) }
                     if (vehicle.lastSeenMillis > 0) put(KEY_LAST_SEEN, vehicle.lastSeenMillis)
                 },
             )
@@ -70,6 +71,7 @@ class VehicleStore(
                             displayName = item.optString(KEY_DISPLAY_NAME).takeIf { it.isNotEmpty() },
                             vin = item.optString(KEY_VIN).takeIf { it.isNotEmpty() },
                             keySlot = item.optInt(KEY_KEY_SLOT, -1).takeIf { it >= 0 },
+                            factoryRangeMiles = item.optDouble(KEY_FACTORY_RANGE).takeIf { it.isFinite() && it > 0.0 }?.toFloat(),
                             lastSeenMillis = item.optLong(KEY_LAST_SEEN, 0L),
                         ),
                     )
@@ -90,6 +92,7 @@ class VehicleStore(
         const val KEY_DISPLAY_NAME = "displayName"
         const val KEY_VIN = "vin"
         const val KEY_KEY_SLOT = "keySlot"
+        const val KEY_FACTORY_RANGE = "factoryRangeMiles"
         const val KEY_LAST_SEEN = "lastSeen"
     }
 }
