@@ -157,23 +157,16 @@ private fun DriveFooter(
     }
 }
 
-/** The cost per distance at the home price; without a price the percent per distance; null when neither is known. */
 @Composable
 private fun rateText(
     stats: DriveStats,
     unit: DistanceUnit,
-): String? {
-    val currencyCode = LocalCurrencyCode.current
-    val costPerMile = stats.costAtHomePrice?.let { it / stats.milesDriven }
-    val percentPerMile = stats.percentPerMile
-    return when {
-        costPerMile != null ->
-            stringResource(R.string.drive_cost_per_distance, formatMoney(unit.ratePerUnit(costPerMile), currencyCode), unit.symbol)
-        percentPerMile != null ->
-            stringResource(R.string.drive_percent_per_distance, formatPercentHundredths(unit.ratePerUnit(percentPerMile)), unit.symbol)
-        else -> null
+): String? =
+    when (val rate = driveRate(stats, unit, LocalCurrencyCode.current)) {
+        is DriveRate.Cost -> stringResource(R.string.drive_cost_per_distance, rate.money, rate.symbol)
+        is DriveRate.Percent -> stringResource(R.string.drive_percent_per_distance, rate.percent, rate.symbol)
+        null -> null
     }
-}
 
 /**
  * The line under the footer: "312 Wh/mi \u00B7 6.4 kWh \u00B7 $1.02 at home price" (these need the learned full range
@@ -229,5 +222,3 @@ internal const val DISTANCE_DECIMALS = 1
 internal fun formatWholePercent(percent: Float): String = String.format(Locale.getDefault(), "%.0f%%", percent)
 
 private fun formatPercentTenths(percent: Float): String = String.format(Locale.getDefault(), "%.1f", percent)
-
-private fun formatPercentHundredths(percent: Float): String = String.format(Locale.getDefault(), "%.2f", percent)

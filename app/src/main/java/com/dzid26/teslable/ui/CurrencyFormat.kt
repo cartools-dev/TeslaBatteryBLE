@@ -33,9 +33,12 @@ internal fun localeCurrencyOrNull(): Currency? =
 /**
  * A money formatter for [code]; blank or invalid follows the phone's currency, and USD when it has none.
  * A currency the phone's language has no symbol for (PLN on an English phone prints "PLN 1.50") is written
- * the way its own country does, "1,50 zł".
+ * the way its own country does, "1,50 zł". [extraDigits] adds precision for small amounts such as a cost per km.
  */
-internal fun currencyFormat(code: String?): NumberFormat {
+internal fun currencyFormat(
+    code: String?,
+    extraDigits: Int = 0,
+): NumberFormat {
     val chosen = currencyOrNull(code) ?: localeCurrencyOrNull() ?: Currency.getInstance(FALLBACK_CODE)
     val locale = formatLocale(chosen)
     return NumberFormat.getCurrencyInstance(locale).apply {
@@ -45,8 +48,8 @@ internal fun currencyFormat(code: String?): NumberFormat {
             format.decimalFormatSymbols = format.decimalFormatSymbols.apply { currencySymbol = chosen.getSymbol(locale) }
         }
         // Pinned explicitly: not every platform formatter resets its digits when the currency changes.
-        minimumFractionDigits = chosen.defaultFractionDigits
-        maximumFractionDigits = chosen.defaultFractionDigits
+        minimumFractionDigits = chosen.defaultFractionDigits + extraDigits
+        maximumFractionDigits = chosen.defaultFractionDigits + extraDigits
     }
 }
 
