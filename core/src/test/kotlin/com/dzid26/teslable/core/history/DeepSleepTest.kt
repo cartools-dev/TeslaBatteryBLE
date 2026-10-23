@@ -31,6 +31,13 @@ class DeepSleepTest {
         locked = true,
     )
 
+    /** Asleep readings every ten minutes from [from] to [to], then an awake one [to] + 5 when [wake] is set. */
+    private fun asleepFor(
+        from: Long,
+        to: Long,
+        wake: Boolean = true,
+    ) = (from..to step 10).map { status(it) } + listOfNotNull(status(to + 5, asleep = false).takeIf { wake })
+
     private fun drives(
         samples: List<BatterySample>,
         odometer: (BatterySample) -> Int = { ODOMETER },
@@ -46,49 +53,70 @@ class DeepSleepTest {
     }
 
     @Test
-    fun `the longest slept-through gap wins`() {
-        val samples = listOf(sample(0), sample(120), sample(180), sample(780))
-        val statuses = listOf(status(60), status(500))
-        val sleep = assertNotNull(longestDeepSleep(samples, drives(samples), statuses))
-        assertEquals(180 * MINUTE, sleep.startMillis)
-        assertEquals(780 * MINUTE, sleep.endMillis)
-        assertEquals(600 * MINUTE, sleep.durationMillis)
+    fun `the longest asleep run wins and ends at the wake reading`() {
+        val statuses = asleepFor(0, 60) + asleepFor(100, 700)
+        val sleep = assertNotNull(longestDeepSleep(emptyList(), emptyList(), statuses))
+        assertEquals(100 * MINUTE, sleep.startMillis)
+        assertEquals(705 * MINUTE, sleep.endMillis)
+        assertEquals(605 * MINUTE, sleep.durationMillis)
     }
 
     @Test
-    fun `the drain rate is the points lost over the sleep per hour`() {
-        val samples = listOf(sample(0, 70), sample(600, 68))
-        val sleep = assertNotNull(longestDeepSleep(samples, drives(samples), listOf(status(60))))
-        assertEquals(2.0, sleep.dropPercent)
-        assertEquals(0.2, sleep.percentPerHour, 1e-9)
+    fun `an awake reading inside ends the run`() {
+        val statuses = asleepFor(0, 100) + status(105, asleep = false) + asleepFor(110, 130)
+        assertEquals(105 * MINUTE, assertNotNull(longestDeepSleep(emptyList(), emptyList(), statuses)).endMillis)
     }
 
     @Test
-    fun `a gap with an awake status inside was not a deep sleep`() {
-        val samples = listOf(sample(0), sample(600))
-        val statuses = listOf(status(60), status(90, asleep = false))
-        assertNull(longestDeepSleep(samples, drives(samples), statuses))
+    fun `a hole between asleep readings splits the run`() {
+        val statuses = asleepFor(0, 100, wake = false) + asleepFor(400, 560)
+        val sleep = assertNotNull(longestDeepSleep(emptyList(), emptyList(), statuses))
+        assertEquals(400 * MINUTE, sleep.startMillis)
+        assertEquals(565 * MINUTE, sleep.endMillis)
     }
 
     @Test
-    fun `a gap shorter than the projection minimum does not count`() {
-        val samples = listOf(sample(0), sample(5))
-        assertNull(longestDeepSleep(samples, drives(samples), listOf(status(2))))
+    fun `an awake reading after a hole ends the run at the last asleep reading`() {
+        val statuses = asleepFor(0, 100, wake = false) + status(400, asleep = false)
+        assertEquals(100 * MINUTE, assertNotNull(longestDeepSleep(emptyList(), emptyList(), statuses)).endMillis)
     }
 
     @Test
-    fun `a gap with a drive or a charge in it does not count`() {
-        val samples = listOf(sample(0), sample(600))
-        val moved = drives(samples) { if (it.timestampMillis == 0L) ODOMETER else ODOMETER + 100 }
-        assertNull(longestDeepSleep(samples, moved, listOf(status(60))))
-        val charging = listOf(sample(0), sample(600, state = ChargingStateKind.Charging))
-        assertNull(longestDeepSleep(charging, drives(charging), listOf(status(60))))
+    fun `a run shorter than the projection minimum does not count`() {
+        assertNull(longestDeepSleep(emptyList(), emptyList(), listOf(status(0), status(5), status(6, asleep = false))))
     }
 
     @Test
     fun `no status log means no deep sleep`() {
-        val samples = listOf(sample(0), sample(600))
-        assertNull(longestDeepSleep(samples, drives(samples), emptyList()))
+        assertNull(longestDeepSleep(listOf(sample(0), sample(600)), emptyList(), emptyList()))
+    }
+
+    @Test
+    fun `the drain is the points lost between the reads either side of the run`() {
+        val samples = listOf(sample(-5, 70), sample(710, 68))
+        val sleep = assertNotNull(longestDeepSleep(samples, drives(samples), asleepFor(0, 700)))
+        assertEquals(2.0, sleep.drop?.percent)
+        assertEquals(2.0 / (715.0 / 60), assertNotNull(sleep.percentPerHour), 1e-9)
+    }
+
+    @Test
+    fun `far reads give a ceiling and no drain when the car moved or charged`() {
+        val statuses = asleepFor(0, 700)
+        val far = listOf(sample(-200, 70), sample(710, 68))
+        val ceiling = assertNotNull(assertNotNull(longestDeepSleep(far, drives(far), statuses)).drop)
+        assertEquals(true, ceiling.ceiling)
+        assertEquals(2.0, ceiling.percent)
+        val samples = listOf(sample(-5, 70), sample(710, 68))
+        val moved = drives(samples) { if (it.timestampMillis < 0) ODOMETER else ODOMETER + 100 }
+        assertNull(assertNotNull(longestDeepSleep(samples, moved, statuses)).drop)
+        val charging = listOf(sample(-5, 70), sample(710, 68, ChargingStateKind.Charging))
+        assertNull(assertNotNull(longestDeepSleep(charging, drives(charging), statuses)).drop)
+    }
+
+    @Test
+    fun `a sleep with no read after it has no drain`() {
+        val samples = listOf(sample(-5, 70))
+        assertNull(assertNotNull(longestDeepSleep(samples, drives(samples), asleepFor(0, 700))).drop)
     }
 
     private companion object {

@@ -93,6 +93,7 @@ import com.dzid26.teslable.core.history.compactDuration
 import com.dzid26.teslable.core.history.dischargeProjection
 import com.dzid26.teslable.core.history.markingLive
 import com.dzid26.teslable.core.history.projectionHorizonMillis
+import com.dzid26.teslable.core.history.restStats
 import com.dzid26.teslable.core.history.socTenths
 import com.dzid26.teslable.core.history.statusDurations
 import com.dzid26.teslable.core.history.within
@@ -165,9 +166,14 @@ internal fun CarScreen(
     val paired = isPaired(connection, vehicle)
     // Fitted once for every card below: the hero, the trip, both history charts.
     val scale = remember(vehicleHistory) { FullRangeScales.of(vehicleHistory) }
+    // The stats card looks at the whole log, whatever range the battery chart shows.
+    val rest =
+        remember(vehicleHistory, vehicleDrives, vehicleStatuses, scale) {
+            restStats(vehicleHistory, vehicleDrives, ProjectionContext(scale, vehicleStatuses))
+        }
     val health =
-        remember(vehicleHistory, vehicleDrives, vehicleStatuses) {
-            healthSummary(vehicleHistory, drives = vehicleDrives, statuses = vehicleStatuses)
+        remember(vehicleHistory) {
+            healthSummary(vehicleHistory)
         }
     // What a pull on this screen will do, and the feedback while it runs.
     val pullLabel =
@@ -306,6 +312,7 @@ internal fun CarScreen(
                         pricePerKwh = pricePerKwh,
                     )
                     BatteryHealthCard(health)
+                    BatteryStatsCard(rest)
                 }
             }
         }
