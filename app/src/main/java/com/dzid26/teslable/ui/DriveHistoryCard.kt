@@ -118,7 +118,7 @@ private fun DriveChips(
 }
 
 /**
- * "Driven: 12.4km \u00B7 N% used \u00B7 $0.05/km": the cost per distance at the home price joins the first line once known
+ * "Driven: 12.4km \u00B7 N% used \u00B7 $5.00/100km": the cost per distance at the home price joins the first line once known
  * (the percent per distance stands in while no price is set). While the full range is
  * not learned the figures are rough, and a note under the lines says so.
  */

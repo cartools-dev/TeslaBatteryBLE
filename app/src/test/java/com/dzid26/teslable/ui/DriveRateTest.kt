@@ -50,16 +50,11 @@ class DriveRateTest {
     }
 
     @Test
-    fun `cost per distance keeps a digit more than the currency`() {
-        assertEquals("$0.075", formatCostRate(0.075f, "USD"))
-        assertEquals("¥5.0", formatCostRate(5f, "JPY"))
-    }
-
-    @Test
     fun `a price replaces the percent rate with the cost per distance`() {
-        // $1.00 over 10mi is $0.10/mi, $0.062/km.
+        // $1.00 over 10mi is $10.00 per 100mi, $6.21 per 100km.
         val rate = driveRate(stats(costAtHomePrice = 1f, percentPerMile = 0.5f), DistanceUnit.KILOMETERS, "USD")
-        assertEquals(DriveRate.Cost("$0.062", "km"), rate)
+        assertEquals(DriveRate.Cost("$6.21", "km"), rate)
+        assertEquals(DriveRate.Cost("$10.00", "mi"), driveRate(stats(costAtHomePrice = 1f), DistanceUnit.MILES, "USD"))
     }
 
     @Test

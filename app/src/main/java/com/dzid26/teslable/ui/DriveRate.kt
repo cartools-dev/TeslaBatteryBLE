@@ -8,7 +8,7 @@ import java.util.Locale
 
 /** The rate on the footer's first line: what the figure is and its parts, formatted for the display unit. */
 internal sealed interface DriveRate {
-    /** Money per distance, such as "$0.075" per "km". */
+    /** Money per 100 distance units, such as "$7.50" per "100km". */
     data class Cost(
         val money: String,
         val symbol: String,
@@ -30,18 +30,13 @@ internal fun driveRate(
     val costPerMile = stats.costAtHomePrice?.let { it / stats.milesDriven }
     val percentPerMile = stats.percentPerMile
     return when {
-        costPerMile != null -> DriveRate.Cost(formatCostRate(unit.ratePerUnit(costPerMile), currencyCode), unit.symbol)
+        costPerMile != null -> DriveRate.Cost(formatMoney(unit.ratePerUnit(costPerMile) * DISTANCE_BLOCK, currencyCode), unit.symbol)
         percentPerMile != null -> DriveRate.Percent(formatPercentHundredths(unit.ratePerUnit(percentPerMile)), unit.symbol)
         else -> null
     }
 }
 
-/** A small amount of money with one digit more than the currency's usual, so $0.075 is not shown as $0.07. */
-internal fun formatCostRate(
-    amount: Float,
-    currencyCode: String?,
-): String = currencyFormat(currencyCode, COST_RATE_EXTRA_DIGITS).format(amount.toDouble())
-
-private const val COST_RATE_EXTRA_DIGITS = 1
-
 private fun formatPercentHundredths(percent: Float): String = String.format(Locale.getDefault(), "%.2f", percent)
+
+/** The cost is quoted per this many miles or km, so it reads in whole cents. */
+private const val DISTANCE_BLOCK = 100f
