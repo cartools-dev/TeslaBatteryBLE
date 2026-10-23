@@ -93,6 +93,7 @@ import com.dzid26.teslable.core.history.Trip
 import com.dzid26.teslable.core.history.activeRoute
 import com.dzid26.teslable.core.history.chargeProjection
 import com.dzid26.teslable.core.history.compactDuration
+import com.dzid26.teslable.core.history.currentRest
 import com.dzid26.teslable.core.history.dischargeProjection
 import com.dzid26.teslable.core.history.markingLive
 import com.dzid26.teslable.core.history.projectionHorizonMillis
@@ -185,6 +186,9 @@ internal fun CarScreen(
         remember(vehicleHistory, vehicleDrives, sleepLogs, scale) {
             restStats(vehicleHistory, vehicleDrives, sleepLogs.copy(scale = scale))
         }
+    val statsNow = nowMillis ?: rememberNowMillis()
+    val current =
+        remember(vehicleHistory, vehicleDrives, sleepLogs, statsNow) { currentRest(vehicleHistory, vehicleDrives, statsNow, sleepLogs) }
     val health =
         remember(vehicleHistory, vehicle?.factoryRangeMiles) {
             healthSummary(vehicleHistory, epaRatedRangeMiles = vehicle?.factoryRangeMiles)
