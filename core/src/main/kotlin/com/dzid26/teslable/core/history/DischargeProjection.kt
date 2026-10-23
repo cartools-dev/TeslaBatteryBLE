@@ -128,8 +128,8 @@ fun dischargeProjection(
 /**
  * What refines the parked rate beyond the raw samples: the fitted rated-range
  * [scale] (null reads the integer level), the vehicle's VCSEC [statuses], oldest first,
- * which say when the car was locked and alone, and its Sentry and climate [activity]
- * readings, oldest first, which say when it was kept busy.
+ * which say when the car slept, and its Sentry and climate [activity] readings, oldest
+ * first, which say when it was kept busy.
  */
 data class ProjectionContext(
     val scale: FullRangeScale? = null,
@@ -199,7 +199,7 @@ private fun parkedDrain(
         if (parkedBetween(a, b, readingA, readingB)) {
             drops += (a.soc(scale) - b.soc(scale)).toDouble()
             spans += b.timestampMillis - a.timestampMillis
-            quiet += b.timestampMillis - a.timestampMillis >= MIN_SLEEP_PAIR_MILLIS && unattendedBetween(a, b, context)
+            quiet += b.timestampMillis - a.timestampMillis >= MIN_SLEEP_PAIR_MILLIS && idleBetween(a, b, context)
         }
     }
     val drop = drops.sum()

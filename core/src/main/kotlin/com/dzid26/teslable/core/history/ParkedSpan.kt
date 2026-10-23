@@ -35,18 +35,18 @@ fun longestParked(
 ): ParkedSpan? = longestRun(samples, drives, scale) { _, _ -> true }
 
 /**
- * The longest stretch of consecutive pairs that were parked and quiet: nobody was seen at the car in any of
- * them ([unattendedBetween]), awake or asleep. This is the sleep the parked-drain projection follows. Ties go
+ * The longest stretch of consecutive pairs that were parked and idle: neither Sentry nor the climate was
+ * running in any of them ([idleBetween]), awake or asleep. This is the sleep the parked-drain projection follows. Ties go
  * to the later stretch.
  *
- * @param context the fitted scale, the vehicle's status log and its Sentry and climate readings.
+ * @param context the fitted scale and the vehicle's Sentry and climate readings.
  * @see longestParked for the other parameters.
  */
 fun longestSleep(
     samples: List<BatterySample>,
     drives: List<DriveSample>,
     context: ProjectionContext,
-): ParkedSpan? = longestRun(samples, drives, context.scale) { a, b -> unattendedBetween(a, b, context) }
+): ParkedSpan? = longestRun(samples, drives, context.scale) { a, b -> idleBetween(a, b, context) }
 
 /** The longest run of consecutive parked pairs of [samples] that [also] accepts. */
 private fun longestRun(
@@ -119,23 +119,22 @@ internal fun chargedBetween(
 }
 
 /**
- * True when nobody was at the car and nothing kept it busy between two reads: the status log says locked with
- * nobody present, and no Sentry or climate reading says it was running. The logs write a status only on a change
- * and as a heartbeat, so a short gap usually holds none: the state carried in, the last reading at or before the
- * first read, stands for it while it is no older than [STATUS_CHANGE_MAX_GAP_MILLIS]. A signal with no reading to go
- * on (the phone was away) is not held against the gap.
+ * True when nothing kept the car busy between two reads: no Sentry or climate reading says it was running. The
+ * logs write a reading only while the car is awake and read, so a short gap usually holds none: the reading carried
+ * in, the last one at or before the first read, stands for it while it is no older than
+ * [STATUS_CHANGE_MAX_GAP_MILLIS]. A signal with no reading to go on (the phone was away) is not held against the gap.
+ * Whether anyone is at the car does not matter: only what draws power does.
  *
- * @param context the vehicle's status log and its Sentry and climate readings, oldest first.
+ * @param context the vehicle's Sentry and climate readings, oldest first.
  */
-internal fun unattendedBetween(
+internal fun idleBetween(
     a: BatterySample,
     b: BatterySample,
     context: ProjectionContext,
 ): Boolean {
     val from = readAt(a)
     val to = readAt(b)
-    return !busyBetween(context.statuses, from, to, StatusSample::timestampMillis) { it.attended() } &&
-        !busyBetween(context.sentryReadings, from, to, ActivitySample::timestampMillis) { it.on } &&
+    return !busyBetween(context.sentryReadings, from, to, ActivitySample::timestampMillis) { it.on } &&
         !busyBetween(context.climateReadings, from, to, ActivitySample::timestampMillis) { it.on }
 }
 
@@ -158,8 +157,6 @@ private fun <T> busyBetween(
     while (index < readings.size && millis(readings[index]) < to) index++
     return listOfNotNull(carried).plus(readings.subList(low, index)).any(busy)
 }
-
-private fun StatusSample.attended(): Boolean = !locked || userPresent
 
 /**
  * The parked pair of reads at least [MIN_LOWEST_DRAIN_MILLIS] apart that lost the battery's level slowest: the

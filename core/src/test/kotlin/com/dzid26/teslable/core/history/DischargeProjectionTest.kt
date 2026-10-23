@@ -239,24 +239,15 @@ class DischargeProjectionTest {
         assertEquals(true, looseWidth > tidyWidth)
     }
 
-    /** A status reading at [minutes]; by default the car is locked with nobody at it. */
-    private fun status(
-        minutes: Long,
-        attended: Boolean = false,
-    ) = StatusSample(
-        timestampMillis = minutes * MINUTE,
-        vehicleId = "",
-        asleep = !attended,
-        userPresent = attended,
-        locked = !attended,
-    )
+    /** The climate running at [minutes]: a car kept busy there, not sleeping. */
+    private fun climate(minutes: Long) = ActivitySample(minutes * MINUTE, "", ActivityKind.CLIMATE, true)
 
     @Test
     fun `the sleep rate comes from the pairs nobody was at the car`() {
         // Two unattended pairs lose a point each; the last pair has someone at the car and loses 3.
         val samples = listOf(sample(0, 80), sample(120, 79), sample(240, 78), sample(360, 75))
-        val statuses = listOf(status(60), status(180), status(300, attended = true))
-        val projection = assertNotNull(project(samples, context = ProjectionContext(statuses = statuses), rangeMillis = 24 * HOUR))
+        val busy = listOf(climate(300))
+        val projection = assertNotNull(project(samples, context = ProjectionContext(activity = busy), rangeMillis = 24 * HOUR))
         // Quiet: 2 points over 4 h = 0.5 %/h is the line; mixed: 5 points over 6 h.
         assertEquals(0.5, projection.percentPerHour, 1e-9)
         assertEquals(5.0 / 6.0, projection.mixedPercentPerHour!!, 1e-9)
@@ -265,9 +256,9 @@ class DischargeProjectionTest {
         assertTrue(projection.lowSoc!! <= 65f)
         // A single quiet pair is not enough to call a rate.
         val one = listOf(sample(0, 80), sample(120, 79), sample(240, 76))
-        val oneQuiet = listOf(status(60), status(180, attended = true))
+        val oneQuiet = listOf(climate(180))
         assertNull(
-            assertNotNull(project(one, context = ProjectionContext(statuses = oneQuiet), rangeMillis = 24 * HOUR)).mixedPercentPerHour,
+            assertNotNull(project(one, context = ProjectionContext(activity = oneQuiet), rangeMillis = 24 * HOUR)).mixedPercentPerHour,
         )
     }
 
@@ -280,21 +271,20 @@ class DischargeProjectionTest {
                 project(samples, context = ProjectionContext(statuses = emptyList()), rangeMillis = 24 * HOUR),
             ).mixedPercentPerHour,
         )
-        // Someone at the car in both gaps rules the sleep out.
-        val attended = listOf(status(60, attended = true), status(180, attended = true))
+        // The climate running in both gaps rules the sleep out.
+        val busy = listOf(climate(60), climate(180))
         assertNull(
-            assertNotNull(project(samples, context = ProjectionContext(statuses = attended), rangeMillis = 24 * HOUR)).mixedPercentPerHour,
+            assertNotNull(project(samples, context = ProjectionContext(activity = busy), rangeMillis = 24 * HOUR)).mixedPercentPerHour,
         )
     }
 
     @Test
     fun `sentry running makes a long locked gap no sleep`() {
         val samples = listOf(sample(0, 80), sample(120, 79), sample(240, 78), sample(360, 75))
-        val statuses = listOf(status(60), status(180), status(300, attended = true))
         val sentry = listOf(ActivitySample(-5 * MINUTE, "", ActivityKind.SENTRY, true))
         val projection =
             assertNotNull(
-                project(samples, context = ProjectionContext(statuses = statuses, activity = sentry), rangeMillis = 24 * HOUR),
+                project(samples, context = ProjectionContext(activity = sentry), rangeMillis = 24 * HOUR),
             )
         // Sentry was on throughout the first gaps: no sleep rate, so the line is the mixed one.
         assertNull(projection.mixedPercentPerHour)
@@ -302,9 +292,9 @@ class DischargeProjectionTest {
 
     @Test
     fun `short quiet pairs are an awake car and make no sleep rate`() {
-        // Locked and alone, but only minutes apart: the car was still awake, not sleeping.
+        // Idle, but only minutes apart: the car was still awake, not sleeping.
         val samples = listOf(sample(0, 80), sample(10, 79), sample(20, 78), sample(30, 77), sample(240, 76))
-        val projection = assertNotNull(project(samples, context = ProjectionContext(statuses = listOf(status(5))), rangeMillis = 24 * HOUR))
+        val projection = assertNotNull(project(samples, context = ProjectionContext(), rangeMillis = 24 * HOUR))
         assertNull(projection.mixedPercentPerHour)
     }
 

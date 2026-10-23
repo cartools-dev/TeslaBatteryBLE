@@ -25,6 +25,8 @@ import com.dzid26.teslable.ble.TeslaAdvert
 import com.dzid26.teslable.ble.TeslaConnection
 import com.dzid26.teslable.ble.Vehicle
 import com.dzid26.teslable.core.health.PriceChange
+import com.dzid26.teslable.core.history.ActivityKind
+import com.dzid26.teslable.core.history.ActivitySample
 import com.dzid26.teslable.core.history.BatterySample
 import com.dzid26.teslable.core.history.DeepSleep
 import com.dzid26.teslable.core.history.DriveSample
@@ -35,7 +37,6 @@ import com.dzid26.teslable.core.history.ProjectionContext
 import com.dzid26.teslable.core.history.RestStats
 import com.dzid26.teslable.core.history.RouteSample
 import com.dzid26.teslable.core.history.SleepDrop
-import com.dzid26.teslable.core.history.StatusSample
 import com.dzid26.teslable.core.units.DistanceUnit
 import com.dzid26.teslable.core.units.EfficiencyUnit
 import com.dzid26.teslable.health.HealthConfidence
@@ -475,7 +476,7 @@ class CardSnapshots {
                 samples = sleepParkedSamples,
                 drives = sleepParkedSamples.map { parkedDrive(it) },
                 nowMillis = NOW,
-                sleepLogs = ProjectionContext(statuses = sleepStatuses),
+                sleepLogs = ProjectionContext(activity = sleepActivity),
             )
         }
     }
@@ -848,25 +849,14 @@ class CardSnapshots {
                     }
             }
 
-        // Someone at the car (unlocked, present) mid-way through each awake burst; locked and alone in the gaps,
-        // with a heartbeat reading every quarter hour. The gaps are the sleep the dashed line follows.
-        private val sleepStatuses =
-            sleepBursts.dropLast(1).zip(sleepBursts.drop(1)).flatMap { (from, to) ->
-                val attended = listOf(from - 10, from - 30).map { sleepStatus(it, attended = true) }
-                val alone = generateSequence(from - 55) { it - 15 }.takeWhile { it > to + 5 }.map { sleepStatus(it, attended = false) }
-                attended + alone.toList()
+        // The climate runs mid-way through each awake burst and stays off in the gaps. The gaps are the sleep
+        // the dashed line follows.
+        private val sleepActivity =
+            sleepBursts.dropLast(1).flatMap { from ->
+                listOf(from - 10, from - 30).map {
+                    ActivitySample(NOW - it * MINUTE, BLE_NAME, ActivityKind.CLIMATE, on = true)
+                }
             }
-
-        private fun sleepStatus(
-            minutesAgo: Long,
-            attended: Boolean,
-        ) = StatusSample(
-            timestampMillis = NOW - minutesAgo * MINUTE,
-            vehicleId = BLE_NAME,
-            asleep = !attended,
-            userPresent = attended,
-            locked = !attended,
-        )
 
         // 21 h parked, 68 -> 66.6 % (about 1.6 %/day), a read every 20 min.
         private val rangeParkedSamples =
