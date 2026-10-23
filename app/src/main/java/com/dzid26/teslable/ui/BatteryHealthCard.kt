@@ -56,9 +56,9 @@ internal fun BatteryHealthCard(summary: HealthSummary) {
                         },
                     detail =
                         if (summary.sohMismatch) {
-                            "rated-range and energy-delta sources differ"
+                            "range-based and charge-based estimates differ"
                         } else {
-                            "rated-range + energy-delta estimate"
+                            "from rated range and energy added while charging"
                         },
                 )
             }
