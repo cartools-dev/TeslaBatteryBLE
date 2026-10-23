@@ -311,7 +311,8 @@ internal fun CarScreen(
                         ratedKwhPerMile = health.ratedKwhPerMile,
                         pricePerKwh = pricePerKwh,
                     )
-                    BatteryHealthCard(health, rest)
+                    BatteryHealthCard(health)
+                    BatteryStatsCard(rest)
                 }
             }
         }

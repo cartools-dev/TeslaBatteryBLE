@@ -25,16 +25,16 @@ import kotlin.math.roundToInt
 internal fun LongestStretchRows(rest: RestStats) {
     rest.parked?.let {
         LongestStretchRow(
-            Stretch(R.string.health_parked_term, R.string.health_parked_hint, it.startMillis, it.endMillis),
+            Stretch(R.string.stats_parked_term, R.string.stats_parked_hint, it.startMillis, it.endMillis),
             it.percentPerHour,
         )
     }
     rest.sleep?.let {
-        LongestStretchRow(Stretch(R.string.health_sleep_term, R.string.health_sleep_hint, it.startMillis, it.endMillis), it.percentPerHour)
+        LongestStretchRow(Stretch(R.string.stats_sleep_term, R.string.stats_sleep_hint, it.startMillis, it.endMillis), it.percentPerHour)
     }
     rest.deepSleep?.let {
         LongestStretchRow(
-            Stretch(R.string.health_deep_sleep_term, R.string.health_deep_sleep_hint, it.startMillis, it.endMillis),
+            Stretch(R.string.stats_deep_sleep_term, R.string.stats_deep_sleep_hint, it.startMillis, it.endMillis),
             it.percentPerHour,
             ceiling = it.drop?.ceiling == true,
             drainTip = it.drop?.let { drop -> drainTip(it, drop) },
@@ -58,10 +58,10 @@ private fun LongestStretchRow(
     drainTip: String? = null,
 ) {
     val is24Hour = LocalIs24Hour.current ?: DateFormat.is24HourFormat(LocalContext.current)
-    EstimateRow(
+    StatRow(
         label = {
             Row {
-                LabelText(stringResource(R.string.health_longest))
+                StatLabel(stringResource(R.string.stats_longest))
                 Spacer(Modifier.width(4.dp))
                 HintText(
                     text = stringResource(stretch.term),
@@ -71,9 +71,9 @@ private fun LongestStretchRow(
             }
         },
         value = compactDuration(stretch.endMillis - stretch.startMillis).orEmpty(),
-        detail = stringResource(R.string.health_ended, formatTime(stretch.endMillis, showDate = true, is24Hour = is24Hour)),
+        detail = stringResource(R.string.stats_ended, formatTime(stretch.endMillis, showDate = true, is24Hour = is24Hour)),
         figure = drainLabel(perHour, ceiling)?.let { Figure(it, drainTip) },
-        valueTip = stringResource(R.string.health_started, formatTime(stretch.startMillis, showDate = true, is24Hour = is24Hour)),
+        valueTip = stringResource(R.string.stats_started, formatTime(stretch.startMillis, showDate = true, is24Hour = is24Hour)),
     )
 }
 
@@ -85,7 +85,7 @@ private fun drainTip(
 ): String {
     val locale = LocalLocale.current.platformLocale
     return stringResource(
-        R.string.health_drain_hint,
+        R.string.stats_drain_hint,
         "%.1f".format(locale, drop.fromPercent),
         "%.1f".format(locale, drop.toPercent),
         compactDuration(drop.spanMillis).orEmpty(),
@@ -111,11 +111,11 @@ private fun drainLabel(
         if (perDay != null) {
             stringResource(R.string.history_parked_rate, perDay)
         } else {
-            stringResource(R.string.health_drain_week, "%.1f".format(locale, perWeek))
+            stringResource(R.string.stats_drain_week, "%.1f".format(locale, perWeek))
         }
     return when {
-        tiny -> stringResource(R.string.health_drain_tiny_week)
-        ceiling -> stringResource(R.string.health_drain_ceiling, figure)
+        tiny -> stringResource(R.string.stats_drain_tiny_week)
+        ceiling -> stringResource(R.string.stats_drain_ceiling, figure)
         else -> figure
     }
 }

@@ -16,31 +16,21 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.AnnotatedString
-import androidx.compose.ui.text.SpanStyle
-import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
-import com.dzid26.teslable.R
-import com.dzid26.teslable.core.history.RestStats
 import com.dzid26.teslable.health.HealthConfidence
 import com.dzid26.teslable.health.HealthSummary
 import java.text.DecimalFormatSymbols
 import kotlin.math.roundToInt
 
 /**
- * Battery stats, first cut: measured capacity and full range from the car's
+ * Battery health, first cut: measured capacity and full range from the car's
  * own readings, with a confidence pill and the session-count learning gate.
  * No SoH percentage until the factory range is configured, and never any
  * cell-imbalance, pack-temperature, or lifespan claims.
  */
 @Composable
-internal fun BatteryHealthCard(
-    summary: HealthSummary,
-    rest: RestStats = RestStats(),
-) {
+internal fun BatteryHealthCard(summary: HealthSummary) {
     val unit = LocalDistanceUnit.current
     val efficiency = LocalEfficiencyUnit.current
     val separator = remember { DecimalFormatSymbols.getInstance().decimalSeparator }
@@ -48,7 +38,7 @@ internal fun BatteryHealthCard(
         Column(Modifier.padding(12.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(
-                    text = stringResource(R.string.health_title),
+                    text = "Battery health",
                     style = MaterialTheme.typography.titleSmall,
                     modifier = Modifier.weight(1f),
                 )
@@ -58,7 +48,7 @@ internal fun BatteryHealthCard(
 
             summary.sohPercent?.let { soh ->
                 EstimateRow(
-                    label = { LabelText("Capacity (SoH)") },
+                    label = "Capacity (SoH)",
                     value = "${soh.roundToInt()}%",
                     detail =
                         if (summary.sohMismatch) {
@@ -70,7 +60,7 @@ internal fun BatteryHealthCard(
             }
             summary.capacityKwh?.let { kwh ->
                 EstimateRow(
-                    label = { LabelText("Usable capacity") },
+                    label = "Usable capacity",
                     value = "~${(kwh * 10).roundToInt() / 10f}kWh",
                     detail =
                         summary.ratedKwhPerMile?.let { constant ->
@@ -80,12 +70,11 @@ internal fun BatteryHealthCard(
             }
             summary.fullRangeMiles?.let { miles ->
                 EstimateRow(
-                    label = { LabelText("Full range") },
+                    label = "Full range",
                     value = "~${unit.format(miles)}",
                     detail = "fitted from ${summary.fullRangeSteps} percent steps",
                 )
             }
-            LongestStretchRows(rest)
             if (summary.capacityKwh == null && summary.fullRangeMiles == null && summary.sohPercent == null) {
                 Text(
                     text = "No readings yet. Charge once with the app open, then read the battery.",
@@ -119,52 +108,11 @@ internal fun BatteryHealthCard(
     }
 }
 
-/** [detail], with the [bold] part (a figure the line carries) in bold; [detail] alone when there is none. */
-private fun boldPart(
-    detail: String,
-    bold: String?,
-): AnnotatedString =
-    buildAnnotatedString {
-        append(detail)
-        if (bold != null) {
-            append(" · ")
-            withStyle(SpanStyle(fontWeight = FontWeight.Bold)) { append(bold) }
-        }
-    }
-
 @Composable
-internal fun LabelText(text: String) = Text(text, style = MaterialTheme.typography.bodySmall)
-
-/** A figure closing a row's detail line, in bold; with a [tip] it is underlined and explains itself on a tap. */
-internal class Figure(
-    val text: String,
-    val tip: String? = null,
-)
-
-@Composable
-private fun DetailLine(
-    detail: String,
-    figure: Figure?,
-) {
-    val style = MaterialTheme.typography.labelSmall
-    val color = MaterialTheme.colorScheme.onSurfaceVariant
-    if (figure?.tip == null) {
-        Text(text = boldPart(detail, figure?.text), style = style, color = color)
-    } else {
-        Row {
-            Text(text = "$detail \u00B7 ", style = style, color = color)
-            HintText(figure.text, figure.tip, color, style = style.copy(fontWeight = FontWeight.Bold))
-        }
-    }
-}
-
-@Composable
-internal fun EstimateRow(
-    label: @Composable () -> Unit,
+private fun EstimateRow(
+    label: String,
     value: String,
     detail: String,
-    figure: Figure? = null,
-    valueTip: String? = null,
 ) {
     Row(
         verticalAlignment = Alignment.Bottom,
@@ -174,22 +122,18 @@ internal fun EstimateRow(
                 .padding(vertical = 2.dp),
     ) {
         Column(Modifier.weight(1f)) {
-            label()
-            DetailLine(detail, figure)
-        }
-        if (valueTip != null) {
-            TipText(
-                text = value,
-                tip = valueTip,
-                style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold),
-            )
-        } else {
+            Text(label, style = MaterialTheme.typography.bodySmall)
             Text(
-                text = value,
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.SemiBold,
+                text = detail,
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
+        Text(
+            text = value,
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.SemiBold,
+        )
     }
 }
 

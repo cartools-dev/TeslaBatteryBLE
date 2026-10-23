@@ -218,7 +218,6 @@ class CardSnapshots {
             CompositionLocalProvider(LocalDistanceUnit provides DistanceUnit.KILOMETERS) {
                 BatteryHealthCard(
                     healthSummary,
-                    restStatsFixture,
                 )
             }
         }
@@ -231,7 +230,7 @@ class CardSnapshots {
                 LocalDistanceUnit provides DistanceUnit.KILOMETERS,
                 LocalEfficiencyUnit provides EfficiencyUnit.ENERGY_PER_100_DISTANCE,
             ) {
-                BatteryHealthCard(healthSummary, restStatsFixture)
+                BatteryHealthCard(healthSummary)
             }
         }
     }
@@ -243,8 +242,15 @@ class CardSnapshots {
                 LocalDistanceUnit provides DistanceUnit.MILES,
                 LocalEfficiencyUnit provides EfficiencyUnit.DISTANCE_PER_ENERGY,
             ) {
-                BatteryHealthCard(healthSummary, restStatsFixture)
+                BatteryHealthCard(healthSummary)
             }
+        }
+    }
+
+    @Test
+    fun statsCard() {
+        snapCard("stats-card") {
+            BatteryStatsCard(restStatsFixture)
         }
     }
 
