@@ -118,7 +118,8 @@ private fun DriveChips(
 }
 
 /**
- * "Driven: N km \u00B7 N% used \u00B7 0.8% per km": the percent rate joins the first line once known. While the full range is
+ * "Driven: 12.4km \u00B7 N% used \u00B7 $0.05/km": the cost per distance at the home price joins the first line once known
+ * (the percent per distance stands in while no price is set). While the full range is
  * not learned the figures are rough, and a note under the lines says so.
  */
 @OptIn(ExperimentalLayoutApi::class)
@@ -133,13 +134,13 @@ private fun DriveFooter(
     val usedText = stringResource(R.string.drive_used, formatPercentTenths(used.coerceAtLeast(0f)))
     FlowRow(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
         Text(
-            text = stringResource(R.string.drive_driven, formatDistance(driven, unit)),
+            text = stringResource(R.string.drive_driven, formatDistance(driven, unit, DISTANCE_DECIMALS)),
             style = MaterialTheme.typography.bodySmall,
         )
         Text(usedText, style = MaterialTheme.typography.bodySmall)
-        stats?.percentPerMile?.let { rate ->
+        stats?.let { rateText(it, unit) }?.let { rate ->
             Text(
-                text = stringResource(R.string.drive_rate_joined, percentPerDistance(rate, unit)),
+                text = stringResource(R.string.drive_rate_joined, rate),
                 style = MaterialTheme.typography.bodySmall,
             )
         }
@@ -156,11 +157,23 @@ private fun DriveFooter(
     }
 }
 
+/** The cost per distance at the home price; without a price the percent per distance; null when neither is known. */
 @Composable
-private fun percentPerDistance(
-    percentPerMile: Float,
+private fun rateText(
+    stats: DriveStats,
     unit: DistanceUnit,
-): String = stringResource(R.string.drive_percent_per_distance, formatPercentHundredths(unit.ratePerUnit(percentPerMile)), unit.symbol)
+): String? {
+    val currencyCode = LocalCurrencyCode.current
+    val costPerMile = stats.costAtHomePrice?.let { it / stats.milesDriven }
+    val percentPerMile = stats.percentPerMile
+    return when {
+        costPerMile != null ->
+            stringResource(R.string.drive_cost_per_distance, formatMoney(unit.ratePerUnit(costPerMile), currencyCode), unit.symbol)
+        percentPerMile != null ->
+            stringResource(R.string.drive_percent_per_distance, formatPercentHundredths(unit.ratePerUnit(percentPerMile)), unit.symbol)
+        else -> null
+    }
+}
 
 /**
  * The line under the footer: "312 Wh/mi \u00B7 6.4 kWh \u00B7 $1.02 at home price" (these need the learned full range
@@ -207,7 +220,11 @@ private fun LegendItem(
 internal fun formatDistance(
     distance: Double,
     unit: DistanceUnit,
-): String = unit.format((distance / unit.fromMiles(1f)).toFloat())
+    decimals: Int = 0,
+): String = unit.format((distance / unit.fromMiles(1f)).toFloat(), decimals, DecimalFormatSymbols.getInstance().decimalSeparator)
+
+/** Cursor labels and the drive footer show distances and ranges to a tenth. */
+internal const val DISTANCE_DECIMALS = 1
 
 internal fun formatWholePercent(percent: Float): String = String.format(Locale.getDefault(), "%.0f%%", percent)
 
