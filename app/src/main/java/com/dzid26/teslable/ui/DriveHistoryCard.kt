@@ -137,7 +137,7 @@ private fun DriveFooter(
             style = MaterialTheme.typography.bodySmall,
         )
         Text(usedText, style = MaterialTheme.typography.bodySmall)
-        stats?.let { driveRates(it, unit, null).percent }?.let { rate ->
+        stats?.let { percentRate(it, unit) }?.let { rate ->
             Text(
                 text = stringResource(R.string.drive_rate_joined, stringResource(R.string.drive_percent_per_distance, rate, unit.symbol)),
                 style = MaterialTheme.typography.bodySmall,
@@ -145,7 +145,7 @@ private fun DriveFooter(
         }
     }
     if (stats != null) {
-        driveEnergyLine(stats, unit)?.let { Text(it, style = MaterialTheme.typography.bodySmall) }
+        DriveEnergyLine(stats, unit)
     }
     if (wholeStepsOnly) {
         Text(
@@ -158,23 +158,31 @@ private fun DriveFooter(
 
 /**
  * The line under the footer: "312 Wh/mi \u00B7 6.4 kWh \u00B7 $7.50/100mi" (these need the learned full range
- * and rated constant). A part the data cannot supply is left out; null when none is known.
+ * and rated constant). A part the data cannot supply is left out; nothing shows when none is known. A tap on the
+ * cost says it is at the home price.
  */
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
-private fun driveEnergyLine(
+private fun DriveEnergyLine(
     stats: DriveStats,
     unit: DistanceUnit,
-): String? {
+) {
     val efficiency = LocalEfficiencyUnit.current
     val separator = remember { DecimalFormatSymbols.getInstance().decimalSeparator }
-    val rates = driveRates(stats, unit, LocalCurrencyCode.current)
-    val energy =
+    val cost = costRate(stats, unit, LocalCurrencyCode.current)?.let { stringResource(R.string.drive_cost_per_distance, it, unit.symbol) }
+    val plain =
         listOfNotNull(
             stats.kwhPerMile?.let { efficiency.format(it, unit, separator) },
             stats.energyKwh?.let { stringResource(R.string.drive_energy, formatKwh(it)) },
-            rates.cost?.let { stringResource(R.string.drive_cost_per_distance, it, rates.symbol) },
         )
-    return energy.takeIf { it.isNotEmpty() }?.joinToString(" \u00B7 ")
+    val style = MaterialTheme.typography.bodySmall
+    val dot = " \u00B7"
+    FlowRow(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+        plain.forEachIndexed { index, part ->
+            Text(if (index < plain.lastIndex || cost != null) part + dot else part, style = style)
+        }
+        cost?.let { TipText(it, stringResource(R.string.drive_cost_tip), style) }
+    }
 }
 
 @Composable
