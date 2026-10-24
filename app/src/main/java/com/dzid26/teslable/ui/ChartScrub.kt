@@ -10,7 +10,8 @@ import androidx.compose.runtime.Stable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.Saver
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
@@ -36,24 +37,44 @@ import kotlin.math.abs
  * - a drag that goes sideways first moves it and holds the page still;
  * - a drag that goes vertical first is the page scrolling: the cursor goes back
  *   to where it stood before the touch;
- * - a tap anywhere off the chart hides it.
+ * - a tap anywhere off the charts hides it; a touch on another chart leaves it standing.
+ * A rotation keeps the cursor on the same point: it is saved as the data x it snapped to, since the canvas x
+ * changes with the chart's width. So does leaving for Settings and coming back, which restores the car view's saved
+ * state like the range chips. A saved point outside the window the chart now shows (another range or distance
+ * window) is not drawn; a new sample keeps it, since the point the cursor stood on is still there.
  */
 
 /** Where the chart's cursor stands, in the chart's canvas x; null for none. */
 @Stable
-internal class CursorPin {
+internal class CursorPin(
+    restoredX: Double? = null,
+) {
     var canvasX by mutableStateOf<Float?>(null)
 
-    /** The screen gesture that last landed on this chart, so the screen-wide clear skips it. */
-    var insideGesture = -1
+    /** The data x the cursor stood on before the screen was recreated; it stands there until a touch moves or clears it. */
+    var restoredX by mutableStateOf(restoredX)
+
+    /** The data x of the point the cursor last snapped to, which a rotation saves. Written while drawing, so not state. */
+    var shownX: Double? = null
+
+    /** The screen-wide tap count this pin has already answered; a recreated chart must not clear on the count it finds. */
+    var seenTaps = CursorDismiss.count
+
+    fun clear() {
+        canvasX = null
+        restoredX = null
+    }
 }
+
+internal val CursorPinSaver = Saver<CursorPin, Double>(save = { it.shownX }, restore = { CursorPin(restoredX = it) })
 
 @Composable
 internal fun rememberCursorPin(): CursorPin {
-    val pin = remember { CursorPin() }
+    val pin = rememberSaveable(saver = CursorPinSaver) { CursorPin() }
     val taps = CursorDismiss.count
     LaunchedEffect(taps) {
-        if (pin.insideGesture != CursorDismiss.gesture) pin.canvasX = null
+        if (taps != pin.seenTaps && CursorDismiss.chartGesture != CursorDismiss.gesture) pin.clear()
+        pin.seenTaps = taps
     }
     return pin
 }
@@ -81,10 +102,15 @@ internal fun Modifier.scrubbing(pin: CursorPin): Modifier =
         val slop = viewConfiguration.touchSlop
         awaitEachGesture {
             val down = awaitFirstDown(requireUnconsumed = false)
-            pin.insideGesture = CursorDismiss.gesture
+            CursorDismiss.chartGesture = CursorDismiss.gesture
             val before = pin.canvasX
+            val restoredBefore = pin.restoredX
             pin.canvasX = down.position.x
-            if (!followScrub(pin, down, slop)) pin.canvasX = before
+            pin.restoredX = null
+            if (!followScrub(pin, down, slop)) {
+                pin.canvasX = before
+                pin.restoredX = restoredBefore
+            }
         }
     }
 
@@ -122,13 +148,23 @@ internal class ScrubCursor(
     private val color: Color,
 ) : Decoration {
     override fun drawOverLayers(context: CartesianDrawingContext) {
-        val at = pin.canvasX
-        if (at == null || points.isEmpty()) return
-        val dataX = context.dataX(at)
+        val dataX = pin.canvasX?.let { context.dataX(it) } ?: restoredCursorX(pin.restoredX, context.ranges.minX, context.ranges.maxX)
+        if (dataX == null || points.isEmpty()) {
+            pin.shownX = null
+            return
+        }
         val (x, y) = points.minBy { abs(it.first - dataX) }
+        pin.shownX = x
         marker.drawOverLayers(context, listOf(PointTarget(x, context.canvasX(x), context.canvasY(y), y, color)))
     }
 }
+
+/** The saved cursor x when it still falls inside the plotted x range, else null. */
+internal fun restoredCursorX(
+    restoredX: Double?,
+    minX: Double,
+    maxX: Double,
+): Double? = restoredX?.takeIf { it in minX..maxX }
 
 private class PointTarget(
     override val x: Double,
@@ -150,6 +186,9 @@ internal object CursorDismiss {
 
     /** Bumped at every touch down; a chart notes the one that landed on it. */
     var gesture = 0
+
+    /** The last touch that landed on any chart: a tap there clears no cursor, so each chart keeps its own. */
+    var chartGesture = -1
 }
 
 /** Counts every tap on this subtree without consuming anything. */
