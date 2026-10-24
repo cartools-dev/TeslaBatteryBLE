@@ -1,0 +1,141 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+
+package com.dzid26.teslable.core.history
+
+import com.dzid26.teslable.protocol.ChargingStateKind
+import com.dzid26.teslable.protocol.ShiftStateKind
+import kotlin.test.Test
+import kotlin.test.assertEquals
+import kotlin.test.assertNotNull
+import kotlin.test.assertNull
+
+class CurrentRestTest {
+    private fun sample(
+        minutes: Long,
+        state: ChargingStateKind? = ChargingStateKind.Disconnected,
+    ) = BatterySample(
+        timestampMillis = minutes * MINUTE,
+        batteryLevel = 70,
+        chargingState = state,
+        chargeLimit = null,
+    )
+
+    private fun drives(
+        samples: List<BatterySample>,
+        shift: (BatterySample) -> ShiftStateKind? = { ShiftStateKind.P },
+        odometer: (BatterySample) -> Int = { ODOMETER },
+    ) = samples.map {
+        DriveSample(
+            timestampMillis = it.timestampMillis,
+            vehicleId = "",
+            shiftState = shift(it),
+            speed = null,
+            power = null,
+            odometerInHundredthsOfAMile = odometer(it),
+        )
+    }
+
+    private fun present(minutes: Long) = StatusSample(minutes * MINUTE, "", asleep = false, userPresent = true, locked = false)
+
+    private fun climate(minutes: Long) = ActivitySample(minutes * MINUTE, "", ActivityKind.CLIMATE, true)
+
+    @Test
+    fun `parked since the unbroken run began, and poweredDown once idle for an hour`() {
+        val samples = listOf(sample(0), sample(100), sample(200), sample(400))
+        val now = 405 * MINUTE
+        val poweredDown = assertNotNull(currentRest(samples, drives(samples), now))
+        assertEquals(RestKind.POWERED_DOWN, poweredDown.kind)
+        assertEquals(0L, poweredDown.sinceMillis)
+        // Someone in the car in the last gap: parked, not poweredDown, and not since the idle run either.
+        val parked = assertNotNull(currentRest(samples, drives(samples), now, ProjectionContext(statuses = listOf(present(300)))))
+        assertEquals(RestKind.PARKED, parked.kind)
+        assertEquals(0L, parked.sinceMillis)
+    }
+
+    @Test
+    fun `just left is parked, not yet poweredDown`() {
+        val samples = listOf(sample(0), sample(10))
+        val rest = assertNotNull(currentRest(samples, drives(samples), 12 * MINUTE))
+        assertEquals(RestKind.PARKED, rest.kind)
+    }
+
+    @Test
+    fun `the climate running now means parked, and the stretch before a drive does not count`() {
+        val samples = listOf(sample(0), sample(100), sample(200), sample(300))
+        val moved = drives(samples, odometer = { if (it.timestampMillis < 150 * MINUTE) ODOMETER else ODOMETER + 100 })
+        val rest = assertNotNull(currentRest(samples, moved, 305 * MINUTE, ProjectionContext(activity = listOf(climate(302)))))
+        assertEquals(RestKind.PARKED, rest.kind)
+        assertEquals(200 * MINUTE, rest.sinceMillis)
+    }
+
+    @Test
+    fun `charging and driving are states of their own, since the run of reads began`() {
+        val charging = listOf(sample(0), sample(50, ChargingStateKind.Charging), sample(100, ChargingStateKind.Charging))
+        val chargingNow = assertNotNull(currentRest(charging, drives(charging), 101 * MINUTE))
+        assertEquals(RestKind.CHARGING, chargingNow.kind)
+        assertEquals(50 * MINUTE, chargingNow.sinceMillis)
+        val driving = listOf(sample(0), sample(50), sample(100))
+        val gear = drives(driving, shift = { if (it.timestampMillis >= 50 * MINUTE) ShiftStateKind.D else ShiftStateKind.P })
+        val drivingNow = assertNotNull(currentRest(driving, gear, 101 * MINUTE))
+        assertEquals(RestKind.DRIVING, drivingNow.kind)
+        assertEquals(50 * MINUTE, drivingNow.sinceMillis)
+    }
+
+    @Test
+    fun `a short pause in a charge does not restart since, a long one does`() {
+        val paused =
+            listOf(
+                sample(0, ChargingStateKind.Charging),
+                sample(50, ChargingStateKind.Charging),
+                sample(52, ChargingStateKind.Stopped),
+                sample(58, ChargingStateKind.Charging),
+            )
+        assertEquals(0L, assertNotNull(currentRest(paused, drives(paused), 59 * MINUTE)).sinceMillis)
+        val long =
+            listOf(sample(0, ChargingStateKind.Charging), sample(10, ChargingStateKind.NoPower), sample(30, ChargingStateKind.Charging))
+        assertEquals(30 * MINUTE, assertNotNull(currentRest(long, drives(long), 31 * MINUTE)).sinceMillis)
+    }
+
+    @Test
+    fun `an old drive reading in gear next to fresh battery reads says nothing of now`() {
+        val samples = listOf(sample(0), sample(100), sample(200))
+        val old = drives(listOf(samples.first()), shift = { ShiftStateKind.D })
+        assertNull(currentRest(samples, old, 201 * MINUTE))
+        // With a fresh drive reading beside the newest read the car is driving again.
+        val fresh = old + drives(listOf(samples.last()), shift = { ShiftStateKind.D })
+        assertEquals(RestKind.DRIVING, assertNotNull(currentRest(samples, fresh, 201 * MINUTE)).kind)
+    }
+
+    @Test
+    fun `no drive reading or no samples is no state`() {
+        val parked = listOf(sample(0), sample(100))
+        assertNull(currentRest(parked, emptyList(), 101 * MINUTE))
+        assertNull(currentRest(emptyList(), emptyList(), 0L))
+    }
+
+    @Test
+    fun `nothing heard for longer than a heartbeat is not known`() {
+        val samples = listOf(sample(0), sample(100), sample(200))
+        assertNull(currentRest(samples, drives(samples), 200 * MINUTE + 3 * 24 * 60 * MINUTE))
+        // A status reading heard recently keeps the state current though the last battery read is old.
+        val heard = ProjectionContext(statuses = listOf(StatusSample(1000 * MINUTE, "", asleep = true, userPresent = false, locked = true)))
+        assertEquals(RestKind.POWERED_DOWN, assertNotNull(currentRest(samples, drives(samples), 1005 * MINUTE, heard)).kind)
+    }
+
+    @Test
+    fun `a newer drive reading in gear means driving, at another odometer not known`() {
+        val samples = listOf(sample(0), sample(100), sample(200))
+        val parked = drives(samples)
+        val newerInGear = parked + parked.last().copy(timestampMillis = 205 * MINUTE, shiftState = ShiftStateKind.D)
+        assertEquals(RestKind.DRIVING, assertNotNull(currentRest(samples, newerInGear, 206 * MINUTE)).kind)
+        val newerMoved = parked + parked.last().copy(timestampMillis = 205 * MINUTE, odometerInHundredthsOfAMile = ODOMETER + 50)
+        assertNull(currentRest(samples, newerMoved, 206 * MINUTE))
+        val newerParked = parked + parked.last().copy(timestampMillis = 205 * MINUTE)
+        assertEquals(RestKind.POWERED_DOWN, assertNotNull(currentRest(samples, newerParked, 206 * MINUTE)).kind)
+    }
+
+    private companion object {
+        const val MINUTE = 60_000L
+        const val ODOMETER = 1_234_500
+    }
+}

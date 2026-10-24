@@ -95,10 +95,18 @@ fun lastFinishedChargeStats(
     samples: List<BatterySample>,
     nowMillis: Long,
 ): ChargeStats? {
-    val currentStart =
-        if (chargeSessionOpen(samples, nowMillis)) chargeRuns(samples).lastOrNull()?.first()?.timestampMillis else null
+    val currentStart = chargeSessionStart(samples, nowMillis)
     return chargeStats(currentStart?.let { start -> samples.filter { it.timestampMillis < start } } ?: samples)
 }
+
+/**
+ * When the charge session that is still going at [nowMillis] began (see [chargeSessionOpen]): its first charging
+ * sample, with a pause shorter than ten minutes not counted as a break. Null when no session is open.
+ */
+fun chargeSessionStart(
+    samples: List<BatterySample>,
+    nowMillis: Long,
+): Long? = if (chargeSessionOpen(samples, nowMillis)) chargeRuns(samples).lastOrNull()?.first()?.timestampMillis else null
 
 private fun List<BatterySample>.toSession(): ChargeSession =
     ChargeSession(

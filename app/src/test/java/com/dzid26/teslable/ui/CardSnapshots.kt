@@ -28,12 +28,14 @@ import com.dzid26.teslable.core.health.PriceChange
 import com.dzid26.teslable.core.history.ActivityKind
 import com.dzid26.teslable.core.history.ActivitySample
 import com.dzid26.teslable.core.history.BatterySample
+import com.dzid26.teslable.core.history.CurrentRest
 import com.dzid26.teslable.core.history.DeepSleep
 import com.dzid26.teslable.core.history.DriveSample
 import com.dzid26.teslable.core.history.DriveWindow
 import com.dzid26.teslable.core.history.HistoryRange
 import com.dzid26.teslable.core.history.ParkedSpan
 import com.dzid26.teslable.core.history.ProjectionContext
+import com.dzid26.teslable.core.history.RestKind
 import com.dzid26.teslable.core.history.RestStats
 import com.dzid26.teslable.core.history.RouteSample
 import com.dzid26.teslable.core.history.SleepDrop
@@ -252,7 +254,28 @@ class CardSnapshots {
     @Test
     fun statsCard() {
         snapCard("stats-card") {
-            DrainStatsCard(restStatsFixture)
+            DrainStatsCard(restStatsFixture, CurrentRest(RestKind.POWERED_DOWN, NOW - 3 * HOUR))
+        }
+    }
+
+    @Test
+    fun statsCardParked() {
+        snapCard("stats-card_parked") {
+            DrainStatsCard(restStatsFixture, CurrentRest(RestKind.PARKED, NOW - 20 * 60_000L))
+        }
+    }
+
+    @Test
+    fun statsCardCharging() {
+        snapCard("stats-card_charging") {
+            DrainStatsCard(RestStats(), CurrentRest(RestKind.CHARGING, NOW - 45 * 60_000L))
+        }
+    }
+
+    @Test
+    fun statsCardDriving() {
+        snapCard("stats-card_driving") {
+            DrainStatsCard(restStatsFixture, CurrentRest(RestKind.DRIVING, NOW - 12 * 60_000L))
         }
     }
 
@@ -960,7 +983,7 @@ class CardSnapshots {
             RestStats(
                 lowestDrain = ParkedSpan(startMillis = NOW - 30 * HOUR, endMillis = NOW - 13 * HOUR, dropPercent = 0.03),
                 parked = ParkedSpan(startMillis = NOW - 40 * HOUR, endMillis = NOW - 12 * HOUR, dropPercent = 1.1),
-                sleep = ParkedSpan(startMillis = NOW - 38 * HOUR, endMillis = NOW - 16 * HOUR, dropPercent = 0.7),
+                powerDown = ParkedSpan(startMillis = NOW - 38 * HOUR, endMillis = NOW - 16 * HOUR, dropPercent = 0.7),
                 deepSleep = DeepSleep(NOW - 34 * HOUR, NOW - 34 * HOUR + 565 * MINUTE, SleepDrop(51.3, 50.9, 700 * MINUTE, ceiling = true)),
             )
 

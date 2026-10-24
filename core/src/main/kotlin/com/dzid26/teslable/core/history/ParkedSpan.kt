@@ -36,13 +36,13 @@ fun longestParked(
 
 /**
  * The longest stretch of consecutive pairs that were parked and idle: nobody in the car and neither Sentry nor the
- * climate running in any of them ([idleBetween]), awake or asleep. This is the sleep the parked-drain projection follows. Ties go
+ * climate running in any of them ([idleBetween]), awake or asleep. This is the power down the parked-drain projection follows. Ties go
  * to the later stretch.
  *
  * @param context the fitted scale, the vehicle's status log and its Sentry and climate readings.
  * @see longestParked for the other parameters.
  */
-fun longestSleep(
+fun longestPowerDown(
     samples: List<BatterySample>,
     drives: List<DriveSample>,
     context: ProjectionContext,
@@ -139,6 +139,15 @@ internal fun idleBetween(
         !busyBetween(context.sentryReadings, from, to, ActivitySample::timestampMillis) { it.on } &&
         !busyBetween(context.climateReadings, from, to, ActivitySample::timestampMillis) { it.on }
 }
+
+/** True when nobody is in the car and neither Sentry nor the climate is running at [nowMillis], by the readings carried in. */
+internal fun idleAt(
+    nowMillis: Long,
+    context: ProjectionContext,
+): Boolean =
+    !busyBetween(context.statuses, nowMillis, nowMillis, StatusSample::timestampMillis) { it.userPresent } &&
+        !busyBetween(context.sentryReadings, nowMillis, nowMillis, ActivitySample::timestampMillis) { it.on } &&
+        !busyBetween(context.climateReadings, nowMillis, nowMillis, ActivitySample::timestampMillis) { it.on }
 
 /** True when [busy] holds for the reading carried in at [from] or for any reading strictly inside the gap to [to]. */
 private fun <T> busyBetween(
