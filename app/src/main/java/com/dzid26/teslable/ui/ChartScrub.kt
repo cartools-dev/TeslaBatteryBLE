@@ -37,7 +37,7 @@ import kotlin.math.abs
  * - a drag that goes sideways first moves it and holds the page still;
  * - a drag that goes vertical first is the page scrolling: the cursor goes back
  *   to where it stood before the touch;
- * - a tap anywhere off the chart hides it.
+ * - a tap anywhere off the charts hides it; a touch on another chart leaves it standing.
  * A rotation keeps the cursor on the same point: it is saved as the data x it snapped to, since the canvas x
  * changes with the chart's width. So does leaving for Settings and coming back, which restores the car view's saved
  * state like the range chips. A saved point outside the window the chart now shows (another range or distance
@@ -57,9 +57,6 @@ internal class CursorPin(
     /** The data x of the point the cursor last snapped to, which a rotation saves. Written while drawing, so not state. */
     var shownX: Double? = null
 
-    /** The screen gesture that last landed on this chart, so the screen-wide clear skips it. */
-    var insideGesture = -1
-
     /** The screen-wide tap count this pin has already answered; a recreated chart must not clear on the count it finds. */
     var seenTaps = CursorDismiss.count
 
@@ -76,7 +73,7 @@ internal fun rememberCursorPin(): CursorPin {
     val pin = rememberSaveable(saver = CursorPinSaver) { CursorPin() }
     val taps = CursorDismiss.count
     LaunchedEffect(taps) {
-        if (taps != pin.seenTaps && pin.insideGesture != CursorDismiss.gesture) pin.clear()
+        if (taps != pin.seenTaps && CursorDismiss.chartGesture != CursorDismiss.gesture) pin.clear()
         pin.seenTaps = taps
     }
     return pin
@@ -105,7 +102,7 @@ internal fun Modifier.scrubbing(pin: CursorPin): Modifier =
         val slop = viewConfiguration.touchSlop
         awaitEachGesture {
             val down = awaitFirstDown(requireUnconsumed = false)
-            pin.insideGesture = CursorDismiss.gesture
+            CursorDismiss.chartGesture = CursorDismiss.gesture
             val before = pin.canvasX
             val restoredBefore = pin.restoredX
             pin.canvasX = down.position.x
@@ -189,6 +186,9 @@ internal object CursorDismiss {
 
     /** Bumped at every touch down; a chart notes the one that landed on it. */
     var gesture = 0
+
+    /** The last touch that landed on any chart: a tap there clears no cursor, so each chart keeps its own. */
+    var chartGesture = -1
 }
 
 /** Counts every tap on this subtree without consuming anything. */
