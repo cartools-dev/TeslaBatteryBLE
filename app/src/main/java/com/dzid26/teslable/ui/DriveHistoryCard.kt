@@ -118,7 +118,7 @@ private fun DriveChips(
 }
 
 /**
- * "Driven: 12.4km 00B7 N% used 00B7 0.82% per km": the percent rate joins the first line once known. While the full range is
+ * "Driven: 12.4km · N% used · 0.82% per km": the percent rate joins the first line once known. While the full range is
  * not learned the figures are rough, and a note under the lines says so.
  */
 @OptIn(ExperimentalLayoutApi::class)
