@@ -2,6 +2,7 @@
 
 package com.dzid26.teslable.core.history
 
+import com.dzid26.teslable.protocol.ChargingStateKind
 import kotlin.math.abs
 import kotlin.math.roundToInt
 import kotlin.math.sqrt
@@ -59,6 +60,11 @@ data class FullRangeScale(
  * more levels are seen. Only the newest [MAX_BOUNDARIES] boundaries are used, and
  * outliers (a drive between two reads) are dropped, so drift or a bad pair
  * cannot poison it for good.
+ *
+ * The line's intercept is only as good as the fit, a few tenths of a percent at the top. A charge that completes
+ * at a 100% limit pins the top exactly, since the car stopped because the pack is full: the newest such reading
+ * re-seats the line so it passes through 100 there (the slope is untouched), see [fullChargeMiles]. Only a
+ * completion inside the fitted window counts, so an old one never outweighs the recent levels.
  */
 object FullRangeScaleEstimator {
     /** Relative standard error at or below which the scale pins. */
@@ -68,6 +74,9 @@ object FullRangeScaleEstimator {
     private const val MAX_BOUNDARIES = 80
 
     private const val MIN_BOUNDARIES = 4
+
+    private const val FULL_LEVEL = 100
+    private const val PERCENT_FULL = 100.0
 
     /** sqrt(12): a uniform position inside a gap has standard deviation gap / sqrt(12). */
     private const val UNIFORM_SPREAD_DIVISOR = 3.4641016f
@@ -89,6 +98,7 @@ object FullRangeScaleEstimator {
         val level: Float,
         val miles: Float,
         val sigma: Float,
+        val atMillis: Long,
     )
 
     fun estimate(samples: List<BatterySample>): FullRangeScale? {
@@ -108,14 +118,38 @@ object FullRangeScaleEstimator {
         val span = kept.maxOf { it.level } - kept.minOf { it.level }
         val relativeError = fit.slopeError / fit.slope
         val pinned = span >= MIN_LEVEL_SPAN && relativeError <= PIN_TOLERANCE
+        val offset = fullChargeMiles(samples, kept.minOf { it.atMillis })?.let { it - fit.slope * PERCENT_FULL } ?: fit.offset
         return FullRangeScale(
             milesPerPercent = fit.slope.toFloat(),
-            offsetMiles = fit.offset.toFloat(),
+            offsetMiles = offset.toFloat(),
             standardErrorMiles = (fit.slopeError * 100.0).toFloat(),
             samples = used,
             pinned = pinned,
         )
     }
+
+    /**
+     * The rated miles the car read when its newest charge completed at a 100% limit: the first Complete reading at
+     * level 100 after charging, no older than [sinceMillis]. Later readings drift down as the pack settles, so they
+     * are not the full mark.
+     */
+    private fun fullChargeMiles(
+        samples: List<BatterySample>,
+        sinceMillis: Long,
+    ): Double? =
+        samples
+            .zipWithNext()
+            .lastOrNull { (before, after) ->
+                after.timestampMillis >= sinceMillis &&
+                    before.chargingState == ChargingStateKind.Charging &&
+                    after.chargingState == ChargingStateKind.Complete &&
+                    after.batteryLevel == FULL_LEVEL &&
+                    after.usableLevel == FULL_LEVEL &&
+                    (after.chargeLimit ?: 0) >= FULL_LEVEL &&
+                    after.ratedRangeMiles?.let { it.isFinite() && it > 0f } == true
+            }?.second
+            ?.ratedRangeMiles
+            ?.toDouble()
 
     private fun boundaries(samples: List<BatterySample>): List<Boundary> {
         val usable =
@@ -132,7 +166,7 @@ object FullRangeScaleEstimator {
             // A uniform position inside the gap has standard deviation gap / sqrt(12).
             val sigma = maxOf(gap / UNIFORM_SPREAD_DIVISOR, MIN_SIGMA_MILES)
             val level = minOf(before.usableLevel, after.usableLevel) + STEP_MIDPOINT
-            result += Boundary(level, (a + b) / 2f, sigma)
+            result += Boundary(level, (a + b) / 2f, sigma, minOf(before.timestampMillis, after.timestampMillis))
         }
         return result
     }

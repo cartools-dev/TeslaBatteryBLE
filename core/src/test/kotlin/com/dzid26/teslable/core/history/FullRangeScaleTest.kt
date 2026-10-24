@@ -58,6 +58,50 @@ class FullRangeScaleTest {
     }
 
     @Test
+    fun `a charge that completes at a 100 limit reads exactly 100 there`() {
+        // The fitted line says 267.6 mi at 100, but the car stopped charging at 267.4: that is full.
+        val climb = climb(270f, -2f, 40.1f, 98f) { it.roundToInt() }.map { it.copy(chargeLimit = 100) }
+        val last = climb.last()
+        val done =
+            last.copy(
+                timestampMillis = last.timestampMillis + 60_000L,
+                batteryLevel = 100,
+                usableLevel = 100,
+                chargingState = ChargingStateKind.Complete,
+                ratedRangeMiles = 267.4f,
+            )
+        val scale = FullRangeScaleEstimator.estimate(climb + done)!!
+        assertEquals(100f, done.soc(scale), 0.001f)
+        assertEquals(2.7f, scale.milesPerPercent, 0.015f)
+    }
+
+    @Test
+    fun `a full charge older than the fitted levels does not anchor the top`() {
+        val old = climb(270f, -2f, 97f, 99.75f) { it.roundToInt() }.map { it.copy(chargeLimit = 100) }
+        val oldDone =
+            old.last().copy(
+                timestampMillis = old.last().timestampMillis + 60_000L,
+                batteryLevel = 100,
+                usableLevel = 100,
+                chargingState = ChargingStateKind.Complete,
+                ratedRangeMiles = 267.4f,
+            )
+        val recent = climb(270f, -2f, 40.1f, 70f) { it.roundToInt() }.map { it.copy(timestampMillis = it.timestampMillis + 10_000_000L) }
+        val withOld = FullRangeScaleEstimator.estimate(listOf(oldDone) + recent)!!
+        assertEquals(FullRangeScaleEstimator.estimate(recent)!!.offsetMiles, withOld.offsetMiles)
+    }
+
+    @Test
+    fun `a completed charge below a 100 limit does not anchor the top`() {
+        val climb = climb(270f, -2f, 40.1f, 80f) { it.roundToInt() }
+        val done = climb.last().copy(timestampMillis = 10_000_000L, chargingState = ChargingStateKind.Complete, chargeLimit = 80)
+        assertEquals(
+            FullRangeScaleEstimator.estimate(climb)!!.offsetMiles,
+            FullRangeScaleEstimator.estimate(climb + done)!!.offsetMiles,
+        )
+    }
+
+    @Test
     fun `a cold battery does not move the scale or step the plotted soc`() {
         // The car holds back one point while cold: the range follows the usable level, the display does not.
         val cold =
