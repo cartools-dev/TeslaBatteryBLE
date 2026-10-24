@@ -10,7 +10,7 @@ import org.junit.Before
 import org.junit.Test
 import java.util.Locale
 
-class DriveRateTest {
+class DriveRatesTest {
     private lateinit var savedLocale: Locale
 
     @Before
@@ -50,21 +50,26 @@ class DriveRateTest {
     }
 
     @Test
-    fun `a price replaces the percent rate with the cost per distance`() {
+    fun `the cost is quoted per 100 distance units`() {
         // $1.00 over 10mi is $10.00 per 100mi, $6.21 per 100km.
-        val rate = driveRate(stats(costAtHomePrice = 1f, percentPerMile = 0.5f), DistanceUnit.KILOMETERS, "USD")
-        assertEquals(DriveRate.Cost("$6.21", "km"), rate)
-        assertEquals(DriveRate.Cost("$10.00", "mi"), driveRate(stats(costAtHomePrice = 1f), DistanceUnit.MILES, "USD"))
+        assertEquals("$6.21", driveRates(stats(costAtHomePrice = 1f), DistanceUnit.KILOMETERS, "USD").cost)
+        assertEquals("$10.00", driveRates(stats(costAtHomePrice = 1f), DistanceUnit.MILES, "USD").cost)
     }
 
     @Test
-    fun `without a price the percent rate stands in`() {
-        val rate = driveRate(stats(percentPerMile = 0.5f), DistanceUnit.MILES, "USD")
-        assertEquals(DriveRate.Percent("0.50", "mi"), rate)
+    fun `the percent rate and the cost are independent`() {
+        val unpriced = driveRates(stats(percentPerMile = 0.5f), DistanceUnit.MILES, "USD")
+        assertEquals("0.50", unpriced.percent)
+        assertNull(unpriced.cost)
+        val priced = driveRates(stats(costAtHomePrice = 1f, percentPerMile = 0.5f), DistanceUnit.KILOMETERS, "USD")
+        assertEquals("0.31", priced.percent)
+        assertEquals("$6.21", priced.cost)
     }
 
     @Test
     fun `with neither there is no rate`() {
-        assertNull(driveRate(stats(), DistanceUnit.MILES, "USD"))
+        val rates = driveRates(stats(), DistanceUnit.MILES, "USD")
+        assertNull(rates.percent)
+        assertNull(rates.cost)
     }
 }
