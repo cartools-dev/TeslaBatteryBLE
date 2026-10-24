@@ -314,12 +314,15 @@ internal fun CarScreen(
                     BatteryHistoryCard(
                         vehicleHistory,
                         vehicleDrives,
-                        nowMillis = nowMillis ?: System.currentTimeMillis(),
+                        // The ticking clock, not a fresh wall-clock read: that changed on every recomposition (each
+                        // RSSI poll), so the card redid its projections and redrew its chart every time.
+                        nowMillis = nowMillis ?: rememberNowMillis(),
                         sleepLogs = sleepLogs,
                     )
                     DriveHistoryCard(vehicleHistory, vehicleDrives, scale = scale, ratedKwhPerMile = health.ratedKwhPerMile)
+                    val vehicleTrips = vehicle?.let { trips[it.bleName] }.orEmpty()
                     PastTripsCard(
-                        trips = vehicle?.let { trips[it.bleName] }.orEmpty().markingLive(liveRoute),
+                        trips = remember(vehicleTrips, liveRoute) { vehicleTrips.markingLive(liveRoute) },
                         samples = vehicleHistory,
                         scale = scale,
                         ratedKwhPerMile = health.ratedKwhPerMile,
