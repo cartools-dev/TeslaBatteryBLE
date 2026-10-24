@@ -558,31 +558,51 @@ jobs:
             echo "keyPassword=$SIGNING_KEY_PASSWORD"
           } > keystore.properties
 
-      # Debuggable (so `adb run-as` can pull logs) but still R8-shrunk and signed
-      # with the release key; tagged releases never set the property.
+      # Two builds of the same commit, both R8-shrunk and signed with the release
+      # key: a debuggable one (so `adb run-as` can pull logs) and a plain
+      # non-debuggable one like a tagged release. They share package, key and
+      # versionCode, so either installs over the other without uninstalling.
       - name: Build the signed, debuggable release APK
         run: ./gradlew :app:assembleRelease -PpreviewDebuggable=true
 
-      - name: Stage the APK
+      - name: Stage the debuggable APK
         run: |
           set -euo pipefail
           apk=app/build/outputs/apk/release/app-release.apk
           [ -f "$apk" ] || { echo "::error::$apk missing (unsigned build?)"; exit 1; }
-          aapt2="$(find "${ANDROID_HOME:-/usr/local/lib/android/sdk}/build-tools" -name aapt2 -type f 2>/dev/null | sort -V | tail -n 1 || true)"
-          if [ -n "$aapt2" ]; then
-            "$aapt2" dump badging "$apk" | grep -q "application-debuggable" \
-              || { echo "::error::the preview APK is not debuggable"; exit 1; }
-          else
-            echo "::warning::aapt2 not found; skipped the debuggable check"
-          fi
           mkdir -p dist
-          cp "$apk" dist/TeslaBatteryBLE-preview.apk
+          cp "$apk" dist/TeslaBatteryBLE-preview-debuggable.apk
 
-      - name: Upload the preview APK
+      - name: Build the signed, non-debuggable release APK
+        run: ./gradlew :app:assembleRelease
+
+      - name: Stage the non-debuggable APK
+        run: |
+          set -euo pipefail
+          apk=app/build/outputs/apk/release/app-release.apk
+          [ -f "$apk" ] || { echo "::error::$apk missing (unsigned build?)"; exit 1; }
+          cp "$apk" dist/TeslaBatteryBLE-preview-release.apk
+
+      - name: Check the debuggable flags
+        run: |
+          set -euo pipefail
+          aapt2="$(find "${ANDROID_HOME:-/usr/local/lib/android/sdk}/build-tools" -name aapt2 -type f 2>/dev/null | sort -V | tail -n 1 || true)"
+          if [ -z "$aapt2" ]; then
+            echo "::warning::aapt2 not found; skipped the debuggable check"
+            exit 0
+          fi
+          "$aapt2" dump badging dist/TeslaBatteryBLE-preview-debuggable.apk | grep -q "application-debuggable" \
+            || { echo "::error::the debuggable preview APK is not debuggable"; exit 1; }
+          if "$aapt2" dump badging dist/TeslaBatteryBLE-preview-release.apk | grep -q "application-debuggable"; then
+            echo "::error::the release preview APK is debuggable"
+            exit 1
+          fi
+
+      - name: Upload the preview APKs
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
           name: preview-apk
-          path: dist/TeslaBatteryBLE-preview.apk
+          path: dist/TeslaBatteryBLE-preview-*.apk
           retention-days: 1
 
   preview:
@@ -600,7 +620,7 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Download the preview APK
+      - name: Download the preview APKs
         uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
         with:
           name: preview-apk
