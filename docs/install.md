@@ -33,8 +33,12 @@ are not affected as long as a tagged pre-release is newer than the preview; to b
 sure, set the title filter to the inverted regex `^Preview` (Obtainium's invert
 switch).
 
-The preview is also debuggable (`adb run-as` can read its logs); tagged releases are
-not.
+The preview carries two APKs of the same commit, both minified with R8 and signed
+with the release key: `...-release.apk` (not debuggable, like a tagged release) and
+`...-debuggable.apk` (`adb run-as` can read its logs). They share package and
+version, so either installs over the other without uninstalling. Obtainium asks
+which APK to use; to pin it, set the APK-filter regex to `release\.apk$` or
+`debuggable\.apk$`.
 
 The preview is signed with the release key, so it only updates an install signed
 with that key. A debug build you installed yourself uses the same package name

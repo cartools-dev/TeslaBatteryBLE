@@ -7,8 +7,10 @@
 # date (tagged pre-releases published later stay newer than it) and the date
 # never resets. An update checker that compares tag names (Obtainium's default)
 # sees a new version on each push; to follow only this release, filter on the
-# title (see the README). Run from a checkout of main with the release APK at
-# dist/TeslaBatteryBLE-preview.apk.
+# title (see docs/install.md). The release carries two APKs of the same commit:
+# the debuggable one and the plain release build (both R8-shrunk, same key and
+# versionCode). Run from a checkout of main with them at
+# dist/TeslaBatteryBLE-preview-debuggable.apk and dist/TeslaBatteryBLE-preview-release.apk.
 #
 # Needs GH_TOKEN and GITHUB_REPOSITORY.
 set -euo pipefail
@@ -17,11 +19,14 @@ REPO="${GITHUB_REPOSITORY:?GITHUB_REPOSITORY is required}"
 SHA="${GITHUB_SHA:-$(git rev-parse HEAD)}"
 TITLE="Preview of main"
 TAG="main-${SHA:0:7}"
-SRC="dist/TeslaBatteryBLE-preview.apk"
-APK="dist/TeslaBatteryBLE-${TAG}.apk"
-
-[ -f "$SRC" ] || { echo "missing $SRC" >&2; exit 1; }
-cp "$SRC" "$APK"
+APKS=()
+for kind in release debuggable; do
+  src="dist/TeslaBatteryBLE-preview-${kind}.apk"
+  [ -f "$src" ] || { echo "missing $src" >&2; exit 1; }
+  apk="dist/TeslaBatteryBLE-${TAG}-${kind}.apk"
+  cp "$src" "$apk"
+  APKS+=("$apk")
+done
 
 git fetch --tags origin main
 DESCRIBE="$(git describe --tags --match 'v[0-9]*' "$SHA" 2>/dev/null || echo "$SHA")"
@@ -29,9 +34,9 @@ DESCRIBE="$(git describe --tags --match 'v[0-9]*' "$SHA" 2>/dev/null || echo "$S
 DESCRIBE="$(printf '%s' "$DESCRIBE" | sed -E 's/-g([0-9a-f]+)$/-\1/')"
 
 {
-  echo "**Rolling preview of \`main\`, debuggable.** This release is replaced in place on every push to \`main\` that passes the tests, static analysis and the emulator smoke test: its tag is renamed to the new commit and the APK is replaced."
+  echo "**Rolling preview of \`main\`.** This release is replaced in place on every push to \`main\` that passes the tests, static analysis and the emulator smoke test: its tag is renamed to the new commit and the APKs are replaced. It carries two builds of the same commit, both minified with R8 and signed with the release key: \`-release.apk\` (like a tagged release) and \`-debuggable.apk\`. They share package, key and version, so either installs over the other without uninstalling."
   echo
-  echo "> **Debuggable build:** the app's private storage (including the car pairing key and the logs) can be read with \`adb run-as com.dzid26.teslable\` by anyone with adb access to the phone. Install it only on your own phone. Tagged releases are not debuggable."
+  echo "> **Debuggable build:** the app's private storage (including the car pairing key and the logs) can be read with \`adb run-as com.dzid26.teslable\` by anyone with adb access to the phone. Install it only on your own phone. Use \`-release.apk\` if you do not need that."
   echo
   echo "Built from [${SHA:0:7}](https://github.com/$REPO/commit/$SHA) (\`$DESCRIBE\`). Signed with the release key, so it updates an installed release in place."
 } > preview-notes.md
@@ -40,7 +45,7 @@ release="$(gh api --paginate "repos/$REPO/releases" \
   --jq ".[] | select(.name == \"$TITLE\" and (.draft | not)) | [.id, .tag_name, .target_commitish] | @tsv" | sed -n 1p)"
 
 if [ -z "$release" ]; then
-  gh release create "$TAG" "$APK" --repo "$REPO" \
+  gh release create "$TAG" "${APKS[@]}" --repo "$REPO" \
     --target "$SHA" --prerelease --title "$TITLE" --notes-file preview-notes.md
   exit 0
 fi
@@ -63,18 +68,21 @@ fi
 
 # The new APK goes up first, so the release is never left without one; the
 # retag follows, then the old APK and tag are removed.
-for attempt in 1 2 3; do
-  gh api --method POST -H "Content-Type: application/vnd.android.package-archive" \
-    "https://uploads.github.com/repos/$REPO/releases/$id/assets?name=$(basename "$APK")" \
-    --input "$APK" > /dev/null && break
-  [ "$attempt" -lt 3 ] || { echo "uploading $APK failed after $attempt attempts" >&2; exit 1; }
-  sleep $((attempt * 5))
+for apk in "${APKS[@]}"; do
+  for attempt in 1 2 3; do
+    gh api --method POST -H "Content-Type: application/vnd.android.package-archive" \
+      "https://uploads.github.com/repos/$REPO/releases/$id/assets?name=$(basename "$apk")" \
+      --input "$apk" > /dev/null && break
+    [ "$attempt" -lt 3 ] || { echo "uploading $apk failed after $attempt attempts" >&2; exit 1; }
+    sleep $((attempt * 5))
+  done
 done
 gh api -X PATCH "repos/$REPO/releases/$id" \
   -f tag_name="$TAG" -f target_commitish="$SHA" -f name="$TITLE" \
   -F prerelease=true -F body=@preview-notes.md > /dev/null
 
+new_names="$(printf '"%s",' "${APKS[@]##*/}")"
 gh api "repos/$REPO/releases/$id/assets" \
-  --jq ".[] | select(.name != \"$(basename "$APK")\") | .id" \
+  --jq ".[] | select([.name] | inside([${new_names%,}]) | not) | .id" \
   | while read -r asset; do gh api -X DELETE "repos/$REPO/releases/assets/$asset"; done
 gh api -X DELETE "repos/$REPO/git/refs/tags/$old_tag" || true
