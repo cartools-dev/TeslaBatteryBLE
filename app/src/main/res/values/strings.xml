@@ -162,7 +162,7 @@
     <string name="drive_rough_note">Fewer stats and coarser steps until the car\'s full range is learned.</string>
     <string name="duration_ago">%1$s ago</string>
     <string name="stats_charging_now">Charging</string>
-    <string name="stats_deep_sleep_hint">The car itself asleep the whole time, watched by the phone without a gap.</string>
+    <string name="stats_deep_sleep_hint">Asleep the whole time - only when watched by the phone at least every 10min.</string>
     <string name="stats_deep_sleep_term">deep sleep</string>
     <string name="stats_drain_ceiling">\u2264%1$s</string>
     <string name="stats_drain_extrapolated" formatted="false">%1$s*</string>
@@ -175,14 +175,14 @@
     <string name="stats_longest">Longest</string>
     <string name="stats_lowest">Lowest</string>
     <string name="stats_lowest_detail">over %1$s, ended %2$s</string>
-    <string name="stats_lowest_drain_hint">The slowest battery loss between two readings at least 6 hours apart, parked and not charging.</string>
+    <string name="stats_lowest_drain_hint">The slowest battery loss between two readings at least 6 hours apart while parked.</string>
     <string name="stats_lowest_drain_term">drain</string>
     <string name="stats_now">Now</string>
     <string name="stats_parked_hint">The odometer unchanged and not charging.</string>
     <string name="stats_parked_now">Parked</string>
     <string name="stats_parked_term">parked</string>
-    <string name="stats_power_down_hint">Parked, unoccupied, Sentry and climate off. The car may still be awake: not the same as deep sleep.</string>
-    <string name="stats_power_down_now">Powered down</string>
+    <string name="stats_power_down_hint">Parked, unoccupied, Sentry and climate off. The car may still be awake when disconnected but expected to go sleep.</string>
+    <string name="stats_power_down_now">Power down</string>
     <string name="stats_power_down_term">power down</string>
     <string name="stats_since">since %1$s</string>
     <string name="stats_started">started %1$s</string>
