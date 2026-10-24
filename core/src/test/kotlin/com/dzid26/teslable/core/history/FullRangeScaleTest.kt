@@ -75,6 +75,52 @@ class FullRangeScaleTest {
         assertEquals(2.7f, scale.milesPerPercent, 0.015f)
     }
 
+    private fun completion(
+        gapMillis: Long,
+        miles: Float,
+        usable: Int = 100,
+    ): Pair<List<BatterySample>, BatterySample> {
+        val climb = climb(270f, -2f, 40.1f, 98f) { it.roundToInt() }.map { it.copy(chargeLimit = 100) }
+        val done =
+            climb.last().copy(
+                timestampMillis = climb.last().timestampMillis + gapMillis,
+                batteryLevel = 100,
+                usableLevel = usable,
+                chargingState = ChargingStateKind.Complete,
+                ratedRangeMiles = miles,
+            )
+        return climb to done
+    }
+
+    @Test
+    fun `the newest of two completions anchors the top`() {
+        val (climb, first) = completion(60_000L, 267.4f)
+        val second = first.copy(timestampMillis = first.timestampMillis + 1_000_000L, chargingState = ChargingStateKind.Charging)
+        val again =
+            second.copy(
+                timestampMillis = second.timestampMillis + 60_000L,
+                chargingState = ChargingStateKind.Complete,
+                ratedRangeMiles = 267.2f,
+            )
+        val scale = FullRangeScaleEstimator.estimate(climb + first + second + again)!!
+        assertEquals(100f, again.soc(scale), 0.001f)
+    }
+
+    @Test
+    fun `a completion read long after charging does not anchor the top`() {
+        val (climb, late) = completion(2 * 3_600_000L, 267.4f)
+        assertEquals(
+            FullRangeScaleEstimator.estimate(climb)!!.offsetMiles,
+            FullRangeScaleEstimator.estimate(climb + late)!!.offsetMiles,
+        )
+    }
+
+    @Test
+    fun `a held-back level 100 does not anchor the top`() {
+        val (climb, held) = completion(60_000L, 267.4f, usable = 99)
+        assertTrue(held.soc(FullRangeScaleEstimator.estimate(climb + held)!!) < 99.99f)
+    }
+
     @Test
     fun `a full charge older than the fitted levels does not anchor the top`() {
         val old = climb(270f, -2f, 97f, 99.75f) { it.roundToInt() }.map { it.copy(chargeLimit = 100) }

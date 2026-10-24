@@ -75,6 +75,9 @@ object FullRangeScaleEstimator {
 
     private const val MIN_BOUNDARIES = 4
 
+    /** Longest gap between the last Charging read and the Complete one for the latter to still be the full mark. */
+    private const val MAX_COMPLETION_GAP_MILLIS = 15 * 60_000L
+
     private const val FULL_LEVEL = 100
     private const val PERCENT_FULL = 100.0
 
@@ -130,26 +133,34 @@ object FullRangeScaleEstimator {
 
     /**
      * The rated miles the car read when its newest charge completed at a 100% limit: the first Complete reading at
-     * level 100 after charging, no older than [sinceMillis]. Later readings drift down as the pack settles, so they
-     * are not the full mark.
+     * level 100 after charging, no older than [sinceMillis] and read within [MAX_COMPLETION_GAP_MILLIS] of the last
+     * Charging one (a later read has already settled below the full mark). Scans back from the newest sample and stops
+     * at [sinceMillis], so the cost does not grow with the history.
      */
     private fun fullChargeMiles(
         samples: List<BatterySample>,
         sinceMillis: Long,
     ): Double? =
-        samples
-            .zipWithNext()
-            .lastOrNull { (before, after) ->
-                after.timestampMillis >= sinceMillis &&
-                    before.chargingState == ChargingStateKind.Charging &&
-                    after.chargingState == ChargingStateKind.Complete &&
-                    after.batteryLevel == FULL_LEVEL &&
-                    after.usableLevel == FULL_LEVEL &&
-                    (after.chargeLimit ?: 0) >= FULL_LEVEL &&
-                    after.ratedRangeMiles?.let { it.isFinite() && it > 0f } == true
-            }?.second
-            ?.ratedRangeMiles
-            ?.toDouble()
+        samples.indices
+            .reversed()
+            .asSequence()
+            .takeWhile { it > 0 && samples[it].timestampMillis >= sinceMillis }
+            .firstOrNull { completesFull(samples[it - 1], samples[it]) }
+            ?.let { samples[it].ratedRangeMiles?.toDouble() }
+
+    /** [after] is the first Complete reading of a charge to a 100% limit, read right after the Charging one [before]. */
+    private fun completesFull(
+        before: BatterySample,
+        after: BatterySample,
+    ): Boolean {
+        val miles = after.ratedRangeMiles
+        val atFull = after.batteryLevel == FULL_LEVEL && after.usableLevel == FULL_LEVEL && (after.chargeLimit ?: 0) >= FULL_LEVEL
+        val justCompleted =
+            before.chargingState == ChargingStateKind.Charging &&
+                after.chargingState == ChargingStateKind.Complete &&
+                after.timestampMillis - before.timestampMillis <= MAX_COMPLETION_GAP_MILLIS
+        return atFull && justCompleted && miles != null && miles.isFinite() && miles > 0f
+    }
 
     private fun boundaries(samples: List<BatterySample>): List<Boundary> {
         val usable =
