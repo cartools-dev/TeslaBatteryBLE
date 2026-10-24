@@ -39,7 +39,9 @@ import kotlin.math.abs
  *   to where it stood before the touch;
  * - a tap anywhere off the chart hides it.
  * A rotation keeps the cursor on the same point: it is saved as the data x it snapped to, since the canvas x
- * changes with the chart's width.
+ * changes with the chart's width. So does leaving for Settings and coming back, which restores the car view's saved
+ * state like the range chips. A saved point outside the window the chart now shows (another range or distance
+ * window) is not drawn; a new sample keeps it, since the point the cursor stood on is still there.
  */
 
 /** Where the chart's cursor stands, in the chart's canvas x; null for none. */
@@ -67,7 +69,7 @@ internal class CursorPin(
     }
 }
 
-private val CursorPinSaver = Saver<CursorPin, Double>(save = { it.shownX }, restore = { CursorPin(restoredX = it) })
+internal val CursorPinSaver = Saver<CursorPin, Double>(save = { it.shownX }, restore = { CursorPin(restoredX = it) })
 
 @Composable
 internal fun rememberCursorPin(): CursorPin {
@@ -149,7 +151,7 @@ internal class ScrubCursor(
     private val color: Color,
 ) : Decoration {
     override fun drawOverLayers(context: CartesianDrawingContext) {
-        val dataX = pin.canvasX?.let { context.dataX(it) } ?: pin.restoredX
+        val dataX = pin.canvasX?.let { context.dataX(it) } ?: restoredCursorX(pin.restoredX, context.ranges.minX, context.ranges.maxX)
         if (dataX == null || points.isEmpty()) {
             pin.shownX = null
             return
@@ -159,6 +161,13 @@ internal class ScrubCursor(
         marker.drawOverLayers(context, listOf(PointTarget(x, context.canvasX(x), context.canvasY(y), y, color)))
     }
 }
+
+/** The saved cursor x when it still falls inside the plotted x range, else null. */
+internal fun restoredCursorX(
+    restoredX: Double?,
+    minX: Double,
+    maxX: Double,
+): Double? = restoredX?.takeIf { it in minX..maxX }
 
 private class PointTarget(
     override val x: Double,
