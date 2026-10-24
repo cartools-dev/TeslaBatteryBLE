@@ -26,7 +26,6 @@ import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
@@ -672,10 +671,7 @@ private fun PairingStatus(
             pairing == PairingPhase.WAITING_FOR_CARD
     Row(verticalAlignment = Alignment.CenterVertically) {
         if (inProgress) {
-            CircularProgressIndicator(
-                modifier = Modifier.size(16.dp),
-                strokeWidth = 2.dp,
-            )
+            IsolatedSpinner(size = 16.dp)
             Spacer(Modifier.width(8.dp))
         }
         Column {
