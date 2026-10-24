@@ -26,7 +26,6 @@ import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
@@ -152,30 +151,14 @@ internal fun CarScreen(
 ) {
     BackHandler { onBack() }
     val connection = state.connections[address]
-    val vehicleHistory =
-        if (vehicle == null) {
-            emptyList()
-        } else {
-            history.filter { it.vehicleId == vehicle.bleName }
-        }
-    val vehicleDrives =
-        if (vehicle == null) {
-            emptyList()
-        } else {
-            driveHistory.filter { it.vehicleId == vehicle.bleName }
-        }
-    val vehicleStatuses =
-        if (vehicle == null) {
-            emptyList()
-        } else {
-            statusHistory.filter { it.vehicleId == vehicle.bleName }
-        }
-    val vehicleActivity =
-        if (vehicle == null) {
-            emptyList()
-        } else {
-            activityHistory.filter { it.vehicleId == vehicle.bleName }
-        }
+    // Filtered once per change of the source log, not per recomposition: the state re-emits on every
+    // RSSI poll and log line, and a fresh list each time would redo every derived figure below and
+    // redraw every card that takes the list.
+    val bleName = vehicle?.bleName
+    val vehicleHistory = remember(history, bleName) { history.filter { it.vehicleId == bleName } }
+    val vehicleDrives = remember(driveHistory, bleName) { driveHistory.filter { it.vehicleId == bleName } }
+    val vehicleStatuses = remember(statusHistory, bleName) { statusHistory.filter { it.vehicleId == bleName } }
+    val vehicleActivity = remember(activityHistory, bleName) { activityHistory.filter { it.vehicleId == bleName } }
     val paired = isPaired(connection, vehicle)
     // Fitted once for every card below: the hero, the trip, both history charts.
     val scale = remember(vehicleHistory) { FullRangeScales.of(vehicleHistory) }
@@ -331,12 +314,15 @@ internal fun CarScreen(
                     BatteryHistoryCard(
                         vehicleHistory,
                         vehicleDrives,
-                        nowMillis = nowMillis ?: System.currentTimeMillis(),
+                        // The ticking clock, not a fresh wall-clock read: that changed on every recomposition (each
+                        // RSSI poll), so the card redid its projections and redrew its chart every time.
+                        nowMillis = nowMillis ?: rememberNowMillis(),
                         sleepLogs = sleepLogs,
                     )
                     DriveHistoryCard(vehicleHistory, vehicleDrives, scale = scale, ratedKwhPerMile = health.ratedKwhPerMile)
+                    val vehicleTrips = vehicle?.let { trips[it.bleName] }.orEmpty()
                     PastTripsCard(
-                        trips = vehicle?.let { trips[it.bleName] }.orEmpty().markingLive(liveRoute),
+                        trips = remember(vehicleTrips, liveRoute) { vehicleTrips.markingLive(liveRoute) },
                         samples = vehicleHistory,
                         scale = scale,
                         ratedKwhPerMile = health.ratedKwhPerMile,
@@ -688,10 +674,7 @@ private fun PairingStatus(
             pairing == PairingPhase.WAITING_FOR_CARD
     Row(verticalAlignment = Alignment.CenterVertically) {
         if (inProgress) {
-            CircularProgressIndicator(
-                modifier = Modifier.size(16.dp),
-                strokeWidth = 2.dp,
-            )
+            IsolatedSpinner(size = 16.dp)
             Spacer(Modifier.width(8.dp))
         }
         Column {
