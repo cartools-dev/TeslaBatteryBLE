@@ -57,10 +57,11 @@ internal fun PastTripsCard(
     if (trips.isEmpty()) return
     var selectedStart by rememberSaveable { mutableStateOf<Long?>(null) }
     val trip = trips.firstOrNull { it.startMillis == selectedStart } ?: trips.last()
+    // Matches the trip against the whole log, so off the main thread; the card shows once the first summary is in.
     val summary =
-        remember(trip, samples, scale, ratedKwhPerMile, pricePerKwh) {
+        rememberInBackground(null, trip, samples, scale, ratedKwhPerMile, pricePerKwh) {
             trip.summary(samples, scale, ratedKwhPerMile, pricePerKwh)
-        }
+        } ?: return
     Card(modifier = Modifier.fillMaxWidth()) {
         Column(Modifier.padding(12.dp)) {
             Text(stringResource(R.string.trip_past_title_count, trips.size), style = MaterialTheme.typography.titleSmall)

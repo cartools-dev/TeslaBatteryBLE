@@ -60,16 +60,27 @@ internal fun DriveHistoryCard(
 ) {
     var window by rememberSaveable { mutableStateOf(initialWindow) }
     val unit = LocalDistanceUnit.current
-    // Up to 20k samples: match only when the data or the window changes.
-    val points =
-        remember(samples, drives, window, unit, scale) { drivePoints(samples, drives, scale, window.miles(unit), window.sinceLastCharge) }
-    val used = remember(points) { points.totalDrop { it.socPercent } }
     val pricePerKwh = LocalPricePerKwh.current
-    val stats = remember(points, scale, ratedKwhPerMile, pricePerKwh) { driveStats(points, scale, ratedKwhPerMile, pricePerKwh) }
-    val plotted =
-        remember(points, unit) {
-            points.map { Plotted(unit.fromMiles(it.milesDriven.toFloat()).toDouble(), it.socPercent, it.regenerating, it.trip) }
-        }
+    // Up to 20k samples: matched off the main thread, and only when the data or the window changes. The card shows once
+    // the first match is in; a later change keeps the previous chart up until the next one is ready.
+    val figures =
+        rememberInBackground(null, samples, drives, window, unit, scale, ratedKwhPerMile, pricePerKwh) {
+            val points = drivePoints(samples, drives, scale, window.miles(unit), window.sinceLastCharge)
+            DriveFigures(
+                plotted =
+                    points.map {
+                        Plotted(
+                            unit.fromMiles(it.milesDriven.toFloat()).toDouble(),
+                            it.socPercent,
+                            it.regenerating,
+                            it.trip,
+                        )
+                    },
+                used = points.totalDrop { it.socPercent },
+                stats = driveStats(points, scale, ratedKwhPerMile, pricePerKwh),
+            )
+        } ?: return
+    val plotted = figures.plotted
 
     Card(modifier = Modifier.fillMaxWidth()) {
         Column(Modifier.padding(12.dp)) {
@@ -91,14 +102,21 @@ internal fun DriveHistoryCard(
                 DriveFooter(
                     plotted.last().distance,
                     unit,
-                    used,
+                    figures.used,
                     wholeStepsOnly = scale?.pinned != true,
-                    stats = stats,
+                    stats = figures.stats,
                 )
             }
         }
     }
 }
+
+/** What the drive history card plots and sums for one window. */
+private class DriveFigures(
+    val plotted: List<Plotted>,
+    val used: Float,
+    val stats: DriveStats?,
+)
 
 /** The distance-window chips: 15 / 50 / 150 km (10 / 30 / 100 mi) and since the last charge. */
 @OptIn(ExperimentalLayoutApi::class)
