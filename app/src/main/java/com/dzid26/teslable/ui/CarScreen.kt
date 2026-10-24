@@ -81,6 +81,8 @@ import com.dzid26.teslable.core.health.priceForCharge
 import com.dzid26.teslable.core.history.ActivitySample
 import com.dzid26.teslable.core.history.BatterySample
 import com.dzid26.teslable.core.history.ChargeProjection
+import com.dzid26.teslable.core.history.ChargeStats
+import com.dzid26.teslable.core.history.DischargeProjection
 import com.dzid26.teslable.core.history.DriveSample
 import com.dzid26.teslable.core.history.FullRangeScale
 import com.dzid26.teslable.core.history.HistoryRange
@@ -165,16 +167,20 @@ internal fun CarScreen(
     // The stats card looks at the whole log, whatever range the battery chart shows.
     // The status and activity logs the sleep rules read, built once per change of either.
     val sleepLogs = remember(vehicleStatuses, vehicleActivity) { ProjectionContext(statuses = vehicleStatuses, activity = vehicleActivity) }
+    // The whole-log figures run off the main thread; each card shows once its first result is in.
     val rest =
-        remember(vehicleHistory, vehicleDrives, sleepLogs, scale) {
+        rememberInBackground(null, vehicleHistory, vehicleDrives, sleepLogs, scale) {
             restStats(vehicleHistory, vehicleDrives, sleepLogs.copy(scale = scale))
         }
     val statsNow = nowMillis ?: rememberNowMillis()
     val current =
-        remember(vehicleHistory, vehicleDrives, sleepLogs, statsNow) { currentRest(vehicleHistory, vehicleDrives, statsNow, sleepLogs) }
+        rememberInBackground(null, vehicleHistory, vehicleDrives, sleepLogs, statsNow) {
+            currentRest(vehicleHistory, vehicleDrives, statsNow, sleepLogs)
+        }
+    val factoryRangeMiles = vehicle?.factoryRangeMiles
     val health =
-        remember(vehicleHistory, vehicle?.factoryRangeMiles) {
-            healthSummary(vehicleHistory, epaRatedRangeMiles = vehicle?.factoryRangeMiles)
+        rememberInBackground(null, vehicleHistory, factoryRangeMiles) {
+            healthSummary(vehicleHistory, epaRatedRangeMiles = factoryRangeMiles)
         }
     // What a pull on this screen will do, and the feedback while it runs.
     val pullLabel =
@@ -308,7 +314,7 @@ internal fun CarScreen(
                         route = liveRoute,
                         currentRatedMiles = vehicleHistory.lastOrNull()?.ratedRangeMiles,
                         scale = scale,
-                        ratedKwhPerMile = health.ratedKwhPerMile,
+                        ratedKwhPerMile = health?.ratedKwhPerMile,
                         pricePerKwh = pricePerKwh,
                     )
                     BatteryHistoryCard(
@@ -319,17 +325,17 @@ internal fun CarScreen(
                         nowMillis = nowMillis ?: rememberNowMillis(),
                         sleepLogs = sleepLogs,
                     )
-                    DriveHistoryCard(vehicleHistory, vehicleDrives, scale = scale, ratedKwhPerMile = health.ratedKwhPerMile)
+                    DriveHistoryCard(vehicleHistory, vehicleDrives, scale = scale, ratedKwhPerMile = health?.ratedKwhPerMile)
                     val vehicleTrips = vehicle?.let { trips[it.bleName] }.orEmpty()
                     PastTripsCard(
                         trips = remember(vehicleTrips, liveRoute) { vehicleTrips.markingLive(liveRoute) },
                         samples = vehicleHistory,
                         scale = scale,
-                        ratedKwhPerMile = health.ratedKwhPerMile,
+                        ratedKwhPerMile = health?.ratedKwhPerMile,
                         pricePerKwh = pricePerKwh,
                     )
-                    BatteryHealthCard(health)
-                    DrainStatsCard(rest, current)
+                    health?.let { BatteryHealthCard(it) }
+                    rest?.let { DrainStatsCard(it, current) }
                 }
             }
         }
@@ -363,7 +369,8 @@ internal fun HeroCard(
     val reading = batteryPercent(connection, lastKnown, nowMillis)
     // Rated miles are the internal unit; SOC is derived at the edge from the
     // fitted scale (null until it pins, then the int level shows).
-    val durations = remember(statusHistory, nowMillis) { statusDurations(statusHistory, vehicle?.bleName.orEmpty(), nowMillis) }
+    val vehicleId = vehicle?.bleName.orEmpty()
+    val durations = rememberInBackground(null, statusHistory, vehicleId, nowMillis) { statusDurations(statusHistory, vehicleId, nowMillis) }
     val keySlot = connection?.keySlot ?: vehicle?.keySlot
     val pairing = connection?.pairing ?: PairingPhase.IDLE
     Card(
@@ -763,11 +770,19 @@ internal fun BatteryHistoryCard(
     var range by rememberSaveable { mutableStateOf(initialRange) }
     val is24Hour = LocalIs24Hour.current ?: DateFormat.is24HourFormat(LocalContext.current)
     val now = nowMillis
-    val visible = samples.within(range, now)
-    val stats = lastFinishedChargeStats(samples, now)
     // Fitted once: the stats, the projection and the chart all read it.
     val scale = remember(samples) { FullRangeScales.of(samples) }
     val withScale = remember(sleepLogs, scale) { sleepLogs.copy(scale = scale) }
+    val priceChanges = LocalPriceChanges.current
+    // Every figure scans the whole log, so they run off the main thread; nothing below shows until the first result.
+    val figures =
+        rememberInBackground(null, samples, drives, range, now, withScale) {
+            batteryHistoryFigures(samples, drives, range, now, withScale)
+        } ?: return
+    val visible = figures.visible
+    val stats = figures.lastCharge
+    val lastChargePrice =
+        rememberInBackground(null, stats, samples, priceChanges) { stats?.let { priceForCharge(priceChanges, samples, it.sinceMillis) } }
 
     Card(modifier = Modifier.fillMaxWidth()) {
         Column(Modifier.padding(12.dp)) {
@@ -791,18 +806,9 @@ internal fun BatteryHistoryCard(
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             } else {
-                // Projections are derived from every sample, not just the
-                // visible window, so a run that started before the selected
-                // range still projects.
-                val baseMillis =
-                    range.durationMillis
-                        ?: (visible.last().timestampMillis - visible.first().timestampMillis)
-                            .coerceAtLeast(1L)
-                val charge = chargeProjection(samples, scale = scale)
-                // Parked drain: the drive samples' odometer marks the
-                // stretches the car moved. Shown next to the charge
-                // projection too: where the battery heads if unplugged now.
-                val discharge = dischargeProjection(samples, drives, baseMillis, now, withScale)
+                val baseMillis = figures.baseMillis
+                val charge = figures.charge
+                val discharge = figures.discharge
                 // The projection gets room on the x-axis: its round-figure horizon ahead.
                 val windowEnd =
                     if (charge != null || discharge != null) {
@@ -836,8 +842,7 @@ internal fun BatteryHistoryCard(
             }
             stats?.let {
                 Spacer(Modifier.height(8.dp))
-                val price = priceForCharge(LocalPriceChanges.current, samples, it.sinceMillis)
-                val energy = sessionEnergyText(it.energyKwh, price, LocalCurrencyCode.current)
+                val energy = sessionEnergyText(it.energyKwh, lastChargePrice, LocalCurrencyCode.current)
                 Text(
                     text =
                         "Last charge:\u00A0${formatPercent(
@@ -849,6 +854,40 @@ internal fun BatteryHistoryCard(
             }
         }
     }
+}
+
+/** What the battery history card shows, derived from the whole log for one range and moment. */
+private class BatteryHistoryFigures(
+    val visible: List<BatterySample>,
+    /** The visible span the projections are scaled to: the range, or the samples' own span for All. */
+    val baseMillis: Long,
+    val charge: ChargeProjection?,
+    val discharge: DischargeProjection?,
+    val lastCharge: ChargeStats?,
+)
+
+private fun batteryHistoryFigures(
+    samples: List<BatterySample>,
+    drives: List<DriveSample>,
+    range: HistoryRange,
+    nowMillis: Long,
+    context: ProjectionContext,
+): BatteryHistoryFigures {
+    val visible = samples.within(range, nowMillis)
+    val baseMillis =
+        range.durationMillis
+            ?: ((visible.lastOrNull()?.timestampMillis ?: 0L) - (visible.firstOrNull()?.timestampMillis ?: 0L)).coerceAtLeast(1L)
+    // Projections are derived from every sample, not just the visible window, so a run that started before the
+    // selected range still projects. Parked drain: the drive samples' odometer marks the stretches the car moved;
+    // shown next to the charge projection too, where the battery heads if unplugged now.
+    val projections = visible.isNotEmpty()
+    return BatteryHistoryFigures(
+        visible = visible,
+        baseMillis = baseMillis,
+        charge = if (projections) chargeProjection(samples, scale = context.scale) else null,
+        discharge = if (projections) dischargeProjection(samples, drives, baseMillis, nowMillis, context) else null,
+        lastCharge = lastFinishedChargeStats(samples, nowMillis),
+    )
 }
 
 @Composable
